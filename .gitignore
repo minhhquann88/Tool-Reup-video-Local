@@ -1,0 +1,29 @@
+# ── Credentials & tokens (NEVER commit) ──────────────────────────────────────
+token.json
+client_secret.json
+*.json
+
+# ── FFmpeg binaries (large, auto-downloaded by setup_ffmpeg.py) ───────────────
+bin/
+
+# ── Data files ────────────────────────────────────────────────────────────────
+*.csv
+# Uncomment to keep the sample CSV in the repo:
+# !video_stats.csv
+
+# ── PyInstaller build artifacts ───────────────────────────────────────────────
+build/
+dist/
+*.spec
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# ── Temp files created by the app ─────────────────────────────────────────────
+_tmp_*.mp4
+reup_*/
