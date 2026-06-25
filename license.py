@@ -9,7 +9,10 @@ API LUÔN trả HTTP 200 — phải đọc trường `status` trong body JSON, k
 vào HTTP status code.
 """
 
+from __future__ import annotations   # cho phép 'X | None' chạy trên Python 3.8/3.9
+
 import json
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -25,6 +28,24 @@ _NET_ERR = "Không thể kết nối máy chủ bản quyền."
 
 # ── Nơi lưu file license (cạnh exe, giống token.json) ─────────────────────────
 def _exe_dir() -> Path:
+    """
+    Thư mục GHI file runtime (license.json).
+    - AppImage: mount chỉ-đọc → ghi cạnh file .AppImage (biến môi trường APPIMAGE);
+      nếu thư mục đó không ghi được thì dùng ~/.config/VideoReupTool.
+    - Frozen khác (exe Windows / onedir): cạnh file thực thi.
+    - Dev: cạnh file nguồn.
+    """
+    appimg = os.environ.get("APPIMAGE")
+    if appimg:
+        here = Path(appimg).parent
+        if os.access(str(here), os.W_OK):
+            return here
+        cfg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")) / "VideoReupTool"
+        try:
+            cfg.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+        return cfg
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
     return Path(__file__).parent

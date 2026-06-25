@@ -16,6 +16,10 @@ GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
 GOOGLE_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
+VIDEOAI_TTS_URL = "https://videoai.ddns.net/v1/tts"
+
+# Giọng mặc định cho Voice API (videoai)
+DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
 
 # Prompt mặc định. Hỗ trợ chèn BẤT KỲ cột nào trong CSV theo cú pháp ${tên_cột},
 # ví dụ ${product_name}.
@@ -32,12 +36,12 @@ DEFAULT_PROMPT = (
 
 # Giọng tiếng Việt của Google TTS: nhãn dễ hiểu -> mã giọng thật
 VOICE_CHOICES = {
-    "👩 Nữ A (trẻ)":     "vi-VN-Standard-A",
-    "👨 Nam B":          "vi-VN-Standard-B",
-    "👩 Nữ C (truyền cảm)": "vi-VN-Standard-C",
-    "👨 Nam D (trầm)":   "vi-VN-Standard-D",
+    "Nữ A (trẻ)":        "vi-VN-Standard-A",
+    "Nam B":             "vi-VN-Standard-B",
+    "Nữ C (truyền cảm)": "vi-VN-Standard-C",
+    "Nam D (trầm)":      "vi-VN-Standard-D",
 }
-DEFAULT_VOICE_LABEL = "👩 Nữ C (truyền cảm)"
+DEFAULT_VOICE_LABEL = "Nữ C (truyền cảm)"
 
 
 def replace_prompt_variables(prompt, row, language_name=None):
@@ -125,7 +129,7 @@ def generate_script(
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             if log:
-                log(f"⚠️ Gemini lần {attempt}/{retries} lỗi: {exc}")
+                log(f"! Gemini lần {attempt}/{retries} lỗi: {exc}")
             if attempt < retries:
                 _sleep_or_stop(min(backoff * attempt, 20), should_stop)
 
@@ -180,11 +184,91 @@ def synthesize_voice(
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             if log:
-                log(f"⚠️ Google TTS lần {attempt}/{retries} lỗi: {exc}")
+                log(f"! Google TTS lần {attempt}/{retries} lỗi: {exc}")
             if attempt < retries:
                 _sleep_or_stop(min(backoff * attempt, 20), should_stop)
 
     raise RuntimeError(f"Google TTS thất bại sau {retries} lần: {last_err}")
+
+
+def synthesize_voice_videoai(
+    text,
+    out_path,
+    *,
+    api_key,
+    voice_name=DEFAULT_VIDEOAI_VOICE,
+    speed=1.0,
+    retries=6,
+    backoff=5,
+    log=None,
+    should_stop=None,
+):
+    """
+    Gọi Voice API (videoai.ddns.net) chuyển text -> file mp3 tại out_path.
+    Trả về out_path. Ném RuntimeError nếu thất bại sau `retries` lần.
+
+    API trả về có thể là:
+      - audio nhị phân (Content-Type: audio/*)  -> ghi thẳng
+      - JSON chứa base64 (audioContent/audio/data) -> decode rồi ghi
+    Xử lý phòng thủ cho cả hai trường hợp.
+    """
+    if not api_key:
+        raise ValueError("Thiếu API Key Voice API")
+    if not text or not str(text).strip():
+        raise ValueError("Thiếu text để tạo voice")
+
+    headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
+    body = {
+        "text": str(text),
+        "voice_name": voice_name or DEFAULT_VIDEOAI_VOICE,
+        "speed": float(speed),
+    }
+
+    last_err = None
+    for attempt in range(1, retries + 1):
+        if should_stop and should_stop():
+            raise RuntimeError("Đã dừng theo yêu cầu")
+        try:
+            resp = requests.post(
+                VIDEOAI_TTS_URL, headers=headers, json=body, timeout=180)
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+
+            # Trường hợp lỗi: thường trả JSON kèm field "error"
+            if "application/json" in ctype:
+                data = resp.json()
+                if isinstance(data, dict) and data.get("error"):
+                    err = data["error"]
+                    msg = err.get("message", err) if isinstance(err, dict) else err
+                    raise RuntimeError(f"Voice API error: {msg}")
+                audio_b64 = None
+                if isinstance(data, dict):
+                    audio_b64 = (data.get("audioContent")
+                                 or data.get("audio")
+                                 or data.get("data"))
+                if not audio_b64:
+                    raise RuntimeError(f"Voice API trả JSON không có audio: {data}")
+                audio_bytes = base64.b64decode(audio_b64)
+            else:
+                # Không phải JSON -> coi như audio nhị phân
+                if resp.status_code >= 400:
+                    raise RuntimeError(
+                        f"Voice API HTTP {resp.status_code}: "
+                        f"{resp.text[:200]}")
+                audio_bytes = resp.content
+
+            if not audio_bytes:
+                raise RuntimeError("Voice API trả về audio rỗng")
+            with open(out_path, "wb") as fh:
+                fh.write(audio_bytes)
+            return out_path
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            if log:
+                log(f"! Voice API lần {attempt}/{retries} lỗi: {exc}")
+            if attempt < retries:
+                _sleep_or_stop(min(backoff * attempt, 20), should_stop)
+
+    raise RuntimeError(f"Voice API thất bại sau {retries} lần: {last_err}")
 
 
 def make_voice(
@@ -195,6 +279,7 @@ def make_voice(
     tts_key,
     prompt=DEFAULT_PROMPT,
     model="gemini-3.1-flash-lite",
+    provider="google",
     voice_name="vi-VN-Standard-C",
     language_code="vi-VN",
     language_name="Tiếng Việt",
@@ -204,7 +289,10 @@ def make_voice(
     should_stop=None,
 ):
     """
-    Luồng đầy đủ cho 1 dòng CSV: prompt -> Gemini sinh text -> Google TTS -> mp3.
+    Luồng đầy đủ cho 1 dòng CSV: prompt -> Gemini sinh text -> TTS -> mp3.
+    `provider`:
+      - "google"  : Google TTS (tts_key = API key Google).
+      - "videoai" : Voice API videoai.ddns.net (tts_key = X-API-Key).
     Trả về (out_path, script_text). Ném RuntimeError nếu thất bại.
     """
     script = generate_script(
@@ -219,16 +307,28 @@ def make_voice(
     )
     if log:
         preview = script if len(script) <= 120 else script[:117] + "..."
-        log(f"📝 Lời thoại: {preview}")
-    synthesize_voice(
-        script,
-        out_path,
-        api_key=tts_key,
-        voice_name=voice_name,
-        language_code=language_code,
-        speaking_rate=speaking_rate,
-        retries=retries,
-        log=log,
-        should_stop=should_stop,
-    )
+        log(f" Lời thoại: {preview}")
+    if provider == "videoai":
+        synthesize_voice_videoai(
+            script,
+            out_path,
+            api_key=tts_key,
+            voice_name=voice_name,
+            speed=speaking_rate,
+            retries=retries,
+            log=log,
+            should_stop=should_stop,
+        )
+    else:
+        synthesize_voice(
+            script,
+            out_path,
+            api_key=tts_key,
+            voice_name=voice_name,
+            language_code=language_code,
+            speaking_rate=speaking_rate,
+            retries=retries,
+            log=log,
+            should_stop=should_stop,
+        )
     return out_path, script

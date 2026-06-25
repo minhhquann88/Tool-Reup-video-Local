@@ -1,7 +1,12 @@
-# ── Credentials & tokens (NEVER commit) ──────────────────────────────────────
+# ── Credentials & tokens ─────────────────────────────────────────────────────
+# token.json   : token đăng nhập Google của NGƯỜI DÙNG (nhạy cảm) → KHÔNG commit
+# license.json : key + trạng thái bản quyền runtime              → KHÔNG commit
 token.json
+license.json
 client_secret.json
-*.json
+# LƯU Ý: client_secret.json (OAuth "installed/desktop") ĐƯỢC commit CÓ CHỦ ĐÍCH —
+# nó vốn đã nằm trong app phân phối và build cần nó. Vì vậy KHÔNG dùng "*.json"
+# (sẽ chặn nhầm client_secret.json).
 
 # ── FFmpeg binaries (large, auto-downloaded by setup_ffmpeg.py) ───────────────
 bin/

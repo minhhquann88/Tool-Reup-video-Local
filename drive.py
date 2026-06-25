@@ -9,6 +9,7 @@ Files are uploaded to the authenticated user's own Drive → no quota issue.
 
 from __future__ import annotations
 
+import os
 import sys
 import threading
 import time
@@ -35,7 +36,24 @@ def _bundle_dir() -> Path:
 
 
 def _exe_dir() -> Path:
-    """Where runtime files (token.json) live — writable folder next to exe."""
+    """
+    Where runtime files (token.json) live — a WRITABLE folder.
+    - AppImage: mount is read-only → write next to the .AppImage file
+      ($APPIMAGE); fall back to ~/.config/VideoReupTool if not writable.
+    - Other frozen (Windows exe / onedir): next to the executable.
+    - Dev: next to this source file.
+    """
+    appimg = os.environ.get("APPIMAGE")
+    if appimg:
+        here = Path(appimg).parent
+        if os.access(str(here), os.W_OK):
+            return here
+        cfg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")) / "VideoReupTool"
+        try:
+            cfg.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+        return cfg
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
     return Path(__file__).parent
@@ -81,10 +99,23 @@ def _get_credentials() -> Credentials:
         return creds
 
     # Browser login — do NOT hold lock here; this blocks until user completes
-    # (or 120 s timeout). Multiple concurrent logins are fine: each gets its
-    # own local server port, last writer wins for token.json.
+    # (or timeout). Multiple concurrent logins are fine: each gets its own
+    # local server port, last writer wins for token.json.
+    #
+    # timeout_seconds must be generous: first-time login goes through the
+    # "Google hasn't verified this app" warning + account picker + consent
+    # screen, which easily takes more than 2 minutes. If the local callback
+    # server closes before Google redirects back, the browser shows
+    # "Unable to connect to localhost:<port>" even though auth succeeded.
     flow  = InstalledAppFlow.from_client_secrets_file(str(secret), SCOPES)
-    creds = flow.run_local_server(port=0, timeout_seconds=120)
+    creds = flow.run_local_server(
+        port=0,
+        timeout_seconds=600,
+        open_browser=True,
+        success_message=(
+            "Đăng nhập thành công! Bạn có thể đóng tab này và quay lại tool."
+        ),
+    )
 
     with _CREDS_LOCK:
         token.write_text(creds.to_json(), encoding="utf-8")

@@ -2,7 +2,10 @@
 core.py - VideoProcessor (FFmpeg) + VideoDownloader
 """
 
+from __future__ import annotations
+
 import json
+
 import os
 import subprocess
 import sys
@@ -26,15 +29,18 @@ import requests
 _WIN_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 # ── Local FFmpeg resolution ───────────────────────────────────────────────────
-# Prefer bin/ffmpeg.exe (bundled) → fall back to system PATH
+# Prefer bundled bin/<exe> → fall back to system PATH.
+# Binary name carries .exe on Windows, no suffix on Linux/macOS.
+_EXE_SUFFIX = ".exe" if sys.platform == "win32" else ""
 
-def _local_or_system(exe: str) -> str:
-    """Return path to local bin/<exe> if it exists, else just the exe name."""
+def _local_or_system(name: str) -> str:
+    """Return path to bundled bin/<name>[.exe] if it exists, else the bare name."""
+    exe = name + _EXE_SUFFIX
     local = _app_dir() / "bin" / exe
     return str(local) if local.exists() else exe
 
-FFMPEG  = _local_or_system("ffmpeg.exe")
-FFPROBE = _local_or_system("ffprobe.exe")
+FFMPEG  = _local_or_system("ffmpeg")
+FFPROBE = _local_or_system("ffprobe")
 
 # Position presets: overlay=X:Y  (W/H = video dims, w/h = overlay dims)
 _POSITIONS = {

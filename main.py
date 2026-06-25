@@ -4,6 +4,8 @@ Flow: CSV → download temp → FFmpeg → lưu (upload Drive | move vào thư m
       → output CSV (cột video_url = link Drive hoặc đường dẫn local)
 """
 
+from __future__ import annotations   # cho phép 'X | None' chạy trên Python 3.8/3.9
+
 import csv
 import io
 import os
@@ -12,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 from tkinter import BooleanVar, StringVar, filedialog, messagebox
 
@@ -21,7 +24,8 @@ from PIL import Image as PILImage
 
 import license as license_mod
 from core import FFMPEG, VideoDownloader, VideoProcessor
-from tts import DEFAULT_PROMPT, DEFAULT_VOICE_LABEL, VOICE_CHOICES, make_voice
+from tts import (DEFAULT_PROMPT, DEFAULT_VIDEOAI_VOICE, DEFAULT_VOICE_LABEL,
+                 VOICE_CHOICES, make_voice)
 
 # ── Theme ────────────────────────────────────────────────────────────────────
 ctk.set_appearance_mode("dark")
@@ -40,14 +44,30 @@ def _resource(name: str) -> Path:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
     return base / name
 
+
+def _crash_dir() -> Path:
+    """Thư mục GHI ĐƯỢC để lưu crash.log (AppImage-aware qua license_mod)."""
+    try:
+        return license_mod._exe_dir()
+    except Exception:
+        return Path(__file__).parent
+
+
+def _write_crash(tb: str) -> None:
+    """Ghi traceback ra crash.log để chẩn đoán khi chạy không có console."""
+    try:
+        (_crash_dir() / "crash.log").write_text(tb, encoding="utf-8")
+    except Exception:
+        pass
+
 STATUS_ICON = {
-    "pending":     "⏳",
-    "downloading": "⬇️",
-    "processing":  "⚙️",
-    "uploading":   "☁️",
-    "done":        "✅",
-    "warning":     "⚠️",
-    "error":       "❌",
+    "pending":     "...",
+    "downloading": "DL",
+    "processing":  "*",
+    "uploading":   "@",
+    "done":        "OK",
+    "warning":     "!",
+    "error":       "X",
 }
 
 
@@ -97,7 +117,7 @@ class VideoRow(ctk.CTkFrame):
         )
         self.chk.pack(side="left", padx=(8, 2))
 
-        self.lbl_status = ctk.CTkLabel(self, text="⏳", width=26, font=("", 14))
+        self.lbl_status = ctk.CTkLabel(self, text="...", width=26, font=("", 14))
         self.lbl_status.pack(side="left", padx=2)
 
         self.thumb = ctk.CTkLabel(
@@ -146,7 +166,7 @@ class VideoRow(ctk.CTkFrame):
         self.thumb.configure(image=ctk_img)
 
     def set_status(self, status: str):
-        self.lbl_status.configure(text=STATUS_ICON.get(status, "❓"))
+        self.lbl_status.configure(text=STATUS_ICON.get(status, "?"))
         if status in ("downloading", "processing", "uploading"):
             self.pb.pack(side="right", padx=8)
         else:
@@ -166,7 +186,7 @@ class App(ctk.CTk):
     def __init__(self, license_data: dict | None = None):
         super().__init__()
         self._license_data = license_data or {}
-        self.title("🎬 Video Reup Tool")
+        self.title("Video Reup Tool")
         self.geometry("1220x820")
         self.minsize(960, 640)
         self._set_app_icon()
@@ -233,6 +253,20 @@ class App(ctk.CTk):
                 "hoặc chạy thủ công:\n  python setup_ffmpeg.py",
             )
 
+    # ── Bắt lỗi trong callback GUI (nút bấm, sự kiện) ──────────────────────────
+    def report_callback_exception(self, exc, val, tb_obj):
+        """Lỗi Python trong callback → ghi crash.log + hiện hộp thoại, KHÔNG đóng app."""
+        import traceback
+        tb = "".join(traceback.format_exception(exc, val, tb_obj))
+        _write_crash(tb)
+        sys.stderr.write(tb)
+        try:
+            messagebox.showerror(
+                "Lỗi", f"{getattr(exc, '__name__', exc)}: {val}\n\n"
+                       "Chi tiết đã ghi vào crash.log (cạnh file .AppImage).")
+        except Exception:
+            pass
+
     # ── UI ───────────────────────────────────────────────────────────────────
 
     def _build_ui(self):
@@ -251,18 +285,18 @@ class App(ctk.CTk):
         bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         bar.grid_propagate(False)
 
-        ctk.CTkLabel(bar, text="🎬 Video Reup Tool",
+        ctk.CTkLabel(bar, text=" Video Reup Tool",
                      font=("", 18, "bold")).pack(side="left", padx=16)
 
         self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV",
                                         text_color="gray", font=("", 12))
         self._csv_label.pack(side="left", padx=6)
 
-        ctk.CTkButton(bar, text="📂 Import CSV", width=130, height=32,
+        ctk.CTkButton(bar, text=" Import CSV", width=130, height=32,
                       command=self._import_csv).pack(side="left", padx=6)
 
         # CSV output path
-        ctk.CTkButton(bar, text="💾 Lưu CSV", width=110, height=32,
+        ctk.CTkButton(bar, text=" Lưu CSV", width=110, height=32,
                       command=self._pick_csv_out).pack(side="right", padx=10)
 
         self._csv_out_label = ctk.CTkLabel(bar, text="Chưa chọn nơi lưu CSV",
@@ -273,20 +307,21 @@ class App(ctk.CTk):
 
     def _build_settings(self):
         pane = ctk.CTkScrollableFrame(self, width=250,
-                                       label_text="⚙️  Cài đặt xử lý")
+                                       label_text="*  Cài đặt xử lý")
         pane.grid(row=1, column=0, sticky="nsew", padx=(8, 4), pady=8)
 
         # ── Concurrency ──
-        self._section(pane, "⚡  Xử lý đồng thời")
-        self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "2")
+        self._section(pane, "  Xử lý đồng thời")
+        self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "1")
+        self._delay   = self._labeled_entry(pane, "Delay mỗi đợt (giây):", "2")
 
         # ── Trim ──
-        self._section(pane, "✂️  Cắt video")
+        self._section(pane, "  Cắt video")
         self._trim_start = self._labeled_entry(pane, "Cắt đầu (giây):", "0")
         self._trim_end   = self._labeled_entry(pane, "Cắt đuôi (giây):", "0")
 
         # ── Audio ──
-        self._section(pane, "🔊  Thay Voice")
+        self._section(pane, "  Thay Voice")
 
         self._audio_label = ctk.CTkLabel(pane, text="Chưa chọn file audio",
                                           text_color="gray", font=("", 11),
@@ -296,11 +331,11 @@ class App(ctk.CTk):
         row = ctk.CTkFrame(pane, fg_color="transparent")
         row.pack(fill="x", pady=2)
         self._btn_pick_audio = ctk.CTkButton(
-            row, text="📂 Chọn Audio", height=30, command=self._pick_audio)
+            row, text=" Chọn Audio", height=30, command=self._pick_audio)
         self._btn_pick_audio.pack(side="left", fill="x", expand=True,
                                   padx=(0, 2))
         self._btn_clear_audio = ctk.CTkButton(
-            row, text="✕", width=30, height=30, fg_color="#555",
+            row, text="X", width=30, height=30, fg_color="#555",
             command=self._clear_audio)
         self._btn_clear_audio.pack(side="right")
 
@@ -312,7 +347,7 @@ class App(ctk.CTk):
         # ── Voice AI (prompt -> Gemini -> Google TTS) ──
         self._voiceai_var = BooleanVar(value=False)
         ctk.CTkSwitch(
-            pane, text="🤖 Voice AI (Gemini + Google TTS)",
+            pane, text=" Voice AI (Gemini + Google TTS)",
             variable=self._voiceai_var, command=self._toggle_voiceai,
         ).pack(anchor="w", pady=(10, 2))
 
@@ -325,20 +360,48 @@ class App(ctk.CTk):
         self._gemini_model = self._fullwidth_entry(
             self._voiceai_box, "Model Gemini:",
             placeholder="gemini-3.1-flash-lite", default="gemini-3.1-flash-lite")
-        self._tts_key = self._fullwidth_entry(
-            self._voiceai_box, "API Key Google TTS:",
-            placeholder="Dán API key Google TTS")
 
-        vrow = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
+        # Nhà cung cấp giọng: Google TTS hoặc Voice API (videoai)
+        prow = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
+        prow.pack(fill="x", pady=(6, 2))
+        ctk.CTkLabel(prow, text="Nhà cung cấp:", width=85,
+                     anchor="w").pack(side="left")
+        self._tts_provider = ctk.CTkOptionMenu(
+            prow, values=["Google TTS", "Voice API (videoai)"],
+            width=145, command=self._toggle_tts_provider)
+        self._tts_provider.set("Google TTS")
+        self._tts_provider.pack(side="right")
+
+        # ── Khối Google TTS ──
+        self._google_box = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
+        self._tts_key = self._fullwidth_entry(
+            self._google_box, "API Key Google TTS:",
+            placeholder="Dán API key Google TTS")
+        vrow = ctk.CTkFrame(self._google_box, fg_color="transparent")
         vrow.pack(fill="x", pady=(6, 2))
         ctk.CTkLabel(vrow, text="Giọng:", width=55, anchor="w").pack(side="left")
         self._voice_name = ctk.CTkOptionMenu(
             vrow, values=list(VOICE_CHOICES.keys()), width=175)
         self._voice_name.set(DEFAULT_VOICE_LABEL)
         self._voice_name.pack(side="right")
-
         self._tts_speed = self._labeled_entry(
-            self._voiceai_box, "Tốc độ đọc:", "1.2")
+            self._google_box, "Tốc độ đọc:", "1.2")
+
+        # ── Khối Voice API (videoai) ──
+        self._videoai_box = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
+        self._videoai_key = self._fullwidth_entry(
+            self._videoai_box, "X-API-Key:",
+            placeholder="Dán API key Voice API")
+        self._videoai_voice = self._fullwidth_entry(
+            self._videoai_box, "Giọng (voice_name):",
+            placeholder=DEFAULT_VIDEOAI_VOICE, default=DEFAULT_VIDEOAI_VOICE)
+        self._videoai_speed = self._labeled_entry(
+            self._videoai_box, "Tốc độ đọc:", "1")
+
+        # Mốc để pack khối nhà cung cấp đúng chỗ (ngay trên Prompt)
+        self._tts_provider_anchor = ctk.CTkFrame(self._voiceai_box, height=0,
+                                                 fg_color="transparent")
+        self._tts_provider_anchor.pack(fill="x")
 
         ctk.CTkLabel(self._voiceai_box, text="Prompt tạo lời thoại:",
                      anchor="w").pack(anchor="w", pady=(6, 2))
@@ -356,10 +419,11 @@ class App(ctk.CTk):
         self._voiceai_anchor = ctk.CTkFrame(pane, height=0,
                                             fg_color="transparent")
         self._voiceai_anchor.pack(fill="x")
+        self._toggle_tts_provider()  # hiện đúng khối nhà cung cấp ban đầu
         self._toggle_voiceai()  # áp dụng trạng thái ẩn ban đầu
 
         # ── Logo ──
-        self._section(pane, "🖼️  Logo / Watermark")
+        self._section(pane, "  Logo / Watermark")
 
         self._logo_label = ctk.CTkLabel(pane, text="Chưa chọn file logo",
                                          text_color="gray", font=("", 11),
@@ -368,10 +432,10 @@ class App(ctk.CTk):
 
         row2 = ctk.CTkFrame(pane, fg_color="transparent")
         row2.pack(fill="x", pady=2)
-        ctk.CTkButton(row2, text="📂 Chọn Logo", height=30,
+        ctk.CTkButton(row2, text=" Chọn Logo", height=30,
                       command=self._pick_logo).pack(side="left", fill="x",
                                                      expand=True, padx=(0, 2))
-        ctk.CTkButton(row2, text="✕", width=30, height=30, fg_color="#555",
+        ctk.CTkButton(row2, text="X", width=30, height=30, fg_color="#555",
                       command=self._clear_logo).pack(side="right")
 
         pos_row = ctk.CTkFrame(pane, fg_color="transparent")
@@ -426,7 +490,7 @@ class App(ctk.CTk):
         self._toggle_logo_speed()  # áp dụng trạng thái ẩn ban đầu
 
         # ── Nơi lưu video: Google Drive hoặc Local ──
-        self._section(pane, "💾  Nơi lưu video")
+        self._section(pane, "  Nơi lưu video")
 
         self._save_mode = ctk.CTkSegmentedButton(
             pane, values=["Google Drive", "Local"],
@@ -445,11 +509,11 @@ class App(ctk.CTk):
 
         btn_row = ctk.CTkFrame(self._drive_box, fg_color="transparent")
         btn_row.pack(fill="x", pady=(0, 6))
-        ctk.CTkButton(btn_row, text="🔑 Đăng nhập", height=34,
+        ctk.CTkButton(btn_row, text=" Đăng nhập", height=34,
                       fg_color="#2d6a4f",
                       command=self._login_drive).pack(side="left", fill="x",
                                                        expand=True, padx=(0, 2))
-        ctk.CTkButton(btn_row, text="🚪 Đăng xuất", height=34, width=90,
+        ctk.CTkButton(btn_row, text=" Đăng xuất", height=34, width=90,
                       fg_color="#555",
                       command=self._logout_drive).pack(side="right")
 
@@ -460,7 +524,7 @@ class App(ctk.CTk):
             text_color="gray", font=("", 11), wraplength=230, justify="left",
         )
         self._local_label.pack(anchor="w", pady=(0, 4))
-        ctk.CTkButton(self._local_box, text="📂 Chọn thư mục lưu", height=34,
+        ctk.CTkButton(self._local_box, text=" Chọn thư mục lưu", height=34,
                       fg_color="#2d6a4f",
                       command=self._pick_local_dir).pack(fill="x", pady=(0, 6))
 
@@ -483,14 +547,14 @@ class App(ctk.CTk):
         ctk.CTkFrame(pane, height=1, fg_color="#444").pack(fill="x", pady=16)
 
         self._btn_process = ctk.CTkButton(
-            pane, text="▶  XỬ LÝ VIDEO", height=44,
+            pane, text="XỬ LÝ VIDEO", height=44,
             font=("", 14, "bold"), fg_color="#1565C0",
             command=self._start_processing,
         )
         self._btn_process.pack(fill="x", pady=(0, 6))
 
         self._btn_stop = ctk.CTkButton(
-            pane, text="⏹  DỪNG", height=34,
+            pane, text="DỪNG", height=34,
             fg_color="#8B0000", state="disabled",
             command=self._request_stop,
         )
@@ -503,7 +567,7 @@ class App(ctk.CTk):
         masked = ("••••" + key[-4:]) if len(key) >= 4 else (key or "N/A")
         expiry = data.get("expire_date") or "Vô thời hạn"
         ctk.CTkLabel(
-            pane, text=f"🔑 Bản quyền: {masked}\nHết hạn: {expiry}",
+            pane, text=f" Bản quyền: {masked}\nHết hạn: {expiry}",
             text_color="gray", font=("", 11), justify="left",
         ).pack(anchor="w")
         ctk.CTkButton(
@@ -524,15 +588,15 @@ class App(ctk.CTk):
         hdr.grid(row=0, column=0, sticky="ew")
         hdr.grid_propagate(False)
 
-        self._list_title = ctk.CTkLabel(hdr, text="📋  Danh sách video  (0)",
+        self._list_title = ctk.CTkLabel(hdr, text="  Danh sách video  (0)",
                                          font=("", 13, "bold"))
         self._list_title.pack(side="left", padx=12)
 
-        ctk.CTkButton(hdr, text="☑ Tất cả", width=80, height=28,
+        ctk.CTkButton(hdr, text="[v] Tất cả", width=80, height=28,
                       font=("", 11),
                       command=lambda: self._select_all(True)).pack(
                           side="right", padx=4)
-        ctk.CTkButton(hdr, text="☐ Bỏ hết", width=80, height=28,
+        ctk.CTkButton(hdr, text="[ ] Bỏ hết", width=80, height=28,
                       font=("", 11), fg_color="#555",
                       command=lambda: self._select_all(False)).pack(
                           side="right", padx=4)
@@ -543,7 +607,7 @@ class App(ctk.CTk):
 
         self._empty_lbl = ctk.CTkLabel(
             self._scroll,
-            text="📂  Chưa có video\nBấm  'Import CSV'  để bắt đầu",
+            text="  Chưa có video\nBấm  'Import CSV'  để bắt đầu",
             font=("", 14), text_color="gray",
         )
         self._empty_lbl.pack(expand=True, pady=80)
@@ -554,11 +618,11 @@ class App(ctk.CTk):
         pager.grid(row=2, column=0, sticky="ew")
         pager.grid_propagate(False)
 
-        self._btn_prev = ctk.CTkButton(pager, text="◀ Trước", width=84, height=28,
+        self._btn_prev = ctk.CTkButton(pager, text="< Trước", width=84, height=28,
                                        font=("", 11), command=self._prev_page)
         self._btn_prev.pack(side="left", padx=(10, 4), pady=6)
 
-        self._btn_next = ctk.CTkButton(pager, text="Sau ▶", width=84, height=28,
+        self._btn_next = ctk.CTkButton(pager, text="Sau >", width=84, height=28,
                                        font=("", 11), command=self._next_page)
         self._btn_next.pack(side="left", padx=4, pady=6)
 
@@ -639,6 +703,15 @@ class App(ctk.CTk):
                 w.configure(state=state)
             except Exception:
                 pass
+
+    def _toggle_tts_provider(self, *_):
+        """Hiện khối Google TTS hoặc Voice API theo dropdown nhà cung cấp."""
+        self._google_box.pack_forget()
+        self._videoai_box.pack_forget()
+        box = (self._videoai_box
+               if self._tts_provider.get() == "Voice API (videoai)"
+               else self._google_box)
+        box.pack(fill="x", before=self._tts_provider_anchor)
 
     def _toggle_logo_speed(self, *_):
         """Hiện ô Tốc độ chỉ khi logo có chuyển động (khác 'Cố định')."""
@@ -733,7 +806,7 @@ class App(ctk.CTk):
         # Overlay che toàn cửa sổ → chặn mọi tương tác bên dưới
         overlay = ctk.CTkFrame(self, fg_color="#0d0d1a")
         overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
-        ctk.CTkLabel(overlay, text="🔒 Bản quyền không hợp lệ",
+        ctk.CTkLabel(overlay, text=" Bản quyền không hợp lệ",
                      font=("", 22, "bold"), text_color="#ff4757"
                      ).pack(pady=(180, 10))
         ctk.CTkLabel(overlay, text=message, font=("", 14),
@@ -786,11 +859,11 @@ class App(ctk.CTk):
             self._status   = ["pending"] * len(self._videos)
             self._page     = 0
             self._csv_label.configure(
-                text=f"✅  {Path(path).name}  ({len(self._videos)} videos)",
+                text=f"OK  {Path(path).name}  ({len(self._videos)} videos)",
                 text_color="#4CAF50",
             )
             self._populate_list()
-            self._log_msg(f"✅ Import {len(self._videos)} video từ {Path(path).name}")
+            self._log_msg(f"OK Import {len(self._videos)} video từ {Path(path).name}")
         except Exception as exc:
             messagebox.showerror("Lỗi đọc CSV", str(exc))
 
@@ -804,7 +877,7 @@ class App(ctk.CTk):
         if path:
             self._csv_out_path.set(path)
             short = path if len(path) < 45 else "…" + path[-42:]
-            self._csv_out_label.configure(text=f"💾  {short}",
+            self._csv_out_label.configure(text=f"  {short}",
                                            text_color="#4CAF50")
 
     def _pick_local_dir(self):
@@ -812,7 +885,7 @@ class App(ctk.CTk):
         if path:
             self._local_dir.set(path)
             short = path if len(path) < 40 else "…" + path[-37:]
-            self._local_label.configure(text=f"📂  {short}",
+            self._local_label.configure(text=f"  {short}",
                                         text_color="#4CAF50")
 
     def _pick_audio(self):
@@ -824,7 +897,7 @@ class App(ctk.CTk):
         if path:
             self._audio_path.set(path)
             self._audio_label.configure(
-                text=f"🔊  {Path(path).name}", text_color="#4CAF50")
+                text=f"  {Path(path).name}", text_color="#4CAF50")
             self._mute_var.set(False)
 
     def _clear_audio(self):
@@ -841,7 +914,7 @@ class App(ctk.CTk):
         if path:
             self._logo_path.set(path)
             self._logo_label.configure(
-                text=f"🖼️  {Path(path).name}", text_color="#4CAF50")
+                text=f"  {Path(path).name}", text_color="#4CAF50")
 
     def _clear_logo(self):
         self._logo_path.set("")
@@ -856,7 +929,7 @@ class App(ctk.CTk):
         if path:
             self._creds_path.set(path)
             self._creds_label.configure(
-                text=f"🔑  {Path(path).name}", text_color="#4CAF50")
+                text=f"  {Path(path).name}", text_color="#4CAF50")
 
     # ── Drive login ──────────────────────────────────────────────────────────
 
@@ -876,17 +949,17 @@ class App(ctk.CTk):
                 if cancel_flag.is_set():
                     return
                 self._ui(lambda e=email: [
-                    self._login_label.configure(text=f"✅ {e}", text_color="#4CAF50"),
-                    messagebox.showinfo("Đăng nhập thành công ✅", f"Đã đăng nhập:\n{e}"),
+                    self._login_label.configure(text=f"OK {e}", text_color="#4CAF50"),
+                    messagebox.showinfo("Đăng nhập thành công OK", f"Đã đăng nhập:\n{e}"),
                 ])
-                self._log_msg(f"✅ Drive đăng nhập OK — {email}")
+                self._log_msg(f"OK Drive đăng nhập OK — {email}")
             except Exception as exc:
                 if cancel_flag.is_set():
                     return
                 self._ui(lambda e=exc: [
                     self._login_label.configure(
                         text="Đăng nhập thất bại", text_color="#f44336"),
-                    messagebox.showerror("Lỗi đăng nhập ❌", str(e)),
+                    messagebox.showerror("Lỗi đăng nhập X", str(e)),
                 ])
             finally:
                 if not cancel_flag.is_set():
@@ -900,7 +973,7 @@ class App(ctk.CTk):
         if _TOKEN_PATH.exists():
             _TOKEN_PATH.unlink()
             self._login_label.configure(text="Đã đăng xuất", text_color="gray")
-            self._log_msg("🚪 Đã xoá token — đăng nhập lại để dùng Drive.")
+            self._log_msg(" Đã xoá token — đăng nhập lại để dùng Drive.")
         else:
             self._login_label.configure(text="Chưa đăng nhập", text_color="gray")
 
@@ -920,7 +993,7 @@ class App(ctk.CTk):
         if not self._videos:
             self._empty_lbl = ctk.CTkLabel(
                 self._scroll,
-                text="📂  Chưa có video\nBấm  'Import CSV'  để bắt đầu",
+                text="  Chưa có video\nBấm  'Import CSV'  để bắt đầu",
                 font=("", 14), text_color="gray",
             )
             self._empty_lbl.pack(expand=True, pady=80)
@@ -932,7 +1005,7 @@ class App(ctk.CTk):
         start = self._page * _PAGE_SIZE
         end   = min(start + _PAGE_SIZE, total)
 
-        self._list_title.configure(text=f"📋  Danh sách video  ({total})")
+        self._list_title.configure(text=f"  Danh sách video  ({total})")
 
         for gidx in range(start, end):
             row = VideoRow(self._scroll, self, self._videos[gidx], gidx)
@@ -1022,28 +1095,41 @@ class App(ctk.CTk):
             trim_start = float(self._trim_start.get() or "0")
             trim_end   = float(self._trim_end.get() or "0")
             logo_size  = int(self._logo_size.get() or "15")
-            workers    = max(1, min(8, int(self._workers.get() or "2")))
+            workers    = max(1, min(8, int(self._workers.get() or "1")))
+            delay      = max(0.0, float(self._delay.get() or "2"))
         except ValueError:
-            messagebox.showerror("Lỗi", "Giây cắt, % logo và số video phải là số!")
+            messagebox.showerror("Lỗi", "Giây cắt, % logo, số video và delay phải là số!")
             return
 
         # Voice AI có độ ưu tiên cao nhất; audio sẽ được sinh riêng cho từng video
         voice_ai = None
         if self._voiceai_var.get():
+            is_videoai = self._tts_provider.get() == "Voice API (videoai)"
             gemini_key = self._gemini_key.get().strip()
-            tts_key    = self._tts_key.get().strip()
             prompt     = self._prompt_box.get("1.0", "end").strip()
+
+            if is_videoai:
+                tts_key    = self._videoai_key.get().strip()
+                voice_name = (self._videoai_voice.get().strip()
+                              or DEFAULT_VIDEOAI_VOICE)
+                speed_str  = self._videoai_speed.get() or "1"
+                key_warn   = "Voice AI cần cả API Key Gemini và X-API-Key Voice API!"
+            else:
+                tts_key    = self._tts_key.get().strip()
+                voice_name = VOICE_CHOICES.get(
+                    self._voice_name.get(), "vi-VN-Standard-C")
+                speed_str  = self._tts_speed.get() or "1.2"
+                key_warn   = "Voice AI cần cả API Key Gemini và API Key Google TTS!"
+
             if not gemini_key or not tts_key:
-                messagebox.showwarning(
-                    "Thiếu API key",
-                    "Voice AI cần cả API Key Gemini và API Key Google TTS!")
+                messagebox.showwarning("Thiếu API key", key_warn)
                 return
             if not prompt:
                 messagebox.showwarning(
                     "Thiếu prompt", "Nhập prompt để tạo lời thoại!")
                 return
             try:
-                speed = float(self._tts_speed.get() or "1.2")
+                speed = float(speed_str)
             except ValueError:
                 messagebox.showerror("Lỗi", "Tốc độ đọc phải là số!")
                 return
@@ -1051,9 +1137,9 @@ class App(ctk.CTk):
                 "gemini_key": gemini_key,
                 "model":      self._gemini_model.get().strip()
                               or "gemini-3.1-flash-lite",
+                "provider":   "videoai" if is_videoai else "google",
                 "tts_key":    tts_key,
-                "voice_name": VOICE_CHOICES.get(
-                    self._voice_name.get(), "vi-VN-Standard-C"),
+                "voice_name": voice_name,
                 "speed":      speed,
                 "prompt":     prompt,
             }
@@ -1088,6 +1174,7 @@ class App(ctk.CTk):
             "folder_name":   self._folder_name.get().strip(),
             "csv_out":       self._csv_out_path.get(),
             "workers":       workers,
+            "delay":         delay,
             "save_mode":     save_mode,
             "local_dir":     self._local_dir.get(),
         }
@@ -1107,7 +1194,7 @@ class App(ctk.CTk):
 
     def _request_stop(self):
         self._stop_flag = True
-        self._log_msg("⏹ Dừng sau khi xong video hiện tại…")
+        self._log_msg("[Dung] Dừng sau khi xong video hiện tại…")
         self._btn_stop.configure(state="disabled")
 
     # ── Batch runner ─────────────────────────────────────────────────────────
@@ -1146,18 +1233,18 @@ class App(ctk.CTk):
             try:
                 os.makedirs(dest_dir, exist_ok=True)
             except Exception as exc:
-                _abort(f"❌ Không tạo được thư mục lưu: {exc}")
+                _abort(f"X Không tạo được thư mục lưu: {exc}")
                 return
-            self._log_msg(f"📁 Lưu video vào: {dest_dir}")
+            self._log_msg(f" Lưu video vào: {dest_dir}")
         else:
             try:
-                self._log_msg("☁️ Đang kết nối Google Drive…")
+                self._log_msg("@ Đang kết nối Google Drive…")
                 init_uploader = DriveUploader()
                 folder_id = init_uploader.create_folder(settings["folder_name"])
                 self._log_msg(
-                    f"✅ Đã tạo folder '{settings['folder_name']}' trên Drive")
+                    f"OK Đã tạo folder '{settings['folder_name']}' trên Drive")
             except Exception as exc:
-                _abort(f"❌ Không thể kết nối Drive: {exc}")
+                _abort(f"X Không thể kết nối Drive: {exc}")
                 return
 
         tmp_dir = tempfile.mkdtemp(prefix="reup_")
@@ -1185,13 +1272,13 @@ class App(ctk.CTk):
                     completed += 1
                     _d, _e, _c = done, errors, completed
                 self._ui(lambda g=gidx: self._set_row_status(g, "error"))
-                self._log_msg(f"❌  [{idx+1}/{total}] Bỏ qua (thiếu video_url): {name}")
+                self._log_msg(f"X  [{idx+1}/{total}] Bỏ qua (thiếu video_url): {name}")
                 pct = _c / total
                 self._ui(lambda p=pct, d=_d, e=_e, c=_c: [
                     self._progress_bar.set(p),
                     self._progress_pct.configure(text=f"{int(p*100)} %"),
                     self._progress_lbl.configure(
-                        text=f"Xong {c}/{total}  ✅ {d}  ❌ {e}"),
+                        text=f"Xong {c}/{total}  OK {d}  X {e}"),
                 ])
                 return
 
@@ -1204,7 +1291,7 @@ class App(ctk.CTk):
                     return
                 # 1. Download
                 self._ui(lambda g=gidx: self._set_row_status(g, "downloading"))
-                self._log_msg(f"⬇️  [{idx+1}/{total}] Tải: {name}")
+                self._log_msg(f"DL  [{idx+1}/{total}] Tải: {name}")
                 self._downloader.download(
                     url, tmp_dl,
                     progress_cb=lambda p, g=gidx: self._ui(
@@ -1222,7 +1309,7 @@ class App(ctk.CTk):
                 voice_failed = False
                 if voice_ai:
                     self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
-                    self._log_msg(f"🗣️  [{idx+1}/{total}] Tạo voice AI: {name}")
+                    self._log_msg(f"  [{idx+1}/{total}] Tạo voice AI: {name}")
                     out_mp3 = os.path.join(tmp_dir, f"voice_{idx}.mp3")
                     row_settings = dict(settings)   # copy riêng, không sửa settings chung
                     try:
@@ -1232,6 +1319,7 @@ class App(ctk.CTk):
                             tts_key=voice_ai["tts_key"],
                             prompt=voice_ai["prompt"],
                             model=voice_ai["model"],
+                            provider=voice_ai.get("provider", "google"),
                             voice_name=voice_ai["voice_name"],
                             speaking_rate=voice_ai["speed"],
                             retries=6,
@@ -1244,7 +1332,7 @@ class App(ctk.CTk):
                         voice_failed = True
                         row_settings["audio_path"] = ""        # mute, bỏ audio gốc
                         self._log_msg(
-                            f"⚠️  [{idx+1}/{total}] Voice AI lỗi → xuất MUTE: "
+                            f"!  [{idx+1}/{total}] Voice AI lỗi → xuất MUTE: "
                             f"{name}\n     → {exc}")
 
                 if self._stop_flag:
@@ -1254,7 +1342,7 @@ class App(ctk.CTk):
 
                 # 3. FFmpeg
                 self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
-                self._log_msg(f"⚙️  [{idx+1}/{total}] Xử lý: {name}")
+                self._log_msg(f"*  [{idx+1}/{total}] Xử lý: {name}")
                 self._processor.process_video(tmp_dl, tmp_out, row_settings)
                 _safe_remove(tmp_dl)
                 if voice_mp3:
@@ -1270,11 +1358,11 @@ class App(ctk.CTk):
                     with lock:
                         final_path = _reserve_local_path(
                             dest_dir, f"{item_id}.mp4", reserved)
-                    self._log_msg(f"📁  [{idx+1}/{total}] Lưu: {name}")
+                    self._log_msg(f"  [{idx+1}/{total}] Lưu: {name}")
                     shutil.move(tmp_out, final_path)
                     ref = os.path.abspath(final_path)
                 else:
-                    self._log_msg(f"☁️  [{idx+1}/{total}] Upload: {name}")
+                    self._log_msg(f"@  [{idx+1}/{total}] Upload: {name}")
                     ref = worker_uploader.upload_video(
                         tmp_out, filename=f"{item_id}.mp4", folder_id=folder_id,
                         progress_cb=lambda p, g=gidx: self._ui(
@@ -1290,9 +1378,9 @@ class App(ctk.CTk):
                 self._ui(lambda g=gidx, s=final_status: self._set_row_status(g, s))
                 if voice_failed:
                     self._log_msg(
-                        f"⚠️  [{idx+1}/{total}] Xong (MUTE, voice lỗi): {name}")
+                        f"!  [{idx+1}/{total}] Xong (MUTE, voice lỗi): {name}")
                 else:
-                    self._log_msg(f"✅  [{idx+1}/{total}] Xong: {name}")
+                    self._log_msg(f"OK  [{idx+1}/{total}] Xong: {name}")
 
             except Exception as exc:
                 _safe_remove(tmp_dl)
@@ -1300,7 +1388,7 @@ class App(ctk.CTk):
                 with lock:
                     errors += 1
                 self._ui(lambda g=gidx: self._set_row_status(g, "error"))
-                self._log_msg(f"❌  [{idx+1}/{total}] Lỗi: {name}\n     → {exc}")
+                self._log_msg(f"X  [{idx+1}/{total}] Lỗi: {name}\n     → {exc}")
 
             finally:
                 with lock:
@@ -1311,7 +1399,7 @@ class App(ctk.CTk):
                     self._progress_bar.set(p),
                     self._progress_pct.configure(text=f"{int(p*100)} %"),
                     self._progress_lbl.configure(
-                        text=f"Xong {c}/{total}  ✅ {d}  ❌ {e}"
+                        text=f"Xong {c}/{total}  OK {d}  X {e}"
                     ),
                 ])
 
@@ -1319,14 +1407,29 @@ class App(ctk.CTk):
         # Bọc trong try/finally để LUÔN bật lại nút (kể cả khi Dừng hoặc lỗi),
         # nếu không nút 'XỬ LÝ VIDEO' sẽ kẹt disabled và không chạy lại được.
         try:
-            workers = int(settings.get("workers", 2))
-            with ThreadPoolExecutor(max_workers=workers) as executor:
-                futures = {
-                    executor.submit(process_one, b, gidx): gidx
-                    for b, gidx in enumerate(indices)
-                }
-                for _ in as_completed(futures):
-                    pass   # progress is updated inside process_one
+            workers = int(settings.get("workers", 1))
+            delay   = float(settings.get("delay", 2))
+            # Xử lý theo từng ĐỢT: mỗi đợt chạy song song `workers` video,
+            # chờ cả đợt xong rồi delay trước khi sang đợt kế (trừ đợt cuối).
+            batch = list(enumerate(indices))
+            rounds = [batch[i:i + workers] for i in range(0, len(batch), workers)]
+            for r, group in enumerate(rounds):
+                if self._stop_flag:
+                    break
+                with ThreadPoolExecutor(max_workers=workers) as executor:
+                    futures = {
+                        executor.submit(process_one, b, gidx): gidx
+                        for b, gidx in group
+                    }
+                    for _ in as_completed(futures):
+                        pass   # progress is updated inside process_one
+                # Delay giữa các đợt (không delay sau đợt cuối / khi đã dừng)
+                if delay > 0 and r < len(rounds) - 1 and not self._stop_flag:
+                    self._log_msg(f"…  Nghỉ {delay:g}s trước đợt tiếp theo")
+                    waited = 0.0
+                    while waited < delay and not self._stop_flag:
+                        time.sleep(min(0.2, delay - waited))
+                        waited += 0.2
 
             # ── Cleanup ───────────────────────────────────────────────────────
             _safe_rmdir(tmp_dir)
@@ -1334,19 +1437,19 @@ class App(ctk.CTk):
             if out_refs:
                 try:
                     self._write_output_csv(settings["csv_out"], out_refs)
-                    self._log_msg(f"\n💾 Đã lưu CSV: {settings['csv_out']}")
+                    self._log_msg(f"\n Đã lưu CSV: {settings['csv_out']}")
                 except Exception as exc:
-                    self._log_msg(f"❌ Lỗi lưu CSV: {exc}")
+                    self._log_msg(f"X Lỗi lưu CSV: {exc}")
 
             if self._stop_flag:
                 self._log_msg(
-                    f"\n⏹ Đã dừng.  {done}/{total} hoàn tất trước khi dừng"
-                    + (f"  ❌ {errors} lỗi" if errors else "")
+                    f"\n[Dung] Đã dừng.  {done}/{total} hoàn tất trước khi dừng"
+                    + (f"  X {errors} lỗi" if errors else "")
                 )
             else:
                 self._log_msg(
-                    f"\n🎉 Hoàn thành!  {done}/{total} thành công"
-                    + (f"  ❌ {errors} lỗi" if errors else "")
+                    f"\n Hoàn thành!  {done}/{total} thành công"
+                    + (f"  X {errors} lỗi" if errors else "")
                 )
                 if done:
                     if save_mode == "local":
@@ -1356,9 +1459,9 @@ class App(ctk.CTk):
                     else:
                         self._ui(lambda: messagebox.showinfo(
                             "Hoàn thành!",
-                            f"✅  {done}/{total} video thành công\n"
-                            f"☁️  Folder: {settings['folder_name']}\n"
-                            f"💾  CSV: {settings['csv_out']}",
+                            f"OK  {done}/{total} video thành công\n"
+                            f"@  Folder: {settings['folder_name']}\n"
+                            f"  CSV: {settings['csv_out']}",
                         ))
         finally:
             self._ui(lambda: [
@@ -1372,15 +1475,20 @@ class App(ctk.CTk):
         """Thông báo hoàn thành (Local) và hỏi mở thư mục chứa video."""
         open_it = messagebox.askyesno(
             "Hoàn thành!",
-            f"✅  {done}/{total} video thành công\n"
-            f"📁  Thư mục: {dest_dir}\n"
-            f"💾  CSV: {csv_out}\n\n"
+            f"OK  {done}/{total} video thành công\n"
+            f"  Thư mục: {dest_dir}\n"
+            f"  CSV: {csv_out}\n\n"
             "Mở thư mục chứa video?")
         if open_it:
             try:
-                os.startfile(dest_dir)   # Windows: mở Explorer tại thư mục
+                if sys.platform == "win32":
+                    os.startfile(dest_dir)              # Windows: mở Explorer
+                elif sys.platform == "darwin":
+                    subprocess.run(["open", dest_dir])  # macOS: Finder
+                else:
+                    subprocess.run(["xdg-open", dest_dir])  # Linux: file manager
             except Exception as exc:     # noqa: BLE001
-                self._log_msg(f"⚠️ Không mở được thư mục: {exc}")
+                self._log_msg(f"! Không mở được thư mục: {exc}")
 
     # ── CSV writer ────────────────────────────────────────────────────────────
 
@@ -1449,11 +1557,11 @@ class LicenseDialog(ctk.CTk):
         self.activated = False
         self.activated_data = None
 
-        self.title("🔑 Kích hoạt bản quyền")
+        self.title("Kích hoạt bản quyền")
         self.geometry("420x300")
         self.resizable(False, False)
 
-        ctk.CTkLabel(self, text="🔑 Kích hoạt bản quyền",
+        ctk.CTkLabel(self, text=" Kích hoạt bản quyền",
                      font=("", 18, "bold")).pack(pady=(22, 2))
         ctk.CTkLabel(self, text="Video Reup Tool",
                      text_color="gray", font=("", 12)).pack(pady=(0, 14))
@@ -1524,4 +1632,19 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        import traceback
+        tb = traceback.format_exc()
+        # Ghi log ra thư mục ghi được (cạnh .AppImage / exe, hoặc ~/.config) để
+        # chẩn đoán khi chạy không có console (double-click không hiện traceback).
+        _write_crash(tb)
+        # In ra stderr (hiện khi chạy từ terminal)
+        sys.stderr.write(tb)
+        # Cố hiển thị hộp thoại nếu Tk còn dùng được
+        try:
+            messagebox.showerror("Lỗi khởi động", tb)
+        except Exception:
+            pass
+        raise

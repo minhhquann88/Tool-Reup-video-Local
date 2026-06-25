@@ -18,19 +18,24 @@
 ## 3. Cấu hình OAuth Consent Screen
 
 1. Menu trái → **APIs & Services** → **OAuth consent screen**
-2. Chọn **External** → **Create**
-3. Điền thông tin bắt buộc:
+2. Chọn **Get started**
+3. Chọn **External** → **Create**
+4. Điền thông tin bắt buộc:
    - **App name**: `VideoReupTool` (tuỳ ý)
    - **User support email**: email của bạn
+   - Chọn **External**
    - **Developer contact email**: email của bạn
-4. Bấm **Save and Continue** qua các bước tiếp theo — không cần điền thêm
-5. Quay về trang **OAuth consent screen**
+5. Bấm **Create** qua các bước tiếp theo
+6. Quay về trang **OAuth consent screen** chọn **Create OAuth client**
+7. Chọn **Application type** (Desktop App), nhập tên App, chọn **Create**
+8. Popup hiện ra → bấm **Download JSON**
+9. Đổi tên file vừa tải thành `client_secret.json`
 
 ### Publish lên Production
 
 Mặc định app ở chế độ **Testing**. Để người dùng đăng nhập mà không cần được thêm thủ công, cần publish:
 
-1. Tab **Audience** (hoặc **OAuth consent screen**) → mục **Publishing status**
+1. vào Tab **OAuth consent screen** chọn Tab **Audience** → mục **Publishing status**
 2. Bấm **Publish App** → xác nhận
 
 > App chuyển sang **In production** — bất kỳ tài khoản Google nào cũng có thể đăng nhập.
@@ -47,22 +52,11 @@ Sau khi publish, mục **OAuth user cap** hiển thị giới hạn **100 users*
 
 ---
 
-## 4. Tạo OAuth Client ID
+## Đặt file vào đúng vị trí
 
-1. Menu trái → **APIs & Services** → **Credentials**
-2. Bấm **+ Create Credentials** → **OAuth client ID**
-3. **Application type**: chọn **Desktop app**
-4. **Name**: tuỳ ý → **Create**
-5. Popup hiện ra → bấm **Download JSON**
-6. Đổi tên file vừa tải thành `client_secret.json`
-
----
-
-## 5. Đặt file vào đúng vị trí
-
-| Môi trường | Vị trí đặt `client_secret.json` |
-|---|---|
-| Chạy từ source (`run.bat`) | Cùng thư mục với `main.py` |
-| Chạy từ file `.exe` | Cùng thư mục với `VideoReupTool.exe` |
+| Môi trường                 | Vị trí đặt `client_secret.json`      |
+| -------------------------- | ------------------------------------ |
+| Chạy từ source (`run.bat`) | Cùng thư mục với `main.py`           |
+| Chạy từ file `.exe`        | Cùng thư mục với `VideoReupTool.exe` |
 
 > `token.json` sẽ tự tạo ra sau lần đăng nhập đầu tiên — không cần tạo thủ công.

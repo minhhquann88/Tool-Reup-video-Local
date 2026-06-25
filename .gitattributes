@@ -1,0 +1,5 @@
+# Script chạy trên Linux BẮT BUỘC giữ LF — nếu lẫn CRLF, bash báo lỗi "\r" và
+# CI / máy người dùng không chạy được. Khóa cứng kể cả khi commit từ Windows.
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf

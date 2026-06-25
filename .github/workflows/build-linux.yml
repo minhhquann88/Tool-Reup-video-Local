@@ -1,0 +1,56 @@
+name: Build Linux AppImage
+
+# Build AppImage trên Ubuntu 22.04 (glibc 2.35) → chạy được trên máy người dùng
+# có glibc >= 2.35 (Ubuntu 22.04, 24.04...). Bạn KHÔNG cần máy Ubuntu/Docker nào.
+#
+# Khi nào chạy:
+#   - Mỗi lần push lên nhánh main  → ra file tải ở tab Actions (Artifacts)
+#   - Khi push tag dạng v1.0       → tự tạo Release đính kèm file .AppImage
+#   - Bấm tay ở tab Actions (Run workflow)
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write          # cần để tạo Release khi push tag
+
+# Hủy lần build cũ nếu push liên tiếp
+concurrency:
+  group: build-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04  # << glibc 2.35, khớp máy người dùng
+    steps:
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài gói hệ thống (Python + Tkinter)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv python3-tk python3-dev curl file binutils
+
+      - name: Build AppImage
+        run: bash build_linux.sh
+
+      - name: Tải lên Artifact (tải về từ tab Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VideoReupTool-AppImage
+          path: dist/VideoReupTool.AppImage
+          if-no-files-found: error
+
+      - name: Tạo Release (chỉ khi push tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/VideoReupTool.AppImage \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "AppImage cho Linux (Ubuntu 22.04+ / glibc 2.35+). Tải file về, chuột phải → Properties → Permissions → tick 'Allow executing file as program' → double-click để mở." \
+            --clobber
