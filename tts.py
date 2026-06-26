@@ -44,6 +44,16 @@ VOICE_CHOICES = {
 DEFAULT_VOICE_LABEL = "Nữ C (truyền cảm)"
 
 
+def _strip_hashtags(text):
+    """
+    Bỏ các hashtag (#abc) khỏi chuỗi. nd_video thường có đuôi tag marketing
+    như "#ShopeeVideo #KOLUyTin …" — không phải tên sản phẩm, đưa vào prompt
+    chỉ gây nhiễu cho nội dung AI sinh ra.
+    """
+    cleaned = re.sub(r"#\S+", "", text or "")
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 def replace_prompt_variables(prompt, row, language_name=None):
     """
     Thay placeholder trong prompt:
@@ -63,11 +73,12 @@ def replace_prompt_variables(prompt, row, language_name=None):
         product_name = str(row.get("product_name") or row.get("productName") or "")
     result = re.sub(r"\$?\{\s*productName\s*\}", product_name, result)
 
-    # ${nd_video}: ưu tiên cột nd_video, rỗng/không có thì fallback product_name.
-    # Xử lý trước vòng lặp chèn cột bên dưới để tránh cột nd_video rỗng ghi đè "".
+    # ${nd_video}: ưu tiên cột nd_video (đã lọc hashtag), rỗng/không có thì
+    # fallback product_name. Xử lý trước vòng lặp chèn cột để tránh cột nd_video
+    # rỗng ghi đè "" và để giữ bản đã lọc hashtag.
     nd_video = ""
     if isinstance(row, dict):
-        nd_video = str(row.get("nd_video") or "").strip()
+        nd_video = _strip_hashtags(str(row.get("nd_video") or ""))
         if not nd_video:
             nd_video = product_name
     result = re.sub(r"\$?\{\s*nd_video\s*\}", nd_video, result)
