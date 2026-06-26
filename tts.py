@@ -22,7 +22,7 @@ VIDEOAI_TTS_URL = "https://videoai.ddns.net/v1/tts"
 DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
 
 # Prompt mặc định. Hỗ trợ chèn BẤT KỲ cột nào trong CSV theo cú pháp ${tên_cột},
-# ví dụ ${product_name}.
+# ví dụ ${nd_video}. Riêng ${nd_video} sẽ fallback sang product_name nếu rỗng.
 DEFAULT_PROMPT = (
     "Tạo nội dung review sản phẩm bằng tiếng Việt cho video ngắn "
     "bán hàng trên sàn Thương mại điện tử. Yêu cầu kết quả trả ra là một đoạn "
@@ -31,7 +31,7 @@ DEFAULT_PROMPT = (
     "gọi mua hàng ngoài nền tảng, không nhắc đến tên của nền tảng nào khác. Không "
     "chứa ký tự đặc biệt, hashtag, chú thích, câu chào hay lặp ý. Kết quả trả về "
     "là một đoạn lời thoại duy nhất bằng tiếng Việt.\n\n"
-    "Tên sản phẩm: ${product_name}"
+    "Tên sản phẩm: ${nd_video}"
 )
 
 # Giọng tiếng Việt của Google TTS: nhãn dễ hiểu -> mã giọng thật
@@ -47,6 +47,7 @@ DEFAULT_VOICE_LABEL = "Nữ C (truyền cảm)"
 def replace_prompt_variables(prompt, row, language_name=None):
     """
     Thay placeholder trong prompt:
+      - ${nd_video}     -> row['nd_video'], rỗng thì fallback product_name
       - ${productName}  -> row['product_name'] hoặc row['productName']
       - ${languageName} -> language_name (truyền vào, không phải cột CSV)
       - ${tên_cột}      -> giá trị cột bất kỳ trong row (CSV)
@@ -61,6 +62,15 @@ def replace_prompt_variables(prompt, row, language_name=None):
     if isinstance(row, dict):
         product_name = str(row.get("product_name") or row.get("productName") or "")
     result = re.sub(r"\$?\{\s*productName\s*\}", product_name, result)
+
+    # ${nd_video}: ưu tiên cột nd_video, rỗng/không có thì fallback product_name.
+    # Xử lý trước vòng lặp chèn cột bên dưới để tránh cột nd_video rỗng ghi đè "".
+    nd_video = ""
+    if isinstance(row, dict):
+        nd_video = str(row.get("nd_video") or "").strip()
+        if not nd_video:
+            nd_video = product_name
+    result = re.sub(r"\$?\{\s*nd_video\s*\}", nd_video, result)
 
     if language_name:
         result = re.sub(r"\$?\{\s*languageName\s*\}", language_name, result)
@@ -91,7 +101,7 @@ def generate_script(
     api_key,
     model="gemini-3.1-flash-lite",
     language_name="Tiếng Việt",
-    retries=6,
+    retries=10,
     backoff=5,
     log=None,
     should_stop=None,
@@ -113,7 +123,7 @@ def generate_script(
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
-            resp = requests.post(url, headers=headers, json=body, timeout=120)
+            resp = requests.post(url, headers=headers, json=body, timeout=30)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
                 raise RuntimeError(data["error"].get("message", "Gemini API error"))
@@ -131,7 +141,9 @@ def generate_script(
             if log:
                 log(f"! Gemini lần {attempt}/{retries} lỗi: {exc}")
             if attempt < retries:
-                _sleep_or_stop(min(backoff * attempt, 20), should_stop)
+                # Chờ cố định `backoff` giây (mặc định 5s) rồi thử lại,
+                # không tăng dần để khỏi đợi lâu.
+                _sleep_or_stop(backoff, should_stop)
 
     raise RuntimeError(f"Gemini thất bại sau {retries} lần: {last_err}")
 
@@ -144,7 +156,7 @@ def synthesize_voice(
     voice_name="vi-VN-Standard-C",
     language_code="vi-VN",
     speaking_rate=1.2,
-    retries=6,
+    retries=10,
     backoff=5,
     log=None,
     should_stop=None,
@@ -171,7 +183,7 @@ def synthesize_voice(
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
-            resp = requests.post(url, headers=headers, json=body, timeout=120)
+            resp = requests.post(url, headers=headers, json=body, timeout=30)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
                 raise RuntimeError(data["error"].get("message", "Google TTS API error"))
@@ -186,7 +198,8 @@ def synthesize_voice(
             if log:
                 log(f"! Google TTS lần {attempt}/{retries} lỗi: {exc}")
             if attempt < retries:
-                _sleep_or_stop(min(backoff * attempt, 20), should_stop)
+                # Chờ cố định `backoff` giây (mặc định 5s), không tăng dần.
+                _sleep_or_stop(backoff, should_stop)
 
     raise RuntimeError(f"Google TTS thất bại sau {retries} lần: {last_err}")
 
@@ -198,7 +211,7 @@ def synthesize_voice_videoai(
     api_key,
     voice_name=DEFAULT_VIDEOAI_VOICE,
     speed=1.0,
-    retries=6,
+    retries=10,
     backoff=5,
     log=None,
     should_stop=None,
@@ -230,7 +243,7 @@ def synthesize_voice_videoai(
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
             resp = requests.post(
-                VIDEOAI_TTS_URL, headers=headers, json=body, timeout=180)
+                VIDEOAI_TTS_URL, headers=headers, json=body, timeout=30)
             ctype = (resp.headers.get("Content-Type") or "").lower()
 
             # Trường hợp lỗi: thường trả JSON kèm field "error"
@@ -266,7 +279,8 @@ def synthesize_voice_videoai(
             if log:
                 log(f"! Voice API lần {attempt}/{retries} lỗi: {exc}")
             if attempt < retries:
-                _sleep_or_stop(min(backoff * attempt, 20), should_stop)
+                # Chờ cố định `backoff` giây (mặc định 5s), không tăng dần.
+                _sleep_or_stop(backoff, should_stop)
 
     raise RuntimeError(f"Voice API thất bại sau {retries} lần: {last_err}")
 
@@ -284,8 +298,9 @@ def make_voice(
     language_code="vi-VN",
     language_name="Tiếng Việt",
     speaking_rate=1.2,
-    retries=6,
+    retries=10,
     log=None,
+    on_script=None,
     should_stop=None,
 ):
     """
@@ -293,6 +308,8 @@ def make_voice(
     `provider`:
       - "google"  : Google TTS (tts_key = API key Google).
       - "videoai" : Voice API videoai.ddns.net (tts_key = X-API-Key).
+    `on_script(script)` (tuỳ chọn): gọi ngay sau khi sinh xong lời thoại, trước
+    bước TTS — để bên gọi log "tạo text xong" đúng thứ tự.
     Trả về (out_path, script_text). Ném RuntimeError nếu thất bại.
     """
     script = generate_script(
@@ -305,7 +322,9 @@ def make_voice(
         log=log,
         should_stop=should_stop,
     )
-    if log:
+    if on_script:
+        on_script(script)
+    elif log:
         preview = script if len(script) <= 120 else script[:117] + "..."
         log(f" Lời thoại: {preview}")
     if provider == "videoai":

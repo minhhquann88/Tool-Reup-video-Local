@@ -7,10 +7,12 @@ from __future__ import annotations
 import json
 
 import os
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlencode
 
 
 def _app_dir() -> Path:
@@ -41,6 +43,90 @@ def _local_or_system(name: str) -> str:
 
 FFMPEG  = _local_or_system("ffmpeg")
 FFPROBE = _local_or_system("ffprobe")
+
+
+def _has_valid_video_stream(path: str) -> bool:
+    """
+    True nếu *path* là video đọc được (có ít nhất 1 luồng video và ffprobe
+    parse được). Bắt mọi file hỏng: tải thiếu byte (mất moov atom), trang
+    HTML lỗi lưu nhầm .mp4, dữ liệu rác... ffprobe sẽ trả mã != 0 hoặc
+    không thấy luồng video.
+    """
+    cmd = [
+        FFPROBE, "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=codec_type",
+        "-of", "csv=p=0",
+        path,
+    ]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True,
+                           creationflags=_WIN_FLAGS)
+    except Exception:   # noqa: BLE001
+        return False
+    return r.returncode == 0 and "video" in (r.stdout or "")
+
+
+def _is_non_video_ctype(ctype: str) -> bool:
+    """True nếu Content-Type là HTML/JSON/XML/text — không phải file video."""
+    ctype = (ctype or "").lower()
+    return any(t in ctype for t in ("text/", "html", "json", "xml"))
+
+
+# Link .mp4 gốc của Shopee nhúng trong trang share-video/sản phẩm.
+# Khớp cả dạng escape JSON (https:\/\/...) sau khi gỡ dấu \/.
+_SHOPEE_MP4_RE = re.compile(
+    r'https?://[^\s"\'<>\\]+?susercontent\.com/[^\s"\'<>\\]+?\.mp4', re.I)
+
+# File ID trong link Google Drive: /file/d/<ID>/... hoặc ?id=<ID>
+_GDRIVE_ID_RE = re.compile(r'/file/d/([\w-]+)|[?&]id=([\w-]+)')
+
+
+def _gdrive_file_id(url: str):
+    """Tách file ID từ link Google Drive (mọi dạng /view, open?id=, uc?id=…)."""
+    m = _GDRIVE_ID_RE.search(url or "")
+    return (m.group(1) or m.group(2)) if m else None
+
+
+def _to_direct_download_url(url: str) -> str:
+    """
+    Chuẩn hoá link tải về dạng tải trực tiếp:
+      - Google Drive (drive.google.com/.../view, open?id=…) → link tải thẳng
+        kèm confirm=t để bỏ qua trang cảnh báo quét virus với file lớn.
+      - URL khác giữ nguyên.
+    """
+    if "drive.google.com" in (url or "") or "drive.usercontent.google.com" in (url or ""):
+        fid = _gdrive_file_id(url)
+        if fid:
+            return ("https://drive.usercontent.google.com/download"
+                    f"?id={fid}&export=download&confirm=t")
+    return url
+
+
+def _extract_direct_video_url(html: str):
+    """
+    Trích link tải video thật từ một trang HTML, trả None nếu không thấy:
+      - Google Drive: trang xác nhận file lớn chứa <form> tải về (lấy action +
+        các input ẩn như confirm/uuid để dựng lại URL tải).
+      - Shopee: link .mp4 (CDN susercontent) nhúng trong trang share-video.
+    """
+    text = (html or "").replace("\\/", "/")
+
+    # Google Drive: form xác nhận tải file lớn
+    fm = re.search(r'<form[^>]+action="([^"]+)"', text)
+    if fm and "drive.usercontent.google.com" in fm.group(1):
+        action = fm.group(1).replace("&amp;", "&")
+        inputs = dict(re.findall(
+            r'<input[^>]+name="([^"]+)"[^>]+value="([^"]*)"', text))
+        if inputs:
+            sep = "&" if "?" in action else "?"
+            return action + sep + urlencode(inputs)
+        return action
+
+    # Shopee: link .mp4 nhúng trong trang
+    m = _SHOPEE_MP4_RE.search(text)
+    return m.group(0) if m else None
+
 
 # Position presets: overlay=X:Y  (W/H = video dims, w/h = overlay dims)
 _POSITIONS = {
@@ -116,14 +202,14 @@ class VideoProcessor:
 
     def get_video_info(self, video_path: str) -> dict:
         """
-        Return {duration: float, width: int}.
+        Return {duration: float, width: int, height: int}.
         duration is 0.0 if it can't be determined (some streamed sources
         report "N/A"); callers must handle the unknown-duration case.
         """
         cmd = [
             FFPROBE, "-v", "error",
             "-select_streams", "v:0",
-            "-show_entries", "format=duration:stream=width,duration",
+            "-show_entries", "format=duration:stream=width,height,duration",
             "-of", "json",
             video_path,
         ]
@@ -136,7 +222,8 @@ class VideoProcessor:
         streams = data.get("streams") or [{}]
         s0      = streams[0]
 
-        width = int(s0.get("width") or 0) or 1280
+        width  = int(s0.get("width") or 0) or 1280
+        height = int(s0.get("height") or 0)
 
         # Prefer container duration, fall back to stream duration
         def _to_float(v):
@@ -151,7 +238,7 @@ class VideoProcessor:
                     or _to_float(s0.get("duration"))
                     or 0.0)
 
-        return {"duration": duration, "width": width}
+        return {"duration": duration, "width": width, "height": height}
 
     def process_video(self, input_path: str, output_path: str,
                       settings: dict) -> str:
@@ -182,6 +269,17 @@ class VideoProcessor:
         logo_motion  = settings.get("logo_motion", "static")
         logo_speed   = settings.get("logo_speed", "normal")
         logo_opacity = settings.get("logo_opacity", "opaque")
+
+        # ── Chất lượng encode (giữ nguyên chất lượng video gốc) ───────────────
+        # Khi buộc phải re-encode (có logo / có cắt), các tham số này quyết định
+        # mức suy giảm. Mặc định đặt ở ngưỡng "gần như không thấy mất mát":
+        #   crf 18   : visually lossless cho x264 (thấp hơn = đẹp hơn, file to hơn)
+        #   medium   : nén hiệu quả hơn 'fast' → bù lại dung lượng khi crf thấp
+        #   192k aac : audio rõ. Audio gốc không cắt vẫn được copy nguyên vẹn.
+        # Có thể override qua settings nếu muốn ưu tiên tốc độ/dung lượng.
+        video_crf     = str(settings.get("video_crf", 18))
+        video_preset  = str(settings.get("video_preset", "medium"))
+        audio_bitrate = str(settings.get("audio_bitrate", "192k"))
 
         info         = self.get_video_info(input_path)
         duration     = info["duration"]          # 0.0 if unknown
@@ -293,19 +391,19 @@ class VideoProcessor:
 
         # ── codecs ───────────────────────────────────────────────────────────
         if need_reencode_video:
-            cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "23",
-                    "-pix_fmt", "yuv420p"]
+            cmd += ["-c:v", "libx264", "-preset", video_preset,
+                    "-crf", video_crf, "-pix_fmt", "yuv420p"]
         else:
             cmd += ["-c:v", "copy"]
 
         if audio_idx is not None:
             # New audio → always re-encode to aac
-            cmd += ["-c:a", "aac", "-b:a", "128k"]
+            cmd += ["-c:a", "aac", "-b:a", audio_bitrate]
         elif audio_path is None:
             # Keep original audio. Re-encode to aac when we trimmed (seek aligns
             # both streams, re-encode guarantees clean sync); copy otherwise.
             if has_trim:
-                cmd += ["-c:a", "aac", "-b:a", "128k"]
+                cmd += ["-c:a", "aac", "-b:a", audio_bitrate]
             else:
                 cmd += ["-c:a", "copy"]
         # mute: no -c:a needed (no audio stream)
@@ -335,21 +433,54 @@ class VideoDownloader:
     }
 
     def download(self, url: str, output_path: str,
-                 progress_cb=None, retries: int = 3) -> str:
+                 progress_cb=None, retries: int = 10, log=None,
+                 should_stop=None) -> str:
         """
         Download *url* to *output_path*.
 
         progress_cb(float 0.0-1.0) is called periodically.
+        should_stop() trả True → dừng sớm, bỏ các lần thử còn lại.
         Raises on permanent failure after *retries* attempts.
         """
+        # Link Google Drive dạng "xem" → link tải trực tiếp (giữ nguyên link khác).
+        req_url = _to_direct_download_url(url)
+
         last_err = None
         for attempt in range(1, retries + 1):
+            if should_stop and should_stop():
+                break
             try:
                 resp = requests.get(
-                    url, stream=True, headers=self.HEADERS,
-                    timeout=30, allow_redirects=True
+                    req_url, stream=True, headers=self.HEADERS,
+                    timeout=(30, 30), allow_redirects=True
                 )
                 resp.raise_for_status()
+
+                # (1) Nội dung trả về không phải video. Link share-video
+                # (sv.shopee.vn/share-video/…) hoặc link sản phẩm trả HTML 200,
+                # KHÔNG phải file .mp4. Thử trích link .mp4 gốc nhúng trong trang
+                # rồi tải lại; không có mới báo lỗi. (Link hết hạn/chặn bot cũng
+                # rơi vào đây — lưu HTML thành .mp4 sẽ "moov atom not found".)
+                ctype = (resp.headers.get("Content-Type") or "").lower()
+                if _is_non_video_ctype(ctype):
+                    real = _extract_direct_video_url(resp.text)
+                    resp.close()
+                    if not real or real == req_url:
+                        raise RuntimeError(
+                            "URL không trả về video "
+                            f"(Content-Type: {ctype or 'rỗng'})")
+                    if log:
+                        log(f"   ↻ Trang HTML → dùng link gốc: ...{real[-46:]}")
+                    resp = requests.get(
+                        real, stream=True, headers=self.HEADERS,
+                        timeout=(30, 30), allow_redirects=True
+                    )
+                    resp.raise_for_status()
+                    ctype = (resp.headers.get("Content-Type") or "").lower()
+                    if _is_non_video_ctype(ctype):
+                        raise RuntimeError(
+                            "Link trích từ trang vẫn không phải video "
+                            f"(Content-Type: {ctype or 'rỗng'})")
 
                 total = int(resp.headers.get("content-length", 0))
                 downloaded = 0
@@ -362,6 +493,25 @@ class VideoDownloader:
                             if progress_cb and total:
                                 progress_cb(downloaded / total)
 
+                # (2) Phát hiện tải thiếu byte (đứt giữa chừng): moov atom
+                # thường nằm ở cuối file, thiếu đuôi = mất moov = file hỏng.
+                if total and downloaded < total:
+                    raise RuntimeError(
+                        f"Tải thiếu dữ liệu: {downloaded}/{total} byte "
+                        f"(kết nối bị đứt)")
+
+                # (3) File quá nhỏ → gần như chắc chắn không phải video.
+                if downloaded < 1024:
+                    raise RuntimeError(
+                        f"File tải về quá nhỏ ({downloaded} byte) — không hợp lệ")
+
+                # (4) Kiểm tra cuối bằng ffprobe: file phải thực sự đọc được.
+                # Bắt mọi loại hỏng còn lại (rác, codec lỗi, moov hỏng...).
+                if not _has_valid_video_stream(output_path):
+                    raise RuntimeError(
+                        "File tải về không phải video hợp lệ "
+                        "(ffprobe không đọc được — moov atom/dữ liệu hỏng)")
+
                 if progress_cb:
                     progress_cb(1.0)
                 return output_path
@@ -369,7 +519,19 @@ class VideoDownloader:
             except Exception as exc:
                 last_err = exc
                 if attempt < retries:
-                    time.sleep(2 * attempt)   # back-off: 2s, 4s
+                    # Chờ cố định 5s giữa các lần (giống các API), thoát sớm nếu
+                    # bấm Dừng để khỏi treo lâu khi đã có 10 lần thử.
+                    for _ in range(5):
+                        if should_stop and should_stop():
+                            break
+                        time.sleep(1)
+
+        # Thất bại hẳn: dọn file hỏng/dở để không bị đem đi xử lý nhầm.
+        try:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        except OSError:
+            pass
 
         raise RuntimeError(
             f"Tải video thất bại sau {retries} lần thử: {last_err}"
