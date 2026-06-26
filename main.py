@@ -71,9 +71,23 @@ STATUS_ICON = {
 }
 
 
+# ── Phân loại log ─────────────────────────────────────────────────────────────
+# Mỗi dòng log gắn 1 nhãn để lọc bằng dropdown. Dòng hệ thống (cat=None) chỉ
+# xuất hiện ở mục "Tất cả".
+LOG_DOWNLOAD = "Tải video"
+LOG_TEXT     = "Tạo text"
+LOG_VOICE    = "Tạo voice"
+LOG_PROCESS  = "Xử lý video"
+LOG_UPLOAD   = "Upload"
+LOG_RESULT   = "Kết quả"
+LOG_CATS        = (LOG_DOWNLOAD, LOG_TEXT, LOG_VOICE, LOG_PROCESS, LOG_UPLOAD, LOG_RESULT)
+LOG_FILTER_ALL  = "Tất cả"
+LOG_FILTER_OPTS = (LOG_FILTER_ALL,) + LOG_CATS
+
+
 # ── Hiển thị danh sách (phân trang) ───────────────────────────────────────────
 # Chỉ render mỗi trang _PAGE_SIZE dòng để tránh treo khi CSV có hàng nghìn video.
-_PAGE_SIZE = 50
+_PAGE_SIZE = 20
 
 # ── Thumbnail helpers ─────────────────────────────────────────────────────────
 
@@ -406,7 +420,8 @@ class App(ctk.CTk):
                      anchor="w").pack(anchor="w", pady=(6, 2))
         ctk.CTkLabel(
             self._voiceai_box,
-            text="Chèn dữ liệu CSV bằng ${tên_cột} (vd ${product_name}).",
+            text="Chèn dữ liệu CSV bằng ${tên_cột} (vd ${nd_video}, "
+                 "tự fallback product_name nếu rỗng).",
             text_color="gray", font=("", 10), wraplength=230, justify="left",
         ).pack(anchor="w")
         self._prompt_box = ctk.CTkTextbox(self._voiceai_box, height=120,
@@ -634,13 +649,32 @@ class App(ctk.CTk):
     # ── Bottom bar ───────────────────────────────────────────────────────────
 
     def _build_bottom(self):
-        bar = ctk.CTkFrame(self, height=220, corner_radius=0)
+        # Log có phân loại: lưu toàn bộ dòng kèm nhãn, dropdown chỉ lọc hiển thị.
+        self._log_entries: list[tuple] = []          # (cat | None, text)
+        self._log_filter = StringVar(value=LOG_FILTER_ALL)
+        self._log_bar_h = 285                         # chiều cao thanh dưới (kéo được)
+
+        bar = ctk.CTkFrame(self, height=self._log_bar_h, corner_radius=0)
         bar.grid(row=2, column=0, columnspan=2, sticky="ew")
         bar.grid_propagate(False)
         bar.grid_columnconfigure(0, weight=1)
+        bar.grid_rowconfigure(3, weight=1)            # hàng log co giãn theo bar
+        self._bottom_bar = bar
 
+        # (0) Tay nắm kéo: rê lên/xuống để phóng to/thu nhỏ khối log
+        grip = ctk.CTkFrame(bar, height=7, corner_radius=0, fg_color="#4a4a4a")
+        grip.grid(row=0, column=0, sticky="ew")
+        grip.bind("<Enter>", lambda e: grip.configure(fg_color="#6a6a6a"))
+        grip.bind("<Leave>", lambda e: grip.configure(fg_color="#4a4a4a"))
+        grip.bind("<B1-Motion>", self._on_log_resize)
+        try:
+            grip.configure(cursor="sb_v_double_arrow")
+        except Exception:   # noqa: BLE001
+            pass
+
+        # (1) Tiến độ tổng
         prow = ctk.CTkFrame(bar, fg_color="transparent")
-        prow.grid(row=0, column=0, sticky="ew", padx=12, pady=(8, 2))
+        prow.grid(row=1, column=0, sticky="ew", padx=12, pady=(8, 2))
         prow.grid_columnconfigure(0, weight=1)
 
         self._progress_lbl = ctk.CTkLabel(prow, text="Sẵn sàng",
@@ -655,9 +689,32 @@ class App(ctk.CTk):
                                            font=("", 11))
         self._progress_pct.grid(row=1, column=1, padx=8)
 
-        self._log = ctk.CTkTextbox(bar, height=150, font=("Consolas", 10),
+        # (2) Hàng tiêu đề log + dropdown lọc
+        hrow = ctk.CTkFrame(bar, fg_color="transparent")
+        hrow.grid(row=2, column=0, sticky="ew", padx=12, pady=(2, 0))
+        hrow.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(hrow, text="Nhật ký:", font=("", 12)).grid(
+            row=0, column=0, sticky="w")
+        ctk.CTkOptionMenu(
+            hrow, variable=self._log_filter, values=list(LOG_FILTER_OPTS),
+            width=140, height=26, font=("", 11),
+            command=lambda _v: self._render_log(),
+        ).grid(row=0, column=2, sticky="e")
+
+        # (3) Khung log
+        self._log = ctk.CTkTextbox(bar, height=180, font=("Consolas", 12),
                                     state="disabled")
-        self._log.grid(row=1, column=0, sticky="ew", padx=12, pady=(2, 8))
+        self._log.grid(row=3, column=0, sticky="nsew", padx=12, pady=(2, 8))
+
+    # ── Resize khối log ────────────────────────────────────────────────────────
+
+    def _on_log_resize(self, event):
+        """Rê tay nắm: đặt lại chiều cao thanh dưới sao cho mép trên bám con trỏ."""
+        win_bottom = self.winfo_rooty() + self.winfo_height()
+        new_h = win_bottom - event.y_root
+        new_h = max(150, min(new_h, self.winfo_height() - 160))
+        self._log_bar_h = new_h
+        self._bottom_bar.configure(height=new_h)
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -832,13 +889,37 @@ class App(ctk.CTk):
             self._recheck_job = None
         super().destroy()
 
-    def _log_msg(self, msg: str):
+    def _log_add(self, text: str, cat=None):
+        """
+        Thêm 1 dòng log kèm nhãn phân loại `cat` (None = dòng hệ thống, chỉ hiện
+        ở mục "Tất cả"). Chỉ chèn vào textbox khi khớp bộ lọc đang chọn.
+        """
         def _do():
-            self._log.configure(state="normal")
-            self._log.insert("end", msg + "\n")
-            self._log.see("end")
-            self._log.configure(state="disabled")
+            self._log_entries.append((cat, text))
+            sel = self._log_filter.get()
+            if sel == LOG_FILTER_ALL or sel == cat:
+                self._log.configure(state="normal")
+                self._log.insert("end", text + "\n")
+                self._log.see("end")
+                self._log.configure(state="disabled")
         self._ui(_do)
+
+    def _log_msg(self, msg: str, cat=None):
+        """Tương thích cũ: tách chuỗi nhiều dòng thành từng dòng log."""
+        for line in str(msg).split("\n"):
+            self._log_add(line, cat)
+
+    def _render_log(self):
+        """Dựng lại nội dung textbox theo bộ lọc hiện tại (khi đổi dropdown)."""
+        sel = self._log_filter.get()
+        lines = [t for c, t in self._log_entries
+                 if sel == LOG_FILTER_ALL or sel == c]
+        self._log.configure(state="normal")
+        self._log.delete("1.0", "end")
+        if lines:
+            self._log.insert("1.0", "\n".join(lines) + "\n")
+        self._log.see("end")
+        self._log.configure(state="disabled")
 
     # ── File pickers ─────────────────────────────────────────────────────────
 
@@ -1187,6 +1268,12 @@ class App(ctk.CTk):
         self._progress_bar.set(0)
         self._progress_pct.configure(text="0 %")
 
+        # Xoá log của lần chạy trước (tránh tích luỹ qua nhiều lần xử lý)
+        self._log_entries.clear()
+        self._log.configure(state="normal")
+        self._log.delete("1.0", "end")
+        self._log.configure(state="disabled")
+
         threading.Thread(
             target=self._run_batch,
             args=(selected, settings),
@@ -1211,6 +1298,14 @@ class App(ctk.CTk):
         done        = 0
         errors      = 0
         completed   = 0          # finished workers (done + error)
+
+        workers     = max(1, int(settings.get("workers", 1)))
+        delay       = max(0.0, float(settings.get("delay", 2)))
+        # Giãn cách KHỞI ĐỘNG: 2 video liên tiếp cách nhau >= `delay` giây khi
+        # bắt đầu (tránh dồn request). next_start = mốc monotonic sớm nhất cho
+        # video kế; bảo vệ bằng start_lock riêng để không tranh chấp với `lock`.
+        start_lock  = threading.Lock()
+        next_start  = [0.0]
 
         self._ui(lambda: self._progress_lbl.configure(
             text=f"Đang xử lý 0 / {total} …"))
@@ -1250,6 +1345,21 @@ class App(ctk.CTk):
 
         tmp_dir = tempfile.mkdtemp(prefix="reup_")
 
+        # Cổng giãn cách: đặt chỗ một "khe khởi động" cách video trước >= delay
+        # giây, rồi chờ tới khe đó. Atomic dưới start_lock nên dù nhiều luồng gọi
+        # cùng lúc, các khe vẫn xếp so le delay giây.
+        def _gate_start():
+            if delay <= 0:
+                return
+            with start_lock:
+                slot = max(time.monotonic(), next_start[0])
+                next_start[0] = slot + delay
+            while not self._stop_flag:
+                remaining = slot - time.monotonic()
+                if remaining <= 0:
+                    break
+                time.sleep(min(0.2, remaining))
+
         # ── Per-video worker ──────────────────────────────────────────────────
         # idx  = thứ tự trong batch (đặt tên temp + log + tiến độ tổng)
         # gidx = chỉ số video trong self._videos (định tuyến trạng thái/lưu CSV)
@@ -1273,7 +1383,8 @@ class App(ctk.CTk):
                     completed += 1
                     _d, _e, _c = done, errors, completed
                 self._ui(lambda g=gidx: self._set_row_status(g, "error"))
-                self._log_msg(f"X  [{idx+1}/{total}] Bỏ qua (thiếu video_url): {name}")
+                self._log_msg(f"X  [{idx+1}/{total}] Bỏ qua (thiếu video_url): {name}",
+                              LOG_RESULT)
                 pct = _c / total
                 self._ui(lambda p=pct, d=_d, e=_e, c=_c: [
                     self._progress_bar.set(p),
@@ -1290,14 +1401,21 @@ class App(ctk.CTk):
             try:
                 if self._stop_flag:
                     return
+                # Giãn cách khởi động (hàng đợi liên tục): chờ tới khe của video
+                # này để không nổ request cùng lúc với video khác.
+                _gate_start()
+                if self._stop_flag:
+                    return
                 # 1. Download
                 self._ui(lambda g=gidx: self._set_row_status(g, "downloading"))
-                self._log_msg(f"DL  [{idx+1}/{total}] Tải: {name}")
                 self._downloader.download(
                     url, tmp_dl,
                     progress_cb=lambda p, g=gidx: self._ui(
                         lambda: self._set_row_progress(g, p)),
+                    log=lambda m: self._log_msg(m, LOG_DOWNLOAD),
+                    should_stop=lambda: self._stop_flag,
                 )
+                self._log_add(f"OK  [{idx+1}/{total}] Tải xong: {name}", LOG_DOWNLOAD)
                 if self._stop_flag:
                     return
 
@@ -1310,9 +1428,19 @@ class App(ctk.CTk):
                 voice_failed = False
                 if voice_ai:
                     self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
-                    self._log_msg(f"  [{idx+1}/{total}] Tạo voice AI: {name}")
                     out_mp3 = os.path.join(tmp_dir, f"voice_{idx}.mp3")
                     row_settings = dict(settings)   # copy riêng, không sửa settings chung
+
+                    # Lời thoại sinh xong → log nhãn "Tạo text"; retry Gemini cũng
+                    # về "Tạo text", còn lại (TTS) về "Tạo voice".
+                    def _on_script(s, i=idx):
+                        snip = " ".join(str(s).split())[:60]
+                        self._log_add(
+                            f'OK  [{i+1}/{total}] Tạo text xong: "{snip}…"', LOG_TEXT)
+
+                    def _voice_log(m):
+                        self._log_msg(m, LOG_TEXT if "Gemini" in m else LOG_VOICE)
+
                     try:
                         make_voice(
                             vid, out_mp3,
@@ -1323,18 +1451,21 @@ class App(ctk.CTk):
                             provider=voice_ai.get("provider", "google"),
                             voice_name=voice_ai["voice_name"],
                             speaking_rate=voice_ai["speed"],
-                            retries=6,
-                            log=self._log_msg,
+                            retries=10,
+                            log=_voice_log,
+                            on_script=_on_script,
                             should_stop=lambda: self._stop_flag,
                         )
                         voice_mp3 = out_mp3
                         row_settings["audio_path"] = out_mp3   # thay audio gốc
+                        self._log_add(
+                            f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
                     except Exception as exc:   # noqa: BLE001
                         voice_failed = True
                         row_settings["audio_path"] = ""        # mute, bỏ audio gốc
                         self._log_msg(
                             f"!  [{idx+1}/{total}] Voice AI lỗi → xuất MUTE: "
-                            f"{name}\n     → {exc}")
+                            f"{name}\n     → {exc}", LOG_VOICE)
 
                 if self._stop_flag:
                     if voice_mp3:
@@ -1343,8 +1474,8 @@ class App(ctk.CTk):
 
                 # 3. FFmpeg
                 self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
-                self._log_msg(f"*  [{idx+1}/{total}] Xử lý: {name}")
                 self._processor.process_video(tmp_dl, tmp_out, row_settings)
+                self._log_add(f"OK  [{idx+1}/{total}] Xử lý xong: {name}", LOG_PROCESS)
                 _safe_remove(tmp_dl)
                 if voice_mp3:
                     _safe_remove(voice_mp3)
@@ -1359,17 +1490,18 @@ class App(ctk.CTk):
                     with lock:
                         final_path = _reserve_local_path(
                             dest_dir, f"{item_id}.mp4", reserved)
-                    self._log_msg(f"  [{idx+1}/{total}] Lưu: {name}")
                     shutil.move(tmp_out, final_path)
                     ref = os.path.abspath(final_path)
+                    self._log_add(f"OK  [{idx+1}/{total}] Lưu xong: {name}", LOG_UPLOAD)
                 else:
-                    self._log_msg(f"@  [{idx+1}/{total}] Upload: {name}")
                     ref = worker_uploader.upload_video(
                         tmp_out, filename=f"{item_id}.mp4", folder_id=folder_id,
                         progress_cb=lambda p, g=gidx: self._ui(
                             lambda: self._set_row_progress(g, p)),
                     )
                     _safe_remove(tmp_out)
+                    self._log_add(
+                        f"OK  [{idx+1}/{total}] Upload xong: {name}", LOG_UPLOAD)
 
                 with lock:
                     # Key by dict identity → robust against duplicate item_id
@@ -1379,9 +1511,10 @@ class App(ctk.CTk):
                 self._ui(lambda g=gidx, s=final_status: self._set_row_status(g, s))
                 if voice_failed:
                     self._log_msg(
-                        f"!  [{idx+1}/{total}] Xong (MUTE, voice lỗi): {name}")
+                        f"!  [{idx+1}/{total}] Xong (MUTE, voice lỗi): {name}",
+                        LOG_RESULT)
                 else:
-                    self._log_msg(f"OK  [{idx+1}/{total}] Xong: {name}")
+                    self._log_msg(f"OK  [{idx+1}/{total}] Xong: {name}", LOG_RESULT)
 
             except Exception as exc:
                 _safe_remove(tmp_dl)
@@ -1389,7 +1522,8 @@ class App(ctk.CTk):
                 with lock:
                     errors += 1
                 self._ui(lambda g=gidx: self._set_row_status(g, "error"))
-                self._log_msg(f"X  [{idx+1}/{total}] Lỗi: {name}\n     → {exc}")
+                self._log_msg(f"X  [{idx+1}/{total}] Lỗi: {name}\n     → {exc}",
+                              LOG_RESULT)
 
             finally:
                 with lock:
@@ -1408,29 +1542,18 @@ class App(ctk.CTk):
         # Bọc trong try/finally để LUÔN bật lại nút (kể cả khi Dừng hoặc lỗi),
         # nếu không nút 'XỬ LÝ VIDEO' sẽ kẹt disabled và không chạy lại được.
         try:
-            workers = int(settings.get("workers", 1))
-            delay   = float(settings.get("delay", 2))
-            # Xử lý theo từng ĐỢT: mỗi đợt chạy song song `workers` video,
-            # chờ cả đợt xong rồi delay trước khi sang đợt kế (trừ đợt cuối).
-            batch = list(enumerate(indices))
-            rounds = [batch[i:i + workers] for i in range(0, len(batch), workers)]
-            for r, group in enumerate(rounds):
-                if self._stop_flag:
-                    break
-                with ThreadPoolExecutor(max_workers=workers) as executor:
-                    futures = {
-                        executor.submit(process_one, b, gidx): gidx
-                        for b, gidx in group
-                    }
-                    for _ in as_completed(futures):
-                        pass   # progress is updated inside process_one
-                # Delay giữa các đợt (không delay sau đợt cuối / khi đã dừng)
-                if delay > 0 and r < len(rounds) - 1 and not self._stop_flag:
-                    self._log_msg(f"…  Nghỉ {delay:g}s trước đợt tiếp theo")
-                    waited = 0.0
-                    while waited < delay and not self._stop_flag:
-                        time.sleep(min(0.2, delay - waited))
-                        waited += 0.2
+            # Hàng đợi liên tục: nạp TẤT CẢ video vào 1 pool `workers` luồng;
+            # luồng nào xong là bốc video kế tiếp ngay (không chờ theo đợt nên
+            # luôn đủ `workers` luồng chạy). `delay` được áp trong _gate_start()
+            # như khoảng giãn cách KHỞI ĐỘNG giữa các video → trải đều request,
+            # không dồn cùng lúc.
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = [
+                    executor.submit(process_one, b, gidx)
+                    for b, gidx in enumerate(indices)
+                ]
+                for _ in as_completed(futures):
+                    pass   # progress is updated inside process_one
 
             # ── Cleanup ───────────────────────────────────────────────────────
             _safe_rmdir(tmp_dir)
