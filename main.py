@@ -1737,6 +1737,27 @@ class LicenseDialog(ctk.CTk):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
+    # ── Single-instance guard (branch Khach) ──────────────────────────────────
+    # Dung kernel-level lock: khong co file tren disk, khong the bi xoa/bypass.
+    # OS tu giai phong khi process ket thuc du bang cach nao (crash, kill, v.v.)
+    import atexit
+    from single_instance import acquire, release as _si_release
+
+    if not acquire():
+        import tkinter as _tk
+        _r = _tk.Tk()
+        _r.withdraw()
+        messagebox.showerror(
+            "Ung dung dang chay",
+            "Video Reup Tool da duoc mo o mot cua so khac.\n\n"
+            "Vui long dong cua so do truoc khi mo lai.",
+        )
+        _r.destroy()
+        sys.exit(0)
+
+    atexit.register(_si_release)   # dam bao release() khi thoat binh thuong
+    # ─────────────────────────────────────────────────────────────────────────
+
     # Cổng bản quyền: kiểm tra key lúc mở app (chặt — mất mạng = không vào được)
     while True:
         status = license_mod.check_license()
