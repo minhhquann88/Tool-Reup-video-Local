@@ -502,14 +502,16 @@ class App(ctk.CTk):
 
         self._logo_size = self._labeled_entry(pane, "Kích thước (%):", "15")
 
-        # Force scale lên 1920×1080: output luôn có metadata 1080p
-        self._force_1080p_var = BooleanVar(value=False)
-        self._force_1080p_chk = ctk.CTkCheckBox(
+        # Thiết lập độ phân giải
+        ctk.CTkLabel(pane, text="Độ phân giải video:", anchor="w").pack(anchor="w", pady=(10, 2))
+        self._resolution_var = StringVar(value="Nâng độ phân giải lên 1920x1080")
+        self._resolution_menu = ctk.CTkOptionMenu(
             pane,
-            text="Force 1920×1080 (fake 1080p metadata)",
-            variable=self._force_1080p_var,
+            values=["Nâng độ phân giải lên 1920x1080", "Giữ nguyên độ phân giải video"],
+            variable=self._resolution_var,
+            width=230,
         )
-        self._force_1080p_chk.pack(anchor="w", pady=(6, 0))
+        self._resolution_menu.pack(fill="x", pady=(0, 6))
 
         self._toggle_logo_speed()  # áp dụng trạng thái ẩn ban đầu
 
@@ -1283,7 +1285,7 @@ class App(ctk.CTk):
             "logo_opacity":  {"Rõ": "opaque", "Mờ vừa": "medium",
                               "Mờ nhiều": "light"}.get(
                                   self._logo_opacity.get(), "opaque"),
-            "force_1080p":   self._force_1080p_var.get(),
+            "force_1080p":   self._resolution_var.get() == "Nâng độ phân giải lên 1920x1080",
             "folder_name":   self._folder_name.get().strip(),
             "csv_out":       self._csv_out_path.get(),
             "workers":       workers,
