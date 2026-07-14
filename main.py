@@ -302,12 +302,12 @@ class App(ctk.CTk):
         ctk.CTkLabel(bar, text=" Render Video Reup Pro",
                      font=("", 18, "bold")).pack(side="left", padx=16)
 
-        self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV",
+        self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV/Excel",
                                         text_color="gray", font=("", 12))
         self._csv_label.pack(side="left", padx=6)
 
-        ctk.CTkButton(bar, text=" Import CSV", width=130, height=32,
-                      command=self._import_csv).pack(side="left", padx=6)
+        ctk.CTkButton(bar, text=" Import CSV/Excel", width=130, height=32,
+                      command=self._import_file).pack(side="left", padx=6)
 
         # CSV output path
         ctk.CTkButton(bar, text=" Lưu CSV", width=110, height=32,
@@ -933,16 +933,38 @@ class App(ctk.CTk):
 
     # ── File pickers ─────────────────────────────────────────────────────────
 
-    def _import_csv(self):
+    def _import_file(self):
         path = filedialog.askopenfilename(
-            title="Chọn file CSV",
-            filetypes=[("CSV", "*.csv"), ("All", "*.*")],
+            title="Chọn file CSV hoặc Excel",
+            filetypes=[
+                ("CSV/Excel", "*.csv *.xlsx *.xls"),
+                ("CSV", "*.csv"),
+                ("Excel", "*.xlsx *.xls"),
+                ("All", "*.*")
+            ],
         )
         if not path:
             return
         try:
-            with open(path, encoding="utf-8-sig") as fh:
-                self._videos = [dict(r) for r in csv.DictReader(fh)]
+            ext = Path(path).suffix.lower()
+            if ext in (".xlsx", ".xls"):
+                from openpyxl import load_workbook
+                wb = load_workbook(path, read_only=True, data_only=True)
+                sheet = wb.active
+                rows = list(sheet.iter_rows(values_only=True))
+                if not rows:
+                     raise ValueError("File Excel trống!")
+                headers = [str(h).strip() if h is not None else f"column_{i}" for i, h in enumerate(rows[0])]
+                self._videos = []
+                for r in rows[1:]:
+                     if any(v is not None for v in r):
+                         row_dict = {}
+                         for h, v in zip(headers, r):
+                             row_dict[h] = str(v).strip() if v is not None else ""
+                         self._videos.append(row_dict)
+            else:
+                with open(path, encoding="utf-8-sig") as fh:
+                    self._videos = [dict(r) for r in csv.DictReader(fh)]
             self._csv_path = path
             # Khởi tạo state song song (mặc định chọn hết, trạng thái chờ)
             self._selected = [True] * len(self._videos)
@@ -955,7 +977,7 @@ class App(ctk.CTk):
             self._populate_list()
             self._log_msg(f"OK Import {len(self._videos)} video từ {Path(path).name}")
         except Exception as exc:
-            messagebox.showerror("Lỗi đọc CSV", str(exc))
+            messagebox.showerror("Lỗi đọc File", str(exc))
 
     def _pick_csv_out(self):
         path = filedialog.asksaveasfilename(
