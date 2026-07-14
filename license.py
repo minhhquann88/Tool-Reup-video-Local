@@ -20,7 +20,7 @@ from pathlib import Path
 import requests
 
 API_URL = "https://key.byscom.vn/api/validate-key"
-APP_ID  = "tool_reup_video"          # đã đăng ký trong bảng apps (giữ đúng chữ thường)
+APP_ID  = "tool_reup_video_pro"      # đã đăng ký trong bảng apps (giữ đúng chữ thường)
 
 _TIMEOUT = 15                        # giây — lỗi/timeout coi như không hợp lệ (chặt)
 _NET_ERR = "Không thể kết nối máy chủ bản quyền."
