@@ -2,7 +2,7 @@
 chcp 65001 >nul
 set PYTHONUTF8=1
 echo ========================================
-echo  Video Reup Tool - Build EXE
+echo  Render Video Reup - Build EXE
 echo ========================================
 
 :: Check client_secret.json exists before building
@@ -33,7 +33,7 @@ pip install pyinstaller -q
 echo.
 echo [2/3] Dang dong goi...
 pyinstaller --noconfirm --onedir --windowed ^
-    --name "VideoReupTool" ^
+    --name "RenderVideoReup" ^
     --icon "video.ico" ^
     --add-data "client_secret.json;." ^
     --add-data "video.ico;." ^
@@ -56,19 +56,19 @@ if errorlevel 1 (
 )
 
 :: Remove token.json from dist if it sneaked in
-if exist "dist\VideoReupTool\token.json" (
-    del /f /q "dist\VideoReupTool\token.json"
+if exist "dist\RenderVideoReup\token.json" (
+    del /f /q "dist\RenderVideoReup\token.json"
     echo [INFO] Da xoa token.json khoi dist.
 )
 
 echo.
 echo [3/3] Hoan thanh!
 echo.
-echo  App o: dist\VideoReupTool\VideoReupTool.exe
+echo  App o: dist\RenderVideoReup\RenderVideoReup.exe
 echo.
 echo  Luu y:
 echo    - token.json se duoc tao ben canh .exe sau khi dang nhap lan dau
 echo    - Khong commit token.json len git
-echo    - De phan phoi: zip toan bo thu muc dist\VideoReupTool\
+echo    - De phan phoi: zip toan bo thu muc dist\RenderVideoReup\
 
 pause

@@ -14,7 +14,7 @@ Nguoi dung KHONG THE bypass bang cach xoa file vi khong co file nao ton tai.
 
 import sys
 
-_LOCK_NAME = "VideoReupTool_SingleInstance"
+_LOCK_NAME = "RenderVideoReup_SingleInstance"
 
 # -- Windows: Named Kernel Mutex -------------------------------------------------
 if sys.platform == "win32":

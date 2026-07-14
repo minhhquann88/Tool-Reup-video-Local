@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Video Reup Tool - Build AppImage cho Linux
+# Render Video Reup - Build AppImage cho Linux
 # (PyInstaller --onedir  →  AppDir  →  appimagetool  →  *.AppImage)
 #
 # LƯU Ý:
@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="VideoReupTool"
+APP="RenderVideoReup"
 ARCH="x86_64"
 # Python dùng để TẠO venv. Đổi qua biến môi trường PYTHON khi cần — ví dụ build
 # trong Docker Ubuntu cũ (glibc thấp) nhưng cần Python mới: PYTHON=python3.11.
@@ -149,7 +149,7 @@ cp video.png "$APPDIR/usr/share/icons/hicolor/256x256/apps/$APP.png"
 cat > "$APPDIR/$APP.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Video Reup Tool
+Name=Render Video Reup
 Comment=Tool reup video
 Exec=$APP
 Icon=$APP
@@ -163,7 +163,7 @@ cp "$APPDIR/$APP.desktop" "$APPDIR/usr/share/applications/"
 cat > "$APPDIR/AppRun" <<'EOF'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
-exec "$HERE/usr/bin/VideoReupTool" "$@"
+exec "$HERE/usr/bin/RenderVideoReup" "$@"
 EOF
 chmod +x "$APPDIR/AppRun"
 

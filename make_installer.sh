@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Tạo MỘT file cài đặt tự giải nén: dist/VideoReupTool-installer.run
+# Tạo MỘT file cài đặt tự giải nén: dist/RenderVideoReup-installer.run
 #
 # Gói gồm: mã nguồn + run_linux.sh + (ffmpeg Linux nếu có sẵn). Người dùng chạy:
-#     bash VideoReupTool-installer.run
-# → tự giải nén vào ~/.local/share/VideoReupTool, tạo lối tắt trong menu, rồi
+#     bash RenderVideoReup-installer.run
+# → tự giải nén vào ~/.local/share/RenderVideoReup, tạo lối tắt trong menu, rồi
 #   khởi động. App chạy bằng Python + Tk CỦA MÁY người dùng → KHÔNG segfault,
 #   KHÔNG lỗi glibc, hợp Ubuntu cũ (>= 20.04, Python >= 3.8).
 #
@@ -12,7 +12,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="VideoReupTool"
+APP="RenderVideoReup"
 OUT="dist/$APP-installer.run"
 STAGE="dist/.installer_stage"
 PKG="$STAGE/$APP"
@@ -70,16 +70,16 @@ tail -n +$((LINE + 1)) "$0" | tar -xz -C "$INSTALL_PARENT"
 # Lối tắt trong menu ứng dụng (mở bằng double-click sau này)
 APPS_DIR="$HOME/.local/share/applications"
 mkdir -p "$APPS_DIR"
-cat > "$APPS_DIR/videoreuptool.desktop" <<DESK
+cat > "$APPS_DIR/rendervideoreup.desktop" <<DESK
 [Desktop Entry]
 Type=Application
-Name=Video Reup Tool
+Name=Render Video Reup
 Exec=bash -c "cd '$APP_DIR' && bash run_linux.sh"
 Icon=$APP_DIR/video.png
 Terminal=true
 Categories=AudioVideo;
 DESK
-chmod +x "$APPS_DIR/videoreuptool.desktop" 2>/dev/null || true
+chmod +x "$APPS_DIR/rendervideoreup.desktop" 2>/dev/null || true
 
 echo
 echo "Đã cài. Khởi động lần đầu (cài thư viện Python — cần mạng, vài phút)..."

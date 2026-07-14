@@ -1,5 +1,5 @@
 """
-main.py - Video Reup Tool
+main.py - Render Video Reup
 Flow: CSV → download temp → FFmpeg → lưu (upload Drive | move vào thư mục local)
       → output CSV (cột video_url = link Drive hoặc đường dẫn local)
 """
@@ -200,7 +200,7 @@ class App(ctk.CTk):
     def __init__(self, license_data: dict | None = None):
         super().__init__()
         self._license_data = license_data or {}
-        self.title("Video Reup Tool")
+        self.title("Render Video Reup")
         self.geometry("1220x820")
         self.minsize(960, 640)
         self._set_app_icon()
@@ -299,7 +299,7 @@ class App(ctk.CTk):
         bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         bar.grid_propagate(False)
 
-        ctk.CTkLabel(bar, text=" Video Reup Tool",
+        ctk.CTkLabel(bar, text=" Render Video Reup",
                      font=("", 18, "bold")).pack(side="left", padx=16)
 
         self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV",
@@ -1687,7 +1687,7 @@ class LicenseDialog(ctk.CTk):
 
         ctk.CTkLabel(self, text=" Kích hoạt bản quyền",
                      font=("", 18, "bold")).pack(pady=(22, 2))
-        ctk.CTkLabel(self, text="Video Reup Tool",
+        ctk.CTkLabel(self, text="Render Video Reup",
                      text_color="gray", font=("", 12)).pack(pady=(0, 14))
 
         self._entry = ctk.CTkEntry(self, width=340, height=38,
@@ -1749,7 +1749,7 @@ def main():
         _r.withdraw()
         messagebox.showerror(
             "Ung dung dang chay",
-            "Video Reup Tool da duoc mo o mot cua so khac.\n\n"
+            "Render Video Reup da duoc mo o mot cua so khac.\n\n"
             "Vui long dong cua so do truoc khi mo lai.",
         )
         _r.destroy()
