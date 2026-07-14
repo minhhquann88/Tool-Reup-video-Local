@@ -281,6 +281,11 @@ class VideoProcessor:
         video_preset  = str(settings.get("video_preset", "medium"))
         audio_bitrate = str(settings.get("audio_bitrate", "192k"))
 
+        # ── Force 1080p (fake metadata 1920×1080 cho các nền tảng yêu cầu 1080p) ─
+        # Scale toàn bộ frame lên 1920×1080 bằng thuật toán bicubic.
+        # Chất lượng pixel thực không tăng nhưng metadata output = 1080p hợp lệ.
+        force_1080p   = bool(settings.get("force_1080p", False))
+
         info         = self.get_video_info(input_path)
         duration     = info["duration"]          # 0.0 if unknown
         video_width  = info["width"]
@@ -315,9 +320,10 @@ class VideoProcessor:
             new_duration = duration
 
         # Re-encode is REQUIRED whenever we trim, because -c:v copy can only
-        # cut at keyframes → trimming mid-GOP causes freeze/stutter. Logo also
-        # forces a re-encode. Only pure remux (no trim, no logo) can copy video.
-        need_reencode_video = has_logo or has_trim
+        # cut at keyframes → trimming mid-GOP causes freeze/stutter. Logo and
+        # force_1080p scale also force a re-encode. Only pure remux (no trim,
+        # no logo, no scale) can copy video.
+        need_reencode_video = has_logo or has_trim or force_1080p
 
         cmd = [FFMPEG, "-y"]
 
@@ -348,7 +354,15 @@ class VideoProcessor:
         # ── filters ─────────────────────────────────────────────────────────
 
         if logo_idx is not None:
-            # Logo chain: scale, then apply opacity only when not fully opaque.
+            # Video source node: thêm scale 1080p vào đầu chain nếu force_1080p.
+            if force_1080p:
+                video_node = "[0:v]scale=1920:1080:flags=bicubic[scaled1080]"
+                src = "[scaled1080]"
+            else:
+                video_node = ""
+                src = "[0:v]"
+
+            # Logo chain: scale logo, then apply opacity only when not fully opaque.
             alpha = _LOGO_OPACITY.get(logo_opacity, 1.0)
             logo_chain = f"[{logo_idx}:v]scale={logo_px}:-2"
             if alpha < 1.0:
@@ -367,8 +381,15 @@ class VideoProcessor:
                 pos = _POSITIONS.get(logo_pos_key, "W-w-10:10")
                 overlay = f"overlay={pos}"
 
-            fc = f"{logo_chain};[0:v][logo]{overlay}[vout]"
+            if video_node:
+                fc = f"{video_node};{logo_chain};{src}[logo]{overlay}[vout]"
+            else:
+                fc = f"{logo_chain};{src}[logo]{overlay}[vout]"
             cmd += ["-filter_complex", fc, "-map", "[vout]"]
+        elif force_1080p:
+            # Không có logo nhưng cần scale: dùng -vf đơn giản hơn filter_complex.
+            cmd += ["-map", "0:v",
+                    "-vf", "scale=1920:1080:flags=bicubic"]
         else:
             cmd += ["-map", "0:v"]
 
