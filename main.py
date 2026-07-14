@@ -1,5 +1,5 @@
 """
-main.py - Video Reup Tool
+main.py - Render Video Reup Pro
 Flow: CSV → download temp → FFmpeg → lưu (upload Drive | move vào thư mục local)
       → output CSV (cột video_url = link Drive hoặc đường dẫn local)
 """
@@ -200,7 +200,7 @@ class App(ctk.CTk):
     def __init__(self, license_data: dict | None = None):
         super().__init__()
         self._license_data = license_data or {}
-        self.title("Video Reup Tool")
+        self.title("Render Video Reup Pro")
         self.geometry("1220x820")
         self.minsize(960, 640)
         self._set_app_icon()
@@ -299,7 +299,7 @@ class App(ctk.CTk):
         bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         bar.grid_propagate(False)
 
-        ctk.CTkLabel(bar, text=" Video Reup Tool",
+        ctk.CTkLabel(bar, text=" Render Video Reup Pro",
                      font=("", 18, "bold")).pack(side="left", padx=16)
 
         self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV",
@@ -501,6 +501,15 @@ class App(ctk.CTk):
         self._logo_opacity.pack(side="right")
 
         self._logo_size = self._labeled_entry(pane, "Kích thước (%):", "15")
+
+        # Force scale lên 1920×1080: output luôn có metadata 1080p
+        self._force_1080p_var = BooleanVar(value=False)
+        self._force_1080p_chk = ctk.CTkCheckBox(
+            pane,
+            text="Force 1920×1080 (fake 1080p metadata)",
+            variable=self._force_1080p_var,
+        )
+        self._force_1080p_chk.pack(anchor="w", pady=(6, 0))
 
         self._toggle_logo_speed()  # áp dụng trạng thái ẩn ban đầu
 
@@ -1252,6 +1261,7 @@ class App(ctk.CTk):
             "logo_opacity":  {"Rõ": "opaque", "Mờ vừa": "medium",
                               "Mờ nhiều": "light"}.get(
                                   self._logo_opacity.get(), "opaque"),
+            "force_1080p":   self._force_1080p_var.get(),
             "folder_name":   self._folder_name.get().strip(),
             "csv_out":       self._csv_out_path.get(),
             "workers":       workers,
@@ -1686,7 +1696,7 @@ class LicenseDialog(ctk.CTk):
 
         ctk.CTkLabel(self, text=" Kích hoạt bản quyền",
                      font=("", 18, "bold")).pack(pady=(22, 2))
-        ctk.CTkLabel(self, text="Video Reup Tool",
+        ctk.CTkLabel(self, text="Render Video Reup Pro",
                      text_color="gray", font=("", 12)).pack(pady=(0, 14))
 
         self._entry = ctk.CTkEntry(self, width=340, height=38,

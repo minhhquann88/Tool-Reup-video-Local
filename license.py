@@ -40,7 +40,7 @@ def _exe_dir() -> Path:
         here = Path(appimg).parent
         if os.access(str(here), os.W_OK):
             return here
-        cfg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")) / "VideoReupTool"
+        cfg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")) / "RenderVideoReupPro"
         try:
             cfg.mkdir(parents=True, exist_ok=True)
         except OSError:
