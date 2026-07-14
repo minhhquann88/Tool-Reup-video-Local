@@ -96,6 +96,7 @@ rm -rf "$BUILD_DIR/$APP" "dist/$APP"
     --hidden-import "googleapiclient.discovery" \
     --hidden-import "googleapiclient.http" \
     --hidden-import "googleapiclient._helpers" \
+    --hidden-import "openpyxl" \
     main.py
 
 # Không để token/license lọt vào gói

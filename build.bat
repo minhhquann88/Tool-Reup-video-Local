@@ -46,6 +46,7 @@ pyinstaller --noconfirm --onedir --windowed ^
     --hidden-import "googleapiclient.discovery" ^
     --hidden-import "googleapiclient.http" ^
     --hidden-import "googleapiclient._helpers" ^
+    --hidden-import "openpyxl" ^
     main.py
 
 if errorlevel 1 (
