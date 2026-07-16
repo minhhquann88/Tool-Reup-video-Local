@@ -1485,7 +1485,7 @@ class App(ctk.CTk):
                             provider=voice_ai.get("provider", "google"),
                             voice_name=voice_ai["voice_name"],
                             speaking_rate=voice_ai["speed"],
-                            retries=10,
+                            retries=5,
                             log=_voice_log,
                             on_script=_on_script,
                             should_stop=lambda: self._stop_flag,
