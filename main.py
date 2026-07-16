@@ -1542,9 +1542,9 @@ class App(ctk.CTk):
                             f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
                     except Exception as exc:   # noqa: BLE001
                         voice_failed = True
-                        row_settings["audio_path"] = ""        # mute, bỏ audio gốc
+                        row_settings["audio_path"] = None      # fallback về audio gốc
                         self._log_msg(
-                            f"!  [{idx+1}/{total}] Voice AI lỗi → xuất MUTE: "
+                            f"!  [{idx+1}/{total}] Voice AI lỗi → dùng AUDIO GỐC: "
                             f"{name}\n     → {exc}", LOG_VOICE)
 
                 if self._stop_flag:
