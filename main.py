@@ -403,7 +403,7 @@ class App(ctk.CTk):
         # Nhà cung cấp giọng: Google TTS hoặc Voice API (videoai)
         prow = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
         prow.pack(fill="x", pady=(6, 2))
-        ctk.CTkLabel(prow, text="Nhà cung cấp:", width=85,
+        ctk.CTkLabel(prow, text="AI tạo voice:", width=85,
                      anchor="w").pack(side="left")
         self._tts_provider = ctk.CTkOptionMenu(
             prow, values=["Google TTS", "Voice API (videoai)"],
