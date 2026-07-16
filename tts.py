@@ -134,7 +134,7 @@ def generate_script(
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
-            resp = requests.post(url, headers=headers, json=body, timeout=30)
+            resp = requests.post(url, headers=headers, json=body, timeout=180)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
                 raise RuntimeError(data["error"].get("message", "Gemini API error"))
@@ -194,7 +194,7 @@ def synthesize_voice(
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
-            resp = requests.post(url, headers=headers, json=body, timeout=30)
+            resp = requests.post(url, headers=headers, json=body, timeout=180)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
                 raise RuntimeError(data["error"].get("message", "Google TTS API error"))
@@ -254,7 +254,7 @@ def synthesize_voice_videoai(
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
             resp = requests.post(
-                VIDEOAI_TTS_URL, headers=headers, json=body, timeout=30)
+                VIDEOAI_TTS_URL, headers=headers, json=body, timeout=180)
             ctype = (resp.headers.get("Content-Type") or "").lower()
 
             # Trường hợp lỗi: thường trả JSON kèm field "error"
