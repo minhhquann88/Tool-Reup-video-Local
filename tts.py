@@ -159,6 +159,63 @@ def generate_script(
     raise RuntimeError(f"Gemini thất bại sau {retries} lần: {last_err}")
 
 
+def generate_script_openai(
+    prompt_template,
+    row,
+    *,
+    api_key,
+    model="gpt-4o-mini",
+    language_name="Tiếng Việt",
+    retries=5,
+    backoff=5,
+    log=None,
+    should_stop=None,
+):
+    """
+    Gọi OpenAI/ChatGPT sinh lời thoại từ prompt (đã chèn dữ liệu CSV).
+    Trả về chuỗi text. Ném RuntimeError nếu thất bại sau `retries` lần.
+    """
+    if not api_key:
+        raise ValueError("Thiếu API key OpenAI/ChatGPT")
+
+    prompt = replace_prompt_variables(prompt_template, row, language_name)
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    body = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+
+    last_err = None
+    for attempt in range(1, retries + 1):
+        if should_stop and should_stop():
+            raise RuntimeError("Đã dừng theo yêu cầu")
+        try:
+            resp = requests.post(url, headers=headers, json=body, timeout=180)
+            data = resp.json()
+            if isinstance(data, dict) and data.get("error"):
+                raise RuntimeError(data["error"].get("message", "OpenAI API error"))
+            text = (
+                data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+            )
+            if not text or not text.strip():
+                raise RuntimeError("ChatGPT trả về nội dung rỗng")
+            return text.strip()
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            if log:
+                log(f"! ChatGPT lần {attempt}/{retries} lỗi: {exc}")
+            if attempt < retries:
+                _sleep_or_stop(backoff, should_stop)
+
+    raise RuntimeError(f"ChatGPT thất bại sau {retries} lần: {last_err}")
+
+
 def synthesize_voice(
     text,
     out_path,
@@ -300,10 +357,12 @@ def make_voice(
     row,
     out_path,
     *,
-    gemini_key,
+    gemini_key=None,
     tts_key,
+    ai_provider="Gemini",
+    ai_key=None,
     prompt=DEFAULT_PROMPT,
-    model="gemini-3.1-flash-lite",
+    model=None,
     provider="google",
     voice_name="vi-VN-Standard-C",
     language_code="vi-VN",
@@ -315,7 +374,7 @@ def make_voice(
     should_stop=None,
 ):
     """
-    Luồng đầy đủ cho 1 dòng CSV: prompt -> Gemini sinh text -> TTS -> mp3.
+    Luồng đầy đủ cho 1 dòng CSV: prompt -> Gemini/ChatGPT sinh text -> TTS -> mp3.
     `provider`:
       - "google"  : Google TTS (tts_key = API key Google).
       - "videoai" : Voice API videoai.ddns.net (tts_key = X-API-Key).
@@ -323,16 +382,31 @@ def make_voice(
     bước TTS — để bên gọi log "tạo text xong" đúng thứ tự.
     Trả về (out_path, script_text). Ném RuntimeError nếu thất bại.
     """
-    script = generate_script(
-        prompt,
-        row,
-        api_key=gemini_key,
-        model=model,
-        language_name=language_name,
-        retries=retries,
-        log=log,
-        should_stop=should_stop,
-    )
+    actual_ai_key = ai_key or gemini_key
+    actual_model = model or ("gemini-3.1-flash-lite" if ai_provider == "Gemini" else "gpt-4o-mini")
+
+    if ai_provider == "ChatGPT":
+        script = generate_script_openai(
+            prompt,
+            row,
+            api_key=actual_ai_key,
+            model=actual_model,
+            language_name=language_name,
+            retries=retries,
+            log=log,
+            should_stop=should_stop,
+        )
+    else:
+        script = generate_script(
+            prompt,
+            row,
+            api_key=actual_ai_key,
+            model=actual_model,
+            language_name=language_name,
+            retries=retries,
+            log=log,
+            should_stop=should_stop,
+        )
     if on_script:
         on_script(script)
     elif log:
