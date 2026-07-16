@@ -326,8 +326,8 @@ class App(ctk.CTk):
 
         # ── Concurrency ──
         self._section(pane, "  Xử lý đồng thời")
-        self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "1")
-        self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):", "2")
+        self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "2")
+        self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):", "1")
 
         # ── Trim ──
         self._section(pane, "  Cắt video")
@@ -368,12 +368,38 @@ class App(ctk.CTk):
         self._voiceai_box = ctk.CTkFrame(pane, fg_color="transparent")
         # Ẩn ban đầu; hiện khi bật switch
 
+        # AI tạo text: Gemini hoặc ChatGPT
+        arow = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
+        arow.pack(fill="x", pady=(6, 2))
+        ctk.CTkLabel(arow, text="AI tạo text:", width=85,
+                     anchor="w").pack(side="left")
+        self._ai_provider = ctk.CTkOptionMenu(
+            arow, values=["Gemini", "ChatGPT"],
+            width=145, command=self._toggle_ai_provider)
+        self._ai_provider.set("Gemini")
+        self._ai_provider.pack(side="right")
+
+        # Khối Gemini
+        self._gemini_box = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
         self._gemini_key = self._fullwidth_entry(
-            self._voiceai_box, "API Key Gemini:",
+            self._gemini_box, "API Key Gemini:",
             placeholder="Dán API key Gemini")
         self._gemini_model = self._fullwidth_entry(
-            self._voiceai_box, "Model Gemini:",
+            self._gemini_box, "Model Gemini:",
             placeholder="gemini-3.1-flash-lite", default="gemini-3.1-flash-lite")
+
+        # Khối ChatGPT
+        self._chatgpt_box = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
+        self._chatgpt_key = self._fullwidth_entry(
+            self._chatgpt_box, "API Key OpenAI:",
+            placeholder="sk-...")
+        self._chatgpt_model = self._fullwidth_entry(
+            self._chatgpt_box, "Model ChatGPT:",
+            placeholder="gpt-4o-mini", default="gpt-4o-mini")
+
+        self._ai_provider_anchor = ctk.CTkFrame(self._voiceai_box, height=0,
+                                                fg_color="transparent")
+        self._ai_provider_anchor.pack(fill="x")
 
         # Nhà cung cấp giọng: Google TTS hoặc Voice API (videoai)
         prow = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
@@ -434,6 +460,7 @@ class App(ctk.CTk):
         self._voiceai_anchor = ctk.CTkFrame(pane, height=0,
                                             fg_color="transparent")
         self._voiceai_anchor.pack(fill="x")
+        self._toggle_ai_provider()  # hiện đúng khối AI tạo text ban đầu
         self._toggle_tts_provider()  # hiện đúng khối nhà cung cấp ban đầu
         self._toggle_voiceai()  # áp dụng trạng thái ẩn ban đầu
 
@@ -780,6 +807,15 @@ class App(ctk.CTk):
                if self._tts_provider.get() == "Voice API (videoai)"
                else self._google_box)
         box.pack(fill="x", before=self._tts_provider_anchor)
+
+    def _toggle_ai_provider(self, *_):
+        """Hiện khối Gemini hoặc ChatGPT theo dropdown AI tạo text."""
+        self._gemini_box.pack_forget()
+        self._chatgpt_box.pack_forget()
+        box = (self._chatgpt_box
+               if self._ai_provider.get() == "ChatGPT"
+               else self._gemini_box)
+        box.pack(fill="x", before=self._ai_provider_anchor)
 
     def _toggle_logo_speed(self, *_):
         """Hiện ô Tốc độ chỉ khi logo có chuyển động (khác 'Cố định')."""
@@ -1209,8 +1245,8 @@ class App(ctk.CTk):
             trim_start = float(self._trim_start.get() or "0")
             trim_end   = float(self._trim_end.get() or "0")
             logo_size  = int(self._logo_size.get() or "15")
-            workers    = max(1, min(8, int(self._workers.get() or "1")))
-            delay      = max(0.0, float(self._delay.get() or "2"))
+            workers    = max(1, min(8, int(self._workers.get() or "2")))
+            delay      = max(0.0, float(self._delay.get() or "1"))
         except ValueError:
             messagebox.showerror("Lỗi", "Giây cắt, % logo, số video và delay phải là số!")
             return
@@ -1219,7 +1255,16 @@ class App(ctk.CTk):
         voice_ai = None
         if self._voiceai_var.get():
             is_videoai = self._tts_provider.get() == "Voice API (videoai)"
-            gemini_key = self._gemini_key.get().strip()
+            ai_provider = self._ai_provider.get()
+            if ai_provider == "ChatGPT":
+                ai_key = self._chatgpt_key.get().strip()
+                ai_model = self._chatgpt_model.get().strip() or "gpt-4o-mini"
+                key_warn_prefix = "API Key OpenAI"
+            else:
+                ai_key = self._gemini_key.get().strip()
+                ai_model = self._gemini_model.get().strip() or "gemini-3.1-flash-lite"
+                key_warn_prefix = "API Key Gemini"
+
             prompt     = self._prompt_box.get("1.0", "end").strip()
 
             if is_videoai:
@@ -1227,15 +1272,15 @@ class App(ctk.CTk):
                 voice_name = (self._videoai_voice.get().strip()
                               or DEFAULT_VIDEOAI_VOICE)
                 speed_str  = self._videoai_speed.get() or "1"
-                key_warn   = "Voice AI cần cả API Key Gemini và X-API-Key Voice API!"
+                key_warn   = f"Voice AI cần cả {key_warn_prefix} và X-API-Key Voice API!"
             else:
                 tts_key    = self._tts_key.get().strip()
                 voice_name = VOICE_CHOICES.get(
                     self._voice_name.get(), "vi-VN-Standard-C")
                 speed_str  = self._tts_speed.get() or "1.2"
-                key_warn   = "Voice AI cần cả API Key Gemini và API Key Google TTS!"
+                key_warn   = f"Voice AI cần cả {key_warn_prefix} và API Key Google TTS!"
 
-            if not gemini_key or not tts_key:
+            if not ai_key or not tts_key:
                 messagebox.showwarning("Thiếu API key", key_warn)
                 return
             if not prompt:
@@ -1248,14 +1293,14 @@ class App(ctk.CTk):
                 messagebox.showerror("Lỗi", "Tốc độ đọc phải là số!")
                 return
             voice_ai = {
-                "gemini_key": gemini_key,
-                "model":      self._gemini_model.get().strip()
-                              or "gemini-3.1-flash-lite",
-                "provider":   "videoai" if is_videoai else "google",
-                "tts_key":    tts_key,
-                "voice_name": voice_name,
-                "speed":      speed,
-                "prompt":     prompt,
+                "ai_provider": ai_provider,
+                "ai_key":      ai_key,
+                "model":       ai_model,
+                "provider":    "videoai" if is_videoai else "google",
+                "tts_key":     tts_key,
+                "voice_name":  voice_name,
+                "speed":       speed,
+                "prompt":      prompt,
             }
 
         if voice_ai:
@@ -1472,12 +1517,13 @@ class App(ctk.CTk):
                             f'OK  [{i+1}/{total}] Tạo text xong: "{snip}…"', LOG_TEXT)
 
                     def _voice_log(m):
-                        self._log_msg(m, LOG_TEXT if "Gemini" in m else LOG_VOICE)
+                        self._log_msg(m, LOG_TEXT if ("Gemini" in m or "ChatGPT" in m) else LOG_VOICE)
 
                     try:
                         make_voice(
                             vid, out_mp3,
-                            gemini_key=voice_ai["gemini_key"],
+                            ai_provider=voice_ai.get("ai_provider", "Gemini"),
+                            ai_key=voice_ai["ai_key"],
                             tts_key=voice_ai["tts_key"],
                             prompt=voice_ai["prompt"],
                             model=voice_ai["model"],
