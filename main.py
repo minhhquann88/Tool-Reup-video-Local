@@ -140,7 +140,7 @@ class VideoRow(ctk.CTkFrame):
         )
         self.thumb.pack(side="left", padx=(6, 8), pady=8)
 
-        name = (video_data.get("nd_video") or video_data.get("product_name") or "")
+        name = (video_data.get("product_name") or video_data.get("nd_video") or "")
         self.name_lbl = ctk.CTkLabel(
             self, text=name, anchor="w",
             font=("", 12), wraplength=500, justify="left",
@@ -1449,7 +1449,7 @@ class App(ctk.CTk):
             vid     = self._videos[gidx]
             item_id = (vid.get("item_id") or "").strip() or f"video_{idx}"
             url     = (vid.get("video_url") or "").strip()
-            name    = (vid.get("nd_video") or vid.get("product_name") or item_id)[:50]
+            name    = (vid.get("product_name") or vid.get("nd_video") or item_id)[:50]
             # idx is unique within this batch → no temp collision on dup item_id
             tmp_dl  = os.path.join(tmp_dir, f"dl_{idx}.mp4")
             tmp_out = os.path.join(tmp_dir, f"out_{idx}.mp4")
