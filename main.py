@@ -24,6 +24,7 @@ import requests
 from PIL import Image as PILImage
 
 import license as license_mod
+import single_instance
 
 IS_PRO = (getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro")
 APP_TITLE = (
@@ -1840,22 +1841,39 @@ class LicenseDialog(ctk.CTk):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    # Cổng bản quyền: kiểm tra key lúc mở app (chặt — mất mạng = không vào được)
-    while True:
-        status = license_mod.check_license()
-        if status["is_valid"]:
-            app = App(license_data=status["data"])
-            app.mainloop()
-            # App đóng vì bản quyền bị thu hồi lúc đang chạy → quay lại nhập key
-            if getattr(app, "_relaunch_license", False):
-                continue
-            return                       # người dùng đóng app bình thường → thoát
-        else:
-            dlg = LicenseDialog()
-            dlg.mainloop()
-            if not dlg.activated:        # đóng cửa sổ mà chưa kích hoạt → thoát
-                return
-            # Đã kích hoạt → lặp lại, check_license() lần sau sẽ pass
+    if not single_instance.acquire():
+        try:
+            root = ctk.CTk()
+            root.withdraw()
+            messagebox.showwarning(
+                "Ứng dụng đang chạy",
+                f"Ứng dụng {APP_TITLE} đang được mở!\n"
+                "Không thể mở nhiều cửa sổ/tab ứng dụng cùng lúc."
+            )
+            root.destroy()
+        except Exception:
+            pass
+        return
+
+    try:
+        # Cổng bản quyền: kiểm tra key lúc mở app (chặt — mất mạng = không vào được)
+        while True:
+            status = license_mod.check_license()
+            if status["is_valid"]:
+                app = App(license_data=status["data"])
+                app.mainloop()
+                # App đóng vì bản quyền bị thu hồi lúc đang chạy → quay lại nhập key
+                if getattr(app, "_relaunch_license", False):
+                    continue
+                return                       # người dùng đóng app bình thường → thoát
+            else:
+                dlg = LicenseDialog()
+                dlg.mainloop()
+                if not dlg.activated:        # đóng cửa sổ mà chưa kích hoạt → thoát
+                    return
+                # Đã kích hoạt → lặp lại, check_license() lần sau sẽ pass
+    finally:
+        single_instance.release()
 
 
 if __name__ == "__main__":
