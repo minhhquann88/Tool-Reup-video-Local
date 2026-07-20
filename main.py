@@ -1,5 +1,5 @@
 """
-main.py - Render Video Reup
+main.py - Render Video Reup Pro
 Flow: CSV → download temp → FFmpeg → lưu (upload Drive | move vào thư mục local)
       → output CSV (cột video_url = link Drive hoặc đường dẫn local)
 """
@@ -200,7 +200,7 @@ class App(ctk.CTk):
     def __init__(self, license_data: dict | None = None):
         super().__init__()
         self._license_data = license_data or {}
-        self.title("Render Video Reup")
+        self.title("Render Video Reup Pro")
         self.geometry("1220x820")
         self.minsize(960, 640)
         self._set_app_icon()
@@ -299,7 +299,7 @@ class App(ctk.CTk):
         bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         bar.grid_propagate(False)
 
-        ctk.CTkLabel(bar, text=" Render Video Reup",
+        ctk.CTkLabel(bar, text=" Render Video Reup Pro",
                      font=("", 18, "bold")).pack(side="left", padx=16)
 
         self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV/Excel",
@@ -325,8 +325,9 @@ class App(ctk.CTk):
         pane.grid(row=1, column=0, sticky="nsew", padx=(8, 4), pady=8)
 
         # ── Concurrency ──
-        # Bản KHÁCH: fix cứng 1 luồng, delay 60s/video — ẩn hoàn toàn khỏi giao diện
-        # (giá trị được ép trong _on_process, không có ô nhập).
+        self._section(pane, "  Xử lý đồng thời")
+        self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "2")
+        self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):", "1")
 
         # ── Trim ──
         self._section(pane, "  Cắt video")
@@ -446,8 +447,7 @@ class App(ctk.CTk):
                      anchor="w").pack(anchor="w", pady=(6, 2))
         ctk.CTkLabel(
             self._voiceai_box,
-            text="Chèn dữ liệu CSV bằng ${tên_cột} (vd ${nd_video}, "
-                 "tự fallback product_name nếu rỗng).",
+            text="Chèn dữ liệu CSV bằng ${tên_cột} (vd ${product_name}).",
             text_color="gray", font=("", 10), wraplength=230, justify="left",
         ).pack(anchor="w")
         self._prompt_box = ctk.CTkTextbox(self._voiceai_box, height=120,
@@ -1244,13 +1244,11 @@ class App(ctk.CTk):
             trim_start = float(self._trim_start.get() or "0")
             trim_end   = float(self._trim_end.get() or "0")
             logo_size  = int(self._logo_size.get() or "15")
+            workers    = max(1, min(8, int(self._workers.get() or "2")))
+            delay      = max(0.0, float(self._delay.get() or "1"))
         except ValueError:
-            messagebox.showerror("Lỗi", "Giây cắt và % logo phải là số!")
+            messagebox.showerror("Lỗi", "Giây cắt, % logo, số video và delay phải là số!")
             return
-
-        # Bản KHÁCH: fix cứng 1 luồng, delay 60s/video (không cho chỉnh).
-        workers = 1
-        delay   = 60.0
 
         # Voice AI có độ ưu tiên cao nhất; audio sẽ được sinh riêng cho từng video
         voice_ai = None
@@ -1510,51 +1508,42 @@ class App(ctk.CTk):
                     out_mp3 = os.path.join(tmp_dir, f"voice_{idx}.mp3")
                     row_settings = dict(settings)   # copy riêng, không sửa settings chung
 
-                    # Kiểm tra cột product_name tồn tại nếu prompt dùng ${product_name}
-                    prompt_txt = voice_ai.get("prompt", "")
-                    if "product_name" not in vid and "${product_name}" in prompt_txt:
+                    # Lời thoại sinh xong → log nhãn "Tạo text"; retry Gemini cũng
+                    # về "Tạo text", còn lại (TTS) về "Tạo voice".
+                    def _on_script(s, i=idx):
+                        snip = " ".join(str(s).split())[:60]
+                        self._log_add(
+                            f'OK  [{i+1}/{total}] Tạo text xong: "{snip}…"', LOG_TEXT)
+
+                    def _voice_log(m):
+                        self._log_msg(m, LOG_TEXT if ("Gemini" in m or "ChatGPT" in m) else LOG_VOICE)
+
+                    try:
+                        make_voice(
+                            vid, out_mp3,
+                            ai_provider=voice_ai.get("ai_provider", "Gemini"),
+                            ai_key=voice_ai["ai_key"],
+                            tts_key=voice_ai["tts_key"],
+                            prompt=voice_ai["prompt"],
+                            model=voice_ai["model"],
+                            provider=voice_ai.get("provider", "google"),
+                            voice_name=voice_ai["voice_name"],
+                            speaking_rate=voice_ai["speed"],
+                            retries=5,
+                            log=_voice_log,
+                            on_script=_on_script,
+                            should_stop=lambda: self._stop_flag,
+                        )
+                        voice_mp3 = out_mp3
+                        row_settings["audio_path"] = out_mp3   # thay audio gốc
+                        self._log_add(
+                            f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
+                    except Exception as exc:   # noqa: BLE001
                         voice_failed = True
-                        row_settings["audio_path"] = None   # giữ audio gốc
+                        row_settings["audio_path"] = None      # fallback về audio gốc
                         self._log_msg(
-                            f"!  [{idx+1}/{total}] Voice AI bỏ qua → cột 'product_name' "
-                            f"không tồn tại trong file CSV/Excel → dùng AUDIO GỐC: {name}",
-                            LOG_VOICE)
-                    else:
-                        # Lời thoại sinh xong → log nhãn "Tạo text"
-                        def _on_script(s, i=idx):
-                            snip = " ".join(str(s).split())[:60]
-                            self._log_add(
-                                f'OK  [{i+1}/{total}] Tạo text xong: "{snip}…"', LOG_TEXT)
-
-                        def _voice_log(m):
-                            self._log_msg(m, LOG_TEXT if ("Gemini" in m or "ChatGPT" in m) else LOG_VOICE)
-
-                        try:
-                            make_voice(
-                                vid, out_mp3,
-                                ai_provider=voice_ai.get("ai_provider", "Gemini"),
-                                ai_key=voice_ai["ai_key"],
-                                tts_key=voice_ai["tts_key"],
-                                prompt=prompt_txt,
-                                model=voice_ai["model"],
-                                provider=voice_ai.get("provider", "google"),
-                                voice_name=voice_ai["voice_name"],
-                                speaking_rate=voice_ai["speed"],
-                                retries=5,
-                                log=_voice_log,
-                                on_script=_on_script,
-                                should_stop=lambda: self._stop_flag,
-                            )
-                            voice_mp3 = out_mp3
-                            row_settings["audio_path"] = out_mp3   # thay audio gốc
-                            self._log_add(
-                                f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
-                        except Exception as exc:   # noqa: BLE001
-                            voice_failed = True
-                            row_settings["audio_path"] = None      # fallback về audio gốc
-                            self._log_msg(
-                                f"!  [{idx+1}/{total}] Voice AI lỗi → dùng AUDIO GỐC: "
-                                f"{name}\n     → {exc}", LOG_VOICE)
+                            f"!  [{idx+1}/{total}] Voice AI lỗi → dùng AUDIO GỐC: "
+                            f"{name}\n     → {exc}", LOG_VOICE)
 
                 if self._stop_flag:
                     if voice_mp3:
@@ -1776,7 +1765,7 @@ class LicenseDialog(ctk.CTk):
 
         ctk.CTkLabel(self, text=" Kích hoạt bản quyền",
                      font=("", 18, "bold")).pack(pady=(22, 2))
-        ctk.CTkLabel(self, text="Render Video Reup",
+        ctk.CTkLabel(self, text="Render Video Reup Pro",
                      text_color="gray", font=("", 12)).pack(pady=(0, 14))
 
         self._entry = ctk.CTkEntry(self, width=340, height=38,
@@ -1826,27 +1815,6 @@ class LicenseDialog(ctk.CTk):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    # ── Single-instance guard (branch Khach) ──────────────────────────────────
-    # Dung kernel-level lock: khong co file tren disk, khong the bi xoa/bypass.
-    # OS tu giai phong khi process ket thuc du bang cach nao (crash, kill, v.v.)
-    import atexit
-    from single_instance import acquire, release as _si_release
-
-    if not acquire():
-        import tkinter as _tk
-        _r = _tk.Tk()
-        _r.withdraw()
-        messagebox.showerror(
-            "Ung dung dang chay",
-            "Render Video Reup da duoc mo o mot cua so khac.\n\n"
-            "Vui long dong cua so do truoc khi mo lai.",
-        )
-        _r.destroy()
-        sys.exit(0)
-
-    atexit.register(_si_release)   # dam bao release() khi thoat binh thuong
-    # ─────────────────────────────────────────────────────────────────────────
-
     # Cổng bản quyền: kiểm tra key lúc mở app (chặt — mất mạng = không vào được)
     while True:
         status = license_mod.check_license()
