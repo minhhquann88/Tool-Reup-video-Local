@@ -31,7 +31,7 @@ DEFAULT_PROMPT = (
     "gọi mua hàng ngoài nền tảng, không nhắc đến tên của nền tảng nào khác. Không "
     "chứa ký tự đặc biệt, hashtag, chú thích, câu chào hay lặp ý. Kết quả trả về "
     "là một đoạn lời thoại duy nhất bằng tiếng Việt.\n\n"
-    "Tên sản phẩm: ${product_name}"
+    "Tên sản phẩm: ${nd_video}"
 )
 
 # Giọng tiếng Việt của Google TTS: nhãn dễ hiểu -> mã giọng thật
@@ -57,12 +57,11 @@ def _strip_hashtags(text):
 def replace_prompt_variables(prompt, row, language_name=None):
     """
     Thay placeholder trong prompt:
-      - ${product_name}  -> row['product_name'] (cột chuẩn chứa tên sản phẩm)
-      - ${productName}   -> row['product_name'] hoặc row['productName']
-      - ${languageName}  -> language_name (truyền vào, không phải cột CSV)
+      - ${nd_video}     -> row['nd_video'], rỗng thì fallback product_name
+      - ${productName}  -> row['product_name'] hoặc row['productName']
+      - ${languageName} -> language_name (truyền vào, không phải cột CSV)
       - ${tên_cột}      -> giá trị cột bất kỳ trong row (CSV)
     Chấp nhận cả ${ten} lẫn {ten}.
-    Không có fallback: nếu cột không tồn tại, giữ nguyên placeholder trong kết quả.
     """
     if not prompt or not isinstance(prompt, str):
         return prompt or ""
@@ -73,7 +72,16 @@ def replace_prompt_variables(prompt, row, language_name=None):
     if isinstance(row, dict):
         product_name = str(row.get("product_name") or row.get("productName") or "")
     result = re.sub(r"\$?\{\s*productName\s*\}", product_name, result)
-    result = re.sub(r"\$?\{\s*product_name\s*\}", product_name, result)
+
+    # ${nd_video}: ưu tiên cột nd_video (đã lọc hashtag), rỗng/không có thì
+    # fallback product_name. Xử lý trước vòng lặp chèn cột để tránh cột nd_video
+    # rỗng ghi đè "" và để giữ bản đã lọc hashtag.
+    nd_video = ""
+    if isinstance(row, dict):
+        nd_video = _strip_hashtags(str(row.get("nd_video") or ""))
+        if not nd_video:
+            nd_video = product_name
+    result = re.sub(r"\$?\{\s*nd_video\s*\}", nd_video, result)
 
     if language_name:
         result = re.sub(r"\$?\{\s*languageName\s*\}", language_name, result)
