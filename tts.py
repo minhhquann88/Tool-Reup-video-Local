@@ -26,7 +26,7 @@ DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
 DEFAULT_PROMPT = (
     "Tạo nội dung review sản phẩm bằng tiếng Việt cho video ngắn "
     "bán hàng trên sàn Thương mại điện tử. Yêu cầu kết quả trả ra là một đoạn "
-    "kịch bản lời thoại tự nhiên, mạch lạc, dài khoảng 120 ký tự. Ngôn từ trung "
+    "kịch bản lời thoại tự nhiên, mạch lạc, dài khoảng 370 ký tự. Ngôn từ trung "
     "thực, khách quan, không phóng đại hoặc so sánh với sản phẩm khác, không kêu "
     "gọi mua hàng ngoài nền tảng, không nhắc đến tên của nền tảng nào khác. Không "
     "chứa ký tự đặc biệt, hashtag, chú thích, câu chào hay lặp ý. Kết quả trả về "
