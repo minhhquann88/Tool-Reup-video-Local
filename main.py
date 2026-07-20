@@ -1841,7 +1841,8 @@ class LicenseDialog(ctk.CTk):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    if not single_instance.acquire():
+    # Bản KHÁCH: chỉ cho mở 1 instance. Bản PRO: cho mở nhiều instance/tab thoải mái
+    if not IS_PRO and not single_instance.acquire():
         try:
             root = ctk.CTk()
             root.withdraw()
@@ -1873,7 +1874,8 @@ def main():
                     return
                 # Đã kích hoạt → lặp lại, check_license() lần sau sẽ pass
     finally:
-        single_instance.release()
+        if not IS_PRO:
+            single_instance.release()
 
 
 if __name__ == "__main__":
