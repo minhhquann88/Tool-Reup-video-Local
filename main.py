@@ -447,8 +447,7 @@ class App(ctk.CTk):
                      anchor="w").pack(anchor="w", pady=(6, 2))
         ctk.CTkLabel(
             self._voiceai_box,
-            text="Chèn dữ liệu CSV bằng ${tên_cột} (vd ${nd_video}, "
-                 "tự fallback product_name nếu rỗng).",
+            text="Chèn dữ liệu CSV bằng ${tên_cột} (vd ${product_name}).",
             text_color="gray", font=("", 10), wraplength=230, justify="left",
         ).pack(anchor="w")
         self._prompt_box = ctk.CTkTextbox(self._voiceai_box, height=120,
