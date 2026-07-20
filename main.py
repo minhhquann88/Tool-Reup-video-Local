@@ -309,7 +309,7 @@ class App(ctk.CTk):
         bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         bar.grid_propagate(False)
 
-        ctk.CTkLabel(bar, text=" Render Video Reup Pro",
+        ctk.CTkLabel(bar, text=f" {APP_TITLE}",
                      font=("", 18, "bold")).pack(side="left", padx=16)
 
         self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV/Excel",
@@ -1789,7 +1789,7 @@ class LicenseDialog(ctk.CTk):
 
         ctk.CTkLabel(self, text=" Kích hoạt bản quyền",
                      font=("", 18, "bold")).pack(pady=(22, 2))
-        ctk.CTkLabel(self, text="Render Video Reup Pro",
+        ctk.CTkLabel(self, text=APP_TITLE,
                      text_color="gray", font=("", 12)).pack(pady=(0, 14))
 
         self._entry = ctk.CTkEntry(self, width=340, height=38,
