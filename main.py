@@ -24,6 +24,13 @@ import requests
 from PIL import Image as PILImage
 
 import license as license_mod
+
+APP_TITLE = (
+    "Render Video Reup Pro"
+    if getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro"
+    else "Render Video Reup"
+)
+
 from core import FFMPEG, VideoDownloader, VideoProcessor
 from tts import (DEFAULT_PROMPT, DEFAULT_VIDEOAI_VOICE, DEFAULT_VOICE_LABEL,
                  VOICE_CHOICES, make_voice)
@@ -203,7 +210,7 @@ class App(ctk.CTk):
     def __init__(self, license_data: dict | None = None):
         super().__init__()
         self._license_data = license_data or {}
-        self.title("Render Video Reup Pro")
+        self.title(APP_TITLE)
         self.geometry("1220x820")
         self.minsize(960, 640)
         self._set_app_icon()
