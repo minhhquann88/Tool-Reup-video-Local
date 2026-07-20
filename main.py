@@ -9,6 +9,7 @@ from __future__ import annotations   # cho phép 'X | None' chạy trên Python 
 import csv
 import io
 import os
+import re
 import shutil
 import subprocess
 import sys
