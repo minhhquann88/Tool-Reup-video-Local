@@ -25,10 +25,9 @@ from PIL import Image as PILImage
 
 import license as license_mod
 
-IS_PRO = (getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro")
 APP_TITLE = (
     "Render Video Reup Pro"
-    if IS_PRO
+    if getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro"
     else "Render Video Reup"
 )
 
@@ -335,14 +334,10 @@ class App(ctk.CTk):
                                        label_text="*  Cài đặt xử lý")
         pane.grid(row=1, column=0, sticky="nsew", padx=(8, 4), pady=8)
 
-        # ── Concurrency (Chỉ có ở bản Pro) ──
-        if IS_PRO:
-            self._section(pane, "  Xử lý đồng thời")
-            self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "2")
-            self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):", "1")
-        else:
-            self._workers = None
-            self._delay   = None
+        # ── Concurrency ──
+        self._section(pane, "  Xử lý đồng thời")
+        self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "2")
+        self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):", "1")
 
         # ── Trim ──
         self._section(pane, "  Cắt video")
@@ -1259,14 +1254,10 @@ class App(ctk.CTk):
             trim_start = float(self._trim_start.get() or "0")
             trim_end   = float(self._trim_end.get() or "0")
             logo_size  = int(self._logo_size.get() or "15")
-            if IS_PRO and self._workers and self._delay:
-                workers = max(1, min(8, int(self._workers.get() or "2")))
-                delay   = max(0.0, float(self._delay.get() or "1"))
-            else:
-                workers = 1
-                delay   = 60.0
+            workers    = max(1, min(8, int(self._workers.get() or "2")))
+            delay      = max(0.0, float(self._delay.get() or "1"))
         except ValueError:
-            messagebox.showerror("Lỗi", "Giây cắt và % logo phải là số!")
+            messagebox.showerror("Lỗi", "Giây cắt, % logo, số video và delay phải là số!")
             return
 
         # Voice AI có độ ưu tiên cao nhất; audio sẽ được sinh riêng cho từng video
