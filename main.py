@@ -24,13 +24,6 @@ import requests
 from PIL import Image as PILImage
 
 import license as license_mod
-
-APP_TITLE = (
-    "Render Video Reup Pro"
-    if getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro"
-    else "Render Video Reup"
-)
-
 from core import FFMPEG, VideoDownloader, VideoProcessor
 from tts import (DEFAULT_PROMPT, DEFAULT_VIDEOAI_VOICE, DEFAULT_VOICE_LABEL,
                  VOICE_CHOICES, make_voice)
@@ -210,7 +203,7 @@ class App(ctk.CTk):
     def __init__(self, license_data: dict | None = None):
         super().__init__()
         self._license_data = license_data or {}
-        self.title(APP_TITLE)
+        self.title("Render Video Reup Pro")
         self.geometry("1220x820")
         self.minsize(960, 640)
         self._set_app_icon()
@@ -309,7 +302,7 @@ class App(ctk.CTk):
         bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         bar.grid_propagate(False)
 
-        ctk.CTkLabel(bar, text=f" {APP_TITLE}",
+        ctk.CTkLabel(bar, text=" Render Video Reup Pro",
                      font=("", 18, "bold")).pack(side="left", padx=16)
 
         self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV/Excel",
@@ -1789,7 +1782,7 @@ class LicenseDialog(ctk.CTk):
 
         ctk.CTkLabel(self, text=" Kích hoạt bản quyền",
                      font=("", 18, "bold")).pack(pady=(22, 2))
-        ctk.CTkLabel(self, text=APP_TITLE,
+        ctk.CTkLabel(self, text="Render Video Reup Pro",
                      text_color="gray", font=("", 12)).pack(pady=(0, 14))
 
         self._entry = ctk.CTkEntry(self, width=340, height=38,
