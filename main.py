@@ -1606,7 +1606,7 @@ class App(ctk.CTk):
                 self._ui(lambda g=gidx, s=final_status: self._set_row_status(g, s))
                 if voice_failed:
                     self._log_msg(
-                        f"!  [{idx+1}/{total}] Xong (MUTE, voice lỗi): {name}",
+                        f"!  [{idx+1}/{total}] Xong (AUDIO GỐC, voice AI bỏ qua/lỗi): {name}",
                         LOG_RESULT)
                 else:
                     self._log_msg(f"OK  [{idx+1}/{total}] Xong: {name}", LOG_RESULT)
