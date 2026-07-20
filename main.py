@@ -140,7 +140,9 @@ class VideoRow(ctk.CTkFrame):
         )
         self.thumb.pack(side="left", padx=(6, 8), pady=8)
 
-        name = (video_data.get("product_name") or video_data.get("nd_video") or "")
+        val = video_data.get("product_name") if video_data.get("product_name") is not None else video_data.get("productName")
+        p_name = "" if val is None or str(val).strip().lower() in ("", "nan", "none") else str(val).strip()
+        name = p_name if p_name else "(dữ liệu product_name rỗng)"
         self.name_lbl = ctk.CTkLabel(
             self, text=name, anchor="w",
             font=("", 12), wraplength=500, justify="left",
@@ -1449,7 +1451,9 @@ class App(ctk.CTk):
             vid     = self._videos[gidx]
             item_id = (vid.get("item_id") or "").strip() or f"video_{idx}"
             url     = (vid.get("video_url") or "").strip()
-            name    = (vid.get("product_name") or vid.get("nd_video") or item_id)[:50]
+            val_p   = vid.get("product_name") if vid.get("product_name") is not None else vid.get("productName")
+            p_name  = "" if val_p is None or str(val_p).strip().lower() in ("", "nan", "none") else str(val_p).strip()
+            name    = (p_name if p_name else "(dữ liệu product_name rỗng)")[:50]
             # idx is unique within this batch → no temp collision on dup item_id
             tmp_dl  = os.path.join(tmp_dir, f"dl_{idx}.mp4")
             tmp_out = os.path.join(tmp_dir, f"out_{idx}.mp4")
