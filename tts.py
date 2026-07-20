@@ -62,7 +62,7 @@ def replace_prompt_variables(prompt, row, language_name=None):
       - ${languageName}  -> language_name (truyền vào, không phải cột CSV)
       - ${tên_cột}      -> giá trị cột bất kỳ trong row (CSV)
     Chấp nhận cả ${ten} lẫn {ten}.
-    Không có fallback: nếu cột không tồn tại, giữ nguyên placeholder trong kết quả.
+    Ném ValueError nếu prompt yêu cầu ${product_name} nhưng ô product_name bị rỗng.
     """
     if not prompt or not isinstance(prompt, str):
         return prompt or ""
@@ -71,7 +71,13 @@ def replace_prompt_variables(prompt, row, language_name=None):
 
     product_name = ""
     if isinstance(row, dict):
-        product_name = str(row.get("product_name") or row.get("productName") or "")
+        val = row.get("product_name") if row.get("product_name") is not None else row.get("productName")
+        if val is not None and str(val).strip().lower() not in ("", "nan", "none"):
+            product_name = str(val).strip()
+
+    if re.search(r"\$?\{\s*(product_name|productName)\s*\}", prompt) and not product_name:
+        raise ValueError("Ô 'product_name' bị rỗng hoặc không tồn tại trong dữ liệu CSV")
+
     result = re.sub(r"\$?\{\s*productName\s*\}", product_name, result)
     result = re.sub(r"\$?\{\s*product_name\s*\}", product_name, result)
 
