@@ -1508,6 +1508,10 @@ class App(ctk.CTk):
                     out_mp3 = os.path.join(tmp_dir, f"voice_{idx}.mp3")
                     row_settings = dict(settings)   # copy riêng, không sửa settings chung
 
+                    prompt_txt = voice_ai.get("prompt", "")
+                    val = vid.get("product_name") if vid.get("product_name") is not None else vid.get("productName")
+                    p_name = "" if val is None or str(val).strip().lower() in ("", "nan", "none") else str(val).strip()
+
                     # Lời thoại sinh xong → log nhãn "Tạo text"; retry Gemini cũng
                     # về "Tạo text", còn lại (TTS) về "Tạo voice".
                     def _on_script(s, i=idx):
@@ -1518,32 +1522,40 @@ class App(ctk.CTk):
                     def _voice_log(m):
                         self._log_msg(m, LOG_TEXT if ("Gemini" in m or "ChatGPT" in m) else LOG_VOICE)
 
-                    try:
-                        make_voice(
-                            vid, out_mp3,
-                            ai_provider=voice_ai.get("ai_provider", "Gemini"),
-                            ai_key=voice_ai["ai_key"],
-                            tts_key=voice_ai["tts_key"],
-                            prompt=voice_ai["prompt"],
-                            model=voice_ai["model"],
-                            provider=voice_ai.get("provider", "google"),
-                            voice_name=voice_ai["voice_name"],
-                            speaking_rate=voice_ai["speed"],
-                            retries=5,
-                            log=_voice_log,
-                            on_script=_on_script,
-                            should_stop=lambda: self._stop_flag,
-                        )
-                        voice_mp3 = out_mp3
-                        row_settings["audio_path"] = out_mp3   # thay audio gốc
-                        self._log_add(
-                            f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
-                    except Exception as exc:   # noqa: BLE001
+                    if re.search(r"\$?\{\s*(product_name|productName)\s*\}", prompt_txt) and not p_name:
                         voice_failed = True
-                        row_settings["audio_path"] = None      # fallback về audio gốc
+                        row_settings["audio_path"] = None   # giữ audio gốc
                         self._log_msg(
-                            f"!  [{idx+1}/{total}] Voice AI lỗi → dùng AUDIO GỐC: "
-                            f"{name}\n     → {exc}", LOG_VOICE)
+                            f"!  [{idx+1}/{total}] Voice AI bỏ qua → ô 'product_name' "
+                            f"bị rỗng trong file CSV/Excel → dùng AUDIO GỐC: {name}",
+                            LOG_VOICE)
+                    else:
+                        try:
+                            make_voice(
+                                vid, out_mp3,
+                                ai_provider=voice_ai.get("ai_provider", "Gemini"),
+                                ai_key=voice_ai["ai_key"],
+                                tts_key=voice_ai["tts_key"],
+                                prompt=prompt_txt,
+                                model=voice_ai["model"],
+                                provider=voice_ai.get("provider", "google"),
+                                voice_name=voice_ai["voice_name"],
+                                speaking_rate=voice_ai["speed"],
+                                retries=5,
+                                log=_voice_log,
+                                on_script=_on_script,
+                                should_stop=lambda: self._stop_flag,
+                            )
+                            voice_mp3 = out_mp3
+                            row_settings["audio_path"] = out_mp3   # thay audio gốc
+                            self._log_add(
+                                f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
+                        except Exception as exc:   # noqa: BLE001
+                            voice_failed = True
+                            row_settings["audio_path"] = None      # fallback về audio gốc
+                            self._log_msg(
+                                f"!  [{idx+1}/{total}] Voice AI lỗi → dùng AUDIO GỐC: "
+                                f"{name}\n     → {exc}", LOG_VOICE)
 
                 if self._stop_flag:
                     if voice_mp3:
