@@ -25,9 +25,10 @@ from PIL import Image as PILImage
 
 import license as license_mod
 
+IS_PRO = (getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro")
 APP_TITLE = (
     "Render Video Reup Pro"
-    if getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro"
+    if IS_PRO
     else "Render Video Reup"
 )
 
