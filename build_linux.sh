@@ -167,21 +167,13 @@ cat > "$APPDIR/AppRun" <<'EOF'
 HERE="$(dirname "$(readlink -f "$0")")"
 
 # ── Fix: X Error BadLength - RenderAddGlyphs ──────────────────────────────────
-# Lỗi xảy ra khi Xft cố gắng gửi quá nhiều glyph trong một X Render request.
-# Các biến dưới đây buộc Tk/CTk dùng fonst nhẹ hơn và tắt antialiasing nặng.
-export GDK_BACKEND=x11
-# Tắt Xft glyph cache quá lớn (mỗi font request nhỏ hơn giới hạn Xlib)
-export XFT_MAX_GLYPH_MEMORY=0
-# Buộc Xft dùng antialiasing cơ bản thay vì subpixel (giảm kích thước glyph request)
+# 1-bit monochrome glyphs (XFT_ANTIALIAS=0) giảm 97% kích thước bitmap glyphs.
+export XFT_ANTIALIAS=0
+export XFT_MAX_GLYPH_MEMORY=10485760
 export XFT_RGBA=none
-# Tắt font hinting nặng → request glyph nhỏ hơn
 export XFT_HINTING=0
-# Tắt DPI cao tự động (HiDPI gây glyph size lớn → tràn Xlib limit)
-export GDK_SCALE=1
-export GDK_DPI_SCALE=1
-# Buộc Tk dùng font hệ thống đơn giản thay vì Xft composite
+export XLIB_SKIP_ARGB_VISUALS=1
 export TK_SCALING=1
-# Nếu máy dùng Wayland, ép chạy X11 để tránh xmix protocol
 export WAYLAND_DISPLAY=
 # ─────────────────────────────────────────────────────────────────────────────
 

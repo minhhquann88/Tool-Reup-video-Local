@@ -17,8 +17,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-BASE_IMAGE="${BASE_IMAGE:-ubuntu:20.04}"   # bản Ubuntu để build → quyết định glibc TỐI THIỂU (20.04 = glibc 2.31)
-PYVER="${PYVER:-}"                          # Dùng Python mặc định của image (20.04 = Python 3.8, tương thích tốt)
+BASE_IMAGE="${BASE_IMAGE:-ubuntu:22.04}"   # ubuntu:22.04 = Python 3.10 (tránh cảnh báo Python 3.8 EOL)
+PYVER="${PYVER:-}"                          # Dùng Python mặc định của image (22.04 = Python 3.10)
 
 # ── Kiểm tra điều kiện ─────────────────────────────────────────────────────────
 if ! command -v docker >/dev/null 2>&1; then
