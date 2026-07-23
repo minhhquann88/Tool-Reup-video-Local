@@ -74,4 +74,17 @@ fi
 # ── [3] Khởi động app ─────────────────────────────────────────────────────────
 echo
 echo "[3/3] Khởi động app..."
+
+# Fix: X Error BadLength - RenderAddGlyphs
+# Lỗi xảy ra khi Xft cố gửi glyph quá lớn trong 1 X Render request.
+# Các biến dưới đây buộc Tk/CTk dùng font nhẹ hơn và tắt antialiasing nặng.
+export GDK_BACKEND=x11
+export XFT_MAX_GLYPH_MEMORY=0
+export XFT_RGBA=none
+export XFT_HINTING=0
+export GDK_SCALE=1
+export GDK_DPI_SCALE=1
+export TK_SCALING=1
+export WAYLAND_DISPLAY=
+
 python3 main.py
