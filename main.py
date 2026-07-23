@@ -17,6 +17,20 @@ import tempfile
 import threading
 import time
 from pathlib import Path
+
+# ── Fix X11 BadLength (RenderAddGlyphs) trên Linux ───────────────────────────
+# Lỗi: "X Error BadLength - RenderAddGlyphs" xảy ra khi Xft cố render
+# quá nhiều glyph font trong 1 X Render request (giới hạn Xlib ~256KB).
+# Phải set TRƯỚC KHI import tkinter/customtkinter để có tác dụng.
+# Không ảnh hưởng gì trên Windows (sys.platform == 'win32').
+if sys.platform != "win32":
+    os.environ.setdefault("GDK_BACKEND", "x11")
+    os.environ.setdefault("GDK_SCALE", "1")
+    os.environ.setdefault("GDK_DPI_SCALE", "1")
+    os.environ.pop("WAYLAND_DISPLAY", None)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 from tkinter import BooleanVar, StringVar, filedialog, messagebox
 
 import customtkinter as ctk
@@ -25,6 +39,24 @@ from PIL import Image as PILImage
 
 import license as license_mod
 import single_instance
+
+# ── Theme ─────────────────────────────────────────────────────────────────────────────
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
+# Fix quan trọng: tắt DPI auto-detect của CustomTkinter trước khi tạo bất kỳ cửa sổ nào.
+# CTk 5.2+ có _check_dpi_scaling chạy định kỳ và override tk.scaling → gây
+# lại "invalid command name check_dpi_scaling" và X11 BadLength crash.
+if sys.platform != "win32":
+    try:
+        ctk.deactivate_automatic_dpi_awareness()   # CTk >= 5.2.0
+    except AttributeError:
+        pass  # phiên bản CTk cũ không có hàm này
+    try:
+        ctk.set_widget_scaling(1.0)
+        ctk.set_window_scaling(1.0)
+    except Exception:
+        pass
 
 IS_PRO = (getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro")
 APP_TITLE = (
@@ -37,11 +69,46 @@ from core import FFMPEG, VideoDownloader, VideoProcessor
 from tts import (DEFAULT_PROMPT, DEFAULT_VIDEOAI_VOICE, DEFAULT_VOICE_LABEL,
                  VOICE_CHOICES, make_voice)
 
-# ── Theme ────────────────────────────────────────────────────────────────────
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
-
 _WIN_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
+
+def _apply_linux_x11_fix(tk_root) -> None:
+    """Áp dụng workaround cho lỗi X11 BadLength - RenderAddGlyphs trên Linux.
+
+    Lỗi xảy ra vì Tkinter/Xft gom quá nhiều glyph trong 1 X Render request
+    (vượt giới hạn ~256KB của Xlib protocol). Fix bằng 3 bước:
+    1. Ép CTk tắt auto DPI → tránh _check_dpi_scaling override scaling của ta.
+    2. Ép Tk scaling = 1.0 → glyph nhỏ hơn → request X11 không vượt giới hạn.
+    3. Dùng font DejaVu Sans đơn giản → batch glyph nhỏ hơn font Unicode mặc định.
+    Không có tác dụng gì trên Windows.
+    """
+    if sys.platform == "win32":
+        return
+    try:
+        # Bước 1: Tắt CTk DPI auto-detect (đã làm ở module level, làm lại để chắc)
+        try:
+            ctk.deactivate_automatic_dpi_awareness()
+        except AttributeError:
+            pass
+        try:
+            ctk.set_widget_scaling(1.0)
+            ctk.set_window_scaling(1.0)
+        except Exception:
+            pass
+        # Bước 2: Ép Tk scaling = 1.0 sau khi window đã tạo
+        tk_root.tk.call("tk", "scaling", 1.0)
+        tk_root.tk.call("tk", "scaling", "-displayof", ".", 1.0)
+        # Bước 3: Dùng font đơn giản, ít glyph Unicode
+        import tkinter.font as tkfont
+        default_font = tkfont.nametofont("TkDefaultFont")
+        default_font.configure(family="DejaVu Sans", size=10)
+        text_font = tkfont.nametofont("TkTextFont")
+        text_font.configure(family="DejaVu Sans", size=10)
+        fixed_font = tkfont.nametofont("TkFixedFont")
+        fixed_font.configure(family="DejaVu Sans Mono", size=10)
+    except Exception:
+        pass  # Không crash nếu font không tồn tại trên máy
+
 
 # ── Cấu hình kiểm tra license định kỳ (ép thời gian ngắn lại khi test) ────────
 _RECHECK_SECONDS = int(os.environ.get("LICENSE_RECHECK_SECONDS", 30 * 60))  # 30'
@@ -211,6 +278,7 @@ class App(ctk.CTk):
 
     def __init__(self, license_data: dict | None = None):
         super().__init__()
+        _apply_linux_x11_fix(self)   # Fix X11 BadLength RenderAddGlyphs
         self._license_data = license_data or {}
         self.title(APP_TITLE)
         self.geometry("1220x820")
@@ -1790,6 +1858,7 @@ class LicenseDialog(ctk.CTk):
 
     def __init__(self):
         super().__init__()
+        _apply_linux_x11_fix(self)   # Fix X11 BadLength RenderAddGlyphs
         self.activated = False
         self.activated_data = None
 

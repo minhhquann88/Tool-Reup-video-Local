@@ -74,4 +74,12 @@ fi
 # ── [3] Khởi động app ─────────────────────────────────────────────────────────
 echo
 echo "[3/3] Khởi động app..."
+
+# Fix: X Error BadLength - RenderAddGlyphs (Tkinter/Xft trên Linux)
+# Fix sâu (CTk DPI + Tk scaling) đã nằm trong main.py; các biến GDK_* là lớp phòng thủ
+export GDK_BACKEND=x11
+export GDK_SCALE=1
+export GDK_DPI_SCALE=1
+export WAYLAND_DISPLAY=
+
 python3 main.py

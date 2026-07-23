@@ -49,6 +49,7 @@ docker run --rm \
     -e DEBIAN_FRONTEND=noninteractive \
     -e PYVER="$PYVER" \
     -e PACKAGE="${PACKAGE:-}" \
+    -e APP="${APP:-}" \
     -e HOST_UID="$HOST_UID" -e HOST_GID="$HOST_GID" \
     "$BASE_IMAGE" bash -c '
         set -e
@@ -75,6 +76,6 @@ docker run --rm \
 
 echo
 echo "========================================================"
-echo " XONG: dist/VideoReupTool.AppImage"
+echo " XONG: dist/${APP:-RenderVideoReupPro}.AppImage"
 echo " (build trên $BASE_IMAGE → chạy trên glibc >= bản này)"
 echo "========================================================"

@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="RenderVideoReup"
+APP="${APP:-RenderVideoReupPro}"
 ARCH="x86_64"
 # Python dùng để TẠO venv. Đổi qua biến môi trường PYTHON khi cần — ví dụ build
 # trong Docker Ubuntu cũ (glibc thấp) nhưng cần Python mới: PYTHON=python3.11.
@@ -160,12 +160,23 @@ EOF
 mkdir -p "$APPDIR/usr/share/applications"
 cp "$APPDIR/$APP.desktop" "$APPDIR/usr/share/applications/"
 
-# AppRun — gọi binary PyInstaller bên trong AppDi
-cat > "$APPDIR/AppRun" <<'EOF'
+# AppRun — gọi binary PyInstaller bên trong AppDir
+# Fix X11 BadLength (RenderAddGlyphs): set biến môi trường để tránh lỗi font render
+cat > "$APPDIR/AppRun" <<'APPRUN_EOF'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
-exec "$HERE/usr/bin/RenderVideoReup" "$@"
-EOF
+
+# ── Fix: X Error BadLength - RenderAddGlyphs ──────────────────────────────────
+export GDK_BACKEND=x11
+export GDK_SCALE=1
+export GDK_DPI_SCALE=1
+export WAYLAND_DISPLAY=
+# Fix sâu hơn (CTk DPI + Tk scaling) nằm trực tiếp trong main.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+APPRUN_EOF
+# Thêm dòng exec riêng để $APP được mở rộng đúng lúc build (không phải lúc chạy)
+echo "exec \"\$HERE/usr/bin/$APP\" \"\$@\"" >> "$APPDIR/AppRun"
 chmod +x "$APPDIR/AppRun"
 
 # ── appimagetool + runtime FUSE-less → AppImage ───────────────────────────────
