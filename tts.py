@@ -159,7 +159,7 @@ def generate_script(
     language_name="Tiếng Việt",
     max_chars=400,
     retries=10,
-    backoff=5,
+    backoff=2,
     log=None,
     should_stop=None,
 ):
@@ -219,7 +219,7 @@ def generate_script_openai(
     language_name="Tiếng Việt",
     max_chars=400,
     retries=10,
-    backoff=5,
+    backoff=2,
     log=None,
     should_stop=None,
 ):
