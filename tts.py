@@ -18,7 +18,8 @@ GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
 GOOGLE_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
-VIDEOAI_TTS_URL = "https://videoai.ddns.net/v1/tts"
+# VIDEOAI_TTS_URL = "https://videoai.ddns.net/v1/tts"
+VIDEOAI_TTS_URL = "http://videoai3.ddns.net:8000/v1/tts"
 
 # Giọng mặc định cho Voice API (videoai)
 DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
