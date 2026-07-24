@@ -101,15 +101,15 @@ def _sleep_or_stop(seconds, should_stop):
         time.sleep(1)
 
 
-def _validate_audio_file(path: str, min_duration: float = 0.5, min_bytes: int = 2048):
+def _validate_audio_file(path: str, min_duration: float = 3.0, min_bytes: int = 50 * 1024):
     """
     Kiểm tra file audio vừa nhận từ TTS API có hợp lệ không.
 
     Tiêu chí:
-      - File phải tồn tại và kích thước >= min_bytes (mặc định 2KB).
-        → Tiếng "pít" thường < vài trăm byte.
-      - Duration >= min_duration giây (mặc định 0.5s) đo bằng ffprobe.
-        → Response lỗi trả audio rác thường < 0.1s.
+      - File phải tồn tại và kích thước >= min_bytes (mặc định 50KB).
+        → Response lỗi/tiếng "pít" thường khoảng 5KB (< 50KB).
+      - Duration >= min_duration giây (mặc định 3.0s) đo bằng ffprobe.
+        → Lời thoại review 370 ký tự chuẩn dài khoảng 15-30s.
 
     Ném ValueError nếu không đạt để trigger retry trong vòng lặp gọi API.
     """
