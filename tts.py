@@ -7,7 +7,9 @@ file mp3 này được dùng làm audio thay thế khi ghép video (core.VideoPr
 """
 
 import base64
+import os
 import re
+import subprocess
 import time
 
 import requests
@@ -24,13 +26,9 @@ DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
 # Prompt mặc định. Hỗ trợ chèn BẤT KỲ cột nào trong CSV theo cú pháp ${tên_cột},
 # ví dụ ${nd_video}. Riêng ${nd_video} sẽ fallback sang product_name nếu rỗng.
 DEFAULT_PROMPT = (
-    "Tạo nội dung review sản phẩm bằng tiếng Việt cho video ngắn "
-    "bán hàng trên sàn Thương mại điện tử. Yêu cầu kết quả trả ra là một đoạn "
-    "kịch bản lời thoại tự nhiên, mạch lạc, dài khoảng 370 ký tự. Ngôn từ trung "
-    "thực, khách quan, không phóng đại hoặc so sánh với sản phẩm khác, không kêu "
-    "gọi mua hàng ngoài nền tảng, không nhắc đến tên của nền tảng nào khác. Không "
-    "chứa ký tự đặc biệt, hashtag, chú thích, câu chào hay lặp ý. Kết quả trả về "
-    "là một đoạn lời thoại duy nhất bằng tiếng Việt.\n\n"
+    "Tạo nội dung review sản phẩm bằng tiếng Việt cho video ngắn bán hàng trên sàn Thương mại điện tử.\n"
+    "YÊU CẦU BẮT BUỘC VỀ ĐỘ DÀI: Kết quả trả ra BẮT BUỘC phải là một đoạn kịch bản có độ dài CHÍNH XÁC từ 350 đến 370 ký tự (không được ngắn hơn 350 ký tự và không được dài quá 370 ký tự). Hãy đếm kỹ số ký tự trước khi xuất kết quả.\n"
+    "Yêu cầu nội dung: Lời thoại tự nhiên, mạch lạc. Ngôn từ trung thực, khách quan, không phóng đại hoặc so sánh với sản phẩm khác, không kêu gọi mua hàng ngoài nền tảng, không nhắc tên nền tảng khác. Không chứa ký tự đặc biệt, hashtag, chú thích, câu chào hay lặp ý. Trả về DUY NHẤT một đoạn văn lời thoại bằng tiếng Việt, không kèm bất kỳ câu dẫn nào khác.\n\n"
     "Tên sản phẩm: ${product_name}"
 )
 
@@ -103,6 +101,54 @@ def _sleep_or_stop(seconds, should_stop):
         time.sleep(1)
 
 
+def _validate_audio_file(path: str, min_duration: float = 0.5, min_bytes: int = 2048):
+    """
+    Kiểm tra file audio vừa nhận từ TTS API có hợp lệ không.
+
+    Tiêu chí:
+      - File phải tồn tại và kích thước >= min_bytes (mặc định 2KB).
+        → Tiếng "pít" thường < vài trăm byte.
+      - Duration >= min_duration giây (mặc định 0.5s) đo bằng ffprobe.
+        → Response lỗi trả audio rác thường < 0.1s.
+
+    Ném ValueError nếu không đạt để trigger retry trong vòng lặp gọi API.
+    """
+    # Kiểm tra kích thước file trước (nhanh, không cần spawn process)
+    try:
+        size = os.path.getsize(path)
+    except OSError:
+        raise ValueError(f"File audio không tồn tại sau khi ghi: {path}")
+
+    if size < min_bytes:
+        raise ValueError(f"File audio quá nhỏ ({size} byte < {min_bytes} byte)")
+
+    # Kiểm tra duration bằng ffprobe
+    try:
+        from core import FFPROBE, _WIN_FLAGS   # import lazy để tránh circular
+        cmd = [
+            FFPROBE, "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            path,
+        ]
+        r = subprocess.run(
+            cmd, capture_output=True, text=True,
+            creationflags=_WIN_FLAGS,
+            timeout=15,
+        )
+        dur_str = (r.stdout or "").strip()
+        if dur_str and dur_str not in ("N/A", ""):
+            duration = float(dur_str)
+            if duration < min_duration:
+                raise ValueError(f"Audio quá ngắn ({duration:.2f}s < {min_duration}s)")
+    except ValueError:
+        raise   # re-raise lỗi duration
+    except Exception:
+        # ffprobe không khả dụng hoặc timeout: bỏ qua kiểm tra duration,
+        # chỉ dựa vào kích thước file (đã kiểm tra ở trên).
+        pass
+
+
 def generate_script(
     prompt_template,
     row,
@@ -110,7 +156,8 @@ def generate_script(
     api_key,
     model="gemini-3.1-flash-lite",
     language_name="Tiếng Việt",
-    retries=5,
+    max_chars=400,
+    retries=10,
     backoff=5,
     log=None,
     should_stop=None,
@@ -142,9 +189,14 @@ def generate_script(
                 .get("parts", [{}])[0]
                 .get("text", "")
             )
-            if not text or not text.strip():
+            text_str = text.strip()
+            if not text_str:
                 raise RuntimeError("Gemini trả về nội dung rỗng")
-            return text.strip()
+            if max_chars and len(text_str) > max_chars:
+                raise RuntimeError(
+                    f"Lời thoại quá dài ({len(text_str)} ký tự > {max_chars} ký tự)"
+                )
+            return text_str
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             if log:
@@ -164,7 +216,8 @@ def generate_script_openai(
     api_key,
     model="gpt-4o-mini",
     language_name="Tiếng Việt",
-    retries=5,
+    max_chars=400,
+    retries=10,
     backoff=5,
     log=None,
     should_stop=None,
@@ -201,9 +254,14 @@ def generate_script_openai(
                 .get("message", {})
                 .get("content", "")
             )
-            if not text or not text.strip():
+            text_str = text.strip()
+            if not text_str:
                 raise RuntimeError("ChatGPT trả về nội dung rỗng")
-            return text.strip()
+            if max_chars and len(text_str) > max_chars:
+                raise RuntimeError(
+                    f"Lời thoại quá dài ({len(text_str)} ký tự > {max_chars} ký tự)"
+                )
+            return text_str
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             if log:
@@ -222,8 +280,8 @@ def synthesize_voice(
     voice_name="vi-VN-Standard-C",
     language_code="vi-VN",
     speaking_rate=1.2,
-    retries=5,
-    backoff=5,
+    retries=10,
+    backoff=10,
     log=None,
     should_stop=None,
 ):
@@ -258,9 +316,17 @@ def synthesize_voice(
                 raise RuntimeError("Google TTS trả về audioContent rỗng")
             with open(out_path, "wb") as fh:
                 fh.write(base64.b64decode(audio))
+            # Kiểm tra audio vừa nhận có hợp lệ không (tránh tiếng 'pít')
+            _validate_audio_file(out_path)
             return out_path
         except Exception as exc:  # noqa: BLE001
             last_err = exc
+            # Xóa file audio hỏng (nếu có) để lần retry ghi lại sạch
+            try:
+                if os.path.exists(out_path):
+                    os.remove(out_path)
+            except OSError:
+                pass
             if log:
                 log(f"! Google TTS lần {attempt}/{retries} lỗi: {exc}")
             if attempt < retries:
@@ -277,8 +343,8 @@ def synthesize_voice_videoai(
     api_key,
     voice_name=DEFAULT_VIDEOAI_VOICE,
     speed=1.0,
-    retries=5,
-    backoff=5,
+    retries=10,
+    backoff=10,
     log=None,
     should_stop=None,
 ):
@@ -339,9 +405,18 @@ def synthesize_voice_videoai(
                 raise RuntimeError("Voice API trả về audio rỗng")
             with open(out_path, "wb") as fh:
                 fh.write(audio_bytes)
+            # Kiểm tra audio vừa nhận có hợp lệ không (tránh tiếng 'pít').
+            # Nếu duration < 0.5s hoặc size < 2KB → raise → trigger retry.
+            _validate_audio_file(out_path)
             return out_path
         except Exception as exc:  # noqa: BLE001
             last_err = exc
+            # Xóa file audio hỏng (nếu có) để lần retry ghi lại sạch
+            try:
+                if os.path.exists(out_path):
+                    os.remove(out_path)
+            except OSError:
+                pass
             if log:
                 log(f"! Voice API lần {attempt}/{retries} lỗi: {exc}")
             if attempt < retries:
@@ -366,7 +441,10 @@ def make_voice(
     language_code="vi-VN",
     language_name="Tiếng Việt",
     speaking_rate=1.2,
-    retries=5,
+    max_chars=400,
+    retries=10,
+    tts_retries=10,
+    tts_backoff=10,
     log=None,
     on_script=None,
     should_stop=None,
@@ -390,6 +468,7 @@ def make_voice(
             api_key=actual_ai_key,
             model=actual_model,
             language_name=language_name,
+            max_chars=max_chars,
             retries=retries,
             log=log,
             should_stop=should_stop,
@@ -401,6 +480,7 @@ def make_voice(
             api_key=actual_ai_key,
             model=actual_model,
             language_name=language_name,
+            max_chars=max_chars,
             retries=retries,
             log=log,
             should_stop=should_stop,
@@ -417,7 +497,8 @@ def make_voice(
             api_key=tts_key,
             voice_name=voice_name,
             speed=speaking_rate,
-            retries=retries,
+            retries=tts_retries,
+            backoff=tts_backoff,
             log=log,
             should_stop=should_stop,
         )
@@ -429,7 +510,8 @@ def make_voice(
             voice_name=voice_name,
             language_code=language_code,
             speaking_rate=speaking_rate,
-            retries=retries,
+            retries=tts_retries,
+            backoff=tts_backoff,
             log=log,
             should_stop=should_stop,
         )
