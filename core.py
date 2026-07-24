@@ -278,7 +278,7 @@ class VideoProcessor:
         #   192k aac : audio rõ. Audio gốc không cắt vẫn được copy nguyên vẹn.
         # Có thể override qua settings nếu muốn ưu tiên tốc độ/dung lượng.
         video_crf     = str(settings.get("video_crf", 18))
-        video_preset  = str(settings.get("video_preset", "medium"))
+        video_preset  = str(settings.get("video_preset", "veryfast"))
         audio_bitrate = str(settings.get("audio_bitrate", "192k"))
 
         # ── Force 1080p (fake metadata 1920×1080 cho các nền tảng yêu cầu 1080p) ─
@@ -307,6 +307,7 @@ class VideoProcessor:
 
         # Output duration (measured from the seek point). None → no -t (full).
         new_duration = None
+        use_shortest  = False   # dùng -shortest thay -t khi ghép audio mới
         if has_trim:
             new_duration = duration - trim_start - trim_end
             if new_duration <= 0:
@@ -315,9 +316,11 @@ class VideoProcessor:
                     f"trim_start={trim_start}s trim_end={trim_end}s"
                 )
         elif has_new_audio:
-            # No trim, but cap output to the video length so longer audio
-            # gets cut and shorter audio leaves a silent tail.
-            new_duration = duration
+            # Dùng -shortest (kết thúc theo stream nào ngắn hơn) thay vì
+            # -t duration để tránh lỗi khi metadata duration của video gốc
+            # không chính xác (thường gặp ở video Shopee/CDN). Nếu audio TTS
+            # dài hơn video → bị cắt; nếu ngắn hơn → video kết thúc cùng audio.
+            use_shortest = True
 
         # Re-encode is REQUIRED whenever we trim, because -c:v copy can only
         # cut at keyframes → trimming mid-GOP causes freeze/stutter. Logo and
@@ -407,13 +410,17 @@ class VideoProcessor:
         # master: if new audio is shorter, the tail stays silent; if longer,
         # it's cut to match the video. Omitted when full-length (no trim, no
         # new audio) so unknown-duration sources still process.
+        # Khi ghép audio mới (không trim): dùng -shortest để tự cắt theo stream
+        # ngắn hơn, tránh lỗi tính sai duration từ metadata video gốc.
         if new_duration is not None:
             cmd += ["-t", str(new_duration)]
+        elif use_shortest:
+            cmd += ["-shortest"]
 
         # ── codecs ───────────────────────────────────────────────────────────
         if need_reencode_video:
             cmd += ["-c:v", "libx264", "-preset", video_preset,
-                    "-crf", video_crf, "-pix_fmt", "yuv420p"]
+                    "-crf", video_crf, "-pix_fmt", "yuv420p", "-threads", "2"]
         else:
             cmd += ["-c:v", "copy"]
 
@@ -423,20 +430,36 @@ class VideoProcessor:
         elif audio_path is None:
             # Keep original audio. Re-encode to aac when we trimmed (seek aligns
             # both streams, re-encode guarantees clean sync); copy otherwise.
+            # Khi copy mà không trim: thêm -avoid_negative_ts make_zero để tránh
+            # mất audio sync với một số codec stream (Opus, DTS) trong container MP4.
             if has_trim:
                 cmd += ["-c:a", "aac", "-b:a", audio_bitrate]
             else:
-                cmd += ["-c:a", "copy"]
+                cmd += ["-c:a", "copy", "-avoid_negative_ts", "make_zero"]
         # mute: no -c:a needed (no audio stream)
 
         cmd += [output_path]
 
         # ── run ──────────────────────────────────────────────────────────────
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           creationflags=_WIN_FLAGS)
+                           creationflags=_WIN_FLAGS,
+                           timeout=600)     # 10 phút max: tránh zombie khi I/O bão hòa
         if r.returncode != 0:
-            # Return last 600 chars of stderr for diagnosis
-            raise RuntimeError(f"FFmpeg lỗi:\n{r.stderr[-600:]}")
+            # Return last 800 chars of stderr for diagnosis
+            raise RuntimeError(f"FFmpeg lỗi:\n{r.stderr[-800:]}")
+
+        # Kiểm tra file output thực sự tồn tại và có dữ liệu hợp lệ.
+        # Trên Windows khi nhiều FFmpeg chạy song song + I/O bão hòa,
+        # returncode có thể = 0 nhưng output bị truncate/rỗng → mất tiếng.
+        if not os.path.exists(output_path):
+            raise RuntimeError(
+                f"FFmpeg báo thành công nhưng output không tồn tại: {output_path}\n"
+                f"Stderr: {r.stderr[-400:]}")
+        out_size = os.path.getsize(output_path)
+        if out_size < 2048:   # < 2KB: chắc chắn không phải video hợp lệ
+            raise RuntimeError(
+                f"FFmpeg output quá nhỏ ({out_size} byte) — có thể bị cắt hoặc rỗng.\n"
+                f"Stderr: {r.stderr[-400:]}")
 
         return output_path
 
@@ -452,6 +475,22 @@ class VideoDownloader:
         ),
         "Referer": "https://shopee.vn/",
     }
+
+    def __init__(self):
+        from requests.adapters import HTTPAdapter
+        from urllib3.util.retry import Retry
+
+        self.session = requests.Session()
+        # Retry tự động ngay ở tầng mạng/urllib3 khi gặp lỗi SSL handshake, connection reset, hoặc server lỗi
+        retries = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[500, 502, 503, 504],
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retries, pool_connections=20, pool_maxsize=20)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
 
     def download(self, url: str, output_path: str,
                  progress_cb=None, retries: int = 10, log=None,
@@ -471,9 +510,9 @@ class VideoDownloader:
             if should_stop and should_stop():
                 break
             try:
-                resp = requests.get(
+                resp = self.session.get(
                     req_url, stream=True, headers=self.HEADERS,
-                    timeout=(30, 30), allow_redirects=True
+                    timeout=(60, 120), allow_redirects=True
                 )
                 resp.raise_for_status()
 
@@ -492,9 +531,9 @@ class VideoDownloader:
                             f"(Content-Type: {ctype or 'rỗng'})")
                     if log:
                         log(f"   ↻ Trang HTML → dùng link gốc: ...{real[-46:]}")
-                    resp = requests.get(
+                    resp = self.session.get(
                         real, stream=True, headers=self.HEADERS,
-                        timeout=(30, 30), allow_redirects=True
+                        timeout=(60, 120), allow_redirects=True
                     )
                     resp.raise_for_status()
                     ctype = (resp.headers.get("Content-Type") or "").lower()
@@ -507,7 +546,7 @@ class VideoDownloader:
                 downloaded = 0
 
                 with open(output_path, "wb") as fh:
-                    for chunk in resp.iter_content(chunk_size=65536):
+                    for chunk in resp.iter_content(chunk_size=1048576):  # 1MB/chunk
                         if chunk:
                             fh.write(chunk)
                             downloaded += len(chunk)

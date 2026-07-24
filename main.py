@@ -164,7 +164,8 @@ LOG_VOICE    = "Tạo voice"
 LOG_PROCESS  = "Xử lý video"
 LOG_UPLOAD   = "Upload"
 LOG_RESULT   = "Kết quả"
-LOG_CATS        = (LOG_DOWNLOAD, LOG_TEXT, LOG_VOICE, LOG_PROCESS, LOG_UPLOAD, LOG_RESULT)
+LOG_ERROR    = "Lỗi"
+LOG_CATS        = (LOG_DOWNLOAD, LOG_TEXT, LOG_VOICE, LOG_PROCESS, LOG_UPLOAD, LOG_RESULT, LOG_ERROR)
 LOG_FILTER_ALL  = "Tất cả"
 LOG_FILTER_OPTS = (LOG_FILTER_ALL,) + LOG_CATS
 
@@ -1027,18 +1028,41 @@ class App(ctk.CTk):
             self._recheck_job = None
         super().destroy()
 
+    def _is_log_match(self, sel: str, cat, text: str) -> bool:
+        if sel == LOG_FILTER_ALL:
+            return True
+        if sel == LOG_ERROR:
+            if cat == LOG_ERROR:
+                return True
+            t = (text or "").strip()
+            return t.startswith("X") or t.startswith("!") or "lỗi" in t.lower()
+        return sel == cat
+
+    def _is_at_bottom(self) -> bool:
+        try:
+            if hasattr(self._log, "_textbox"):
+                _, y2 = self._log._textbox.yview()
+            else:
+                _, y2 = self._log.yview()
+            return y2 >= 0.95
+        except Exception:
+            return True
+
     def _log_add(self, text: str, cat=None):
         """
         Thêm 1 dòng log kèm nhãn phân loại `cat` (None = dòng hệ thống, chỉ hiện
         ở mục "Tất cả"). Chỉ chèn vào textbox khi khớp bộ lọc đang chọn.
+        Nếu người dùng đang cuộn lên trên xem log cũ, không kéo xuống dưới.
         """
         def _do():
             self._log_entries.append((cat, text))
             sel = self._log_filter.get()
-            if sel == LOG_FILTER_ALL or sel == cat:
+            if self._is_log_match(sel, cat, text):
+                at_bottom = self._is_at_bottom()
                 self._log.configure(state="normal")
                 self._log.insert("end", text + "\n")
-                self._log.see("end")
+                if at_bottom:
+                    self._log.see("end")
                 self._log.configure(state="disabled")
         self._ui(_do)
 
@@ -1050,8 +1074,7 @@ class App(ctk.CTk):
     def _render_log(self):
         """Dựng lại nội dung textbox theo bộ lọc hiện tại (khi đổi dropdown)."""
         sel = self._log_filter.get()
-        lines = [t for c, t in self._log_entries
-                 if sel == LOG_FILTER_ALL or sel == c]
+        lines = [t for c, t in self._log_entries if self._is_log_match(sel, c, t)]
         self._log.configure(state="normal")
         self._log.delete("1.0", "end")
         if lines:
@@ -1517,6 +1540,11 @@ class App(ctk.CTk):
 
         tmp_dir = tempfile.mkdtemp(prefix="reup_")
 
+        # Semaphore giới hạn số FFmpeg process chạy đồng thời.
+        # Dù workers = 8, tối đa 4 FFmpeg chạy song song để tránh I/O
+        # bão hòa + Windows handle limit (giai đoạn download vẫn song song).
+        _ffmpeg_sem = threading.Semaphore(min(workers, 4))
+
         # Cổng giãn cách: đặt chỗ một "khe khởi động" cách video trước >= delay
         # giây, rồi chờ tới khe đó. Atomic dưới start_lock nên dù nhiều luồng gọi
         # cùng lúc, các khe vẫn xếp so le delay giây.
@@ -1556,9 +1584,10 @@ class App(ctk.CTk):
                     errors += 1
                     completed += 1
                     _d, _e, _c = done, errors, completed
+                    out_refs[id(vid)] = "Lỗi"
                 self._ui(lambda g=gidx: self._set_row_status(g, "error"))
                 self._log_msg(f"X  [{idx+1}/{total}] Bỏ qua (thiếu video_url): {name}",
-                              LOG_RESULT)
+                              LOG_ERROR)
                 pct = _c / total
                 self._ui(lambda p=pct, d=_d, e=_e, c=_c: [
                     self._progress_bar.set(p),
@@ -1581,25 +1610,30 @@ class App(ctk.CTk):
                 if self._stop_flag:
                     return
                 # 1. Download
+                def _dl_log(m):
+                    prefix = f"[{idx+1}/{total}] "
+                    msg = m if m.startswith(prefix) or m.startswith("X ") or m.startswith("! ") else f"{prefix}{m}"
+                    cat = LOG_ERROR if ("lỗi" in m.lower() or "fail" in m.lower() or "không" in m.lower()) else LOG_DOWNLOAD
+                    self._log_msg(msg, cat)
+
                 self._ui(lambda g=gidx: self._set_row_status(g, "downloading"))
                 self._downloader.download(
                     url, tmp_dl,
                     progress_cb=lambda p, g=gidx: self._ui(
                         lambda: self._set_row_progress(g, p)),
-                    log=lambda m: self._log_msg(m, LOG_DOWNLOAD),
+                    log=_dl_log,
                     should_stop=lambda: self._stop_flag,
                 )
                 self._log_add(f"OK  [{idx+1}/{total}] Tải xong: {name}", LOG_DOWNLOAD)
                 if self._stop_flag:
                     return
 
-                # 2. Voice AI (tuỳ chọn): prompt + dữ liệu CSV -> Gemini -> TTS
-                #    Voice AI luôn THAY audio gốc; nếu lỗi (sau 6 lần retry) thì
-                #    xuất video MUTE (không fallback về tiếng gốc).
+                # 2. Voice AI (tuỳ chọn): prompt + dữ liệu CSV → Gemini → TTS
+                #    Nếu lỗi sau toàn bộ retry → raise để bỏ qua video hoàn toàn.
+                #    Không fallback về audio gốc.
                 row_settings = settings
                 voice_ai = settings.get("voice_ai")
                 voice_mp3 = None
-                voice_failed = False
                 if voice_ai:
                     self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
                     out_mp3 = os.path.join(tmp_dir, f"voice_{idx}.mp3")
@@ -1617,42 +1651,37 @@ class App(ctk.CTk):
                             f'OK  [{i+1}/{total}] Tạo text xong: "{snip}…"', LOG_TEXT)
 
                     def _voice_log(m):
-                        self._log_msg(m, LOG_TEXT if ("Gemini" in m or "ChatGPT" in m) else LOG_VOICE)
+                        prefix = f"[{idx+1}/{total}] "
+                        msg = m if m.startswith(prefix) else f"{prefix}{m}"
+                        is_err = "lỗi" in m.lower() or "fail" in m.lower() or "too large" in m.lower()
+                        cat = LOG_ERROR if is_err else (LOG_TEXT if ("Gemini" in m or "ChatGPT" in m) else LOG_VOICE)
+                        self._log_msg(msg, cat)
 
                     if re.search(r"\$?\{\s*(product_name|productName)\s*\}", prompt_txt) and not p_name:
-                        voice_failed = True
-                        row_settings["audio_path"] = None   # giữ audio gốc
-                        self._log_msg(
-                            f"!  [{idx+1}/{total}] Voice AI bỏ qua → ô 'product_name' "
-                            f"bị rỗng trong file CSV/Excel → dùng AUDIO GỐC: {name}",
-                            LOG_VOICE)
-                    else:
-                        try:
-                            make_voice(
-                                vid, out_mp3,
-                                ai_provider=voice_ai.get("ai_provider", "Gemini"),
-                                ai_key=voice_ai["ai_key"],
-                                tts_key=voice_ai["tts_key"],
-                                prompt=prompt_txt,
-                                model=voice_ai["model"],
-                                provider=voice_ai.get("provider", "google"),
-                                voice_name=voice_ai["voice_name"],
-                                speaking_rate=voice_ai["speed"],
-                                retries=5,
-                                log=_voice_log,
-                                on_script=_on_script,
-                                should_stop=lambda: self._stop_flag,
-                            )
-                            voice_mp3 = out_mp3
-                            row_settings["audio_path"] = out_mp3   # thay audio gốc
-                            self._log_add(
-                                f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
-                        except Exception as exc:   # noqa: BLE001
-                            voice_failed = True
-                            row_settings["audio_path"] = None      # fallback về audio gốc
-                            self._log_msg(
-                                f"!  [{idx+1}/{total}] Voice AI lỗi → dùng AUDIO GỐC: "
-                                f"{name}\n     → {exc}", LOG_VOICE)
+                        raise RuntimeError(
+                            f"Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV")
+
+                    make_voice(
+                        vid, out_mp3,
+                        ai_provider=voice_ai.get("ai_provider", "Gemini"),
+                        ai_key=voice_ai["ai_key"],
+                        tts_key=voice_ai["tts_key"],
+                        prompt=prompt_txt,
+                        model=voice_ai["model"],
+                        provider=voice_ai.get("provider", "google"),
+                        voice_name=voice_ai["voice_name"],
+                        speaking_rate=voice_ai["speed"],
+                        retries=10,
+                        tts_retries=10,
+                        tts_backoff=10,
+                        log=_voice_log,
+                        on_script=_on_script,
+                        should_stop=lambda: self._stop_flag,
+                    )
+                    voice_mp3 = out_mp3
+                    row_settings["audio_path"] = out_mp3   # thay audio gốc
+                    self._log_add(
+                        f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
 
                 if self._stop_flag:
                     if voice_mp3:
@@ -1661,7 +1690,10 @@ class App(ctk.CTk):
 
                 # 3. FFmpeg
                 self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
-                self._processor.process_video(tmp_dl, tmp_out, row_settings)
+                # Giới hạn số FFmpeg song song (semaphore): download vẫn chạy
+                # tối đa `workers` luồng, nhưng FFmpeg encode tối đa 4 cài cùng lúc.
+                with _ffmpeg_sem:
+                    self._processor.process_video(tmp_dl, tmp_out, row_settings)
                 self._log_add(f"OK  [{idx+1}/{total}] Xử lý xong: {name}", LOG_PROCESS)
                 _safe_remove(tmp_dl)
                 if voice_mp3:
@@ -1694,23 +1726,21 @@ class App(ctk.CTk):
                     # Key by dict identity → robust against duplicate item_id
                     out_refs[id(vid)] = ref
                     done += 1
-                final_status = "warning" if voice_failed else "done"
-                self._ui(lambda g=gidx, s=final_status: self._set_row_status(g, s))
-                if voice_failed:
-                    self._log_msg(
-                        f"!  [{idx+1}/{total}] Xong (AUDIO GỐC, voice AI bỏ qua/lỗi): {name}",
-                        LOG_RESULT)
-                else:
-                    self._log_msg(f"OK  [{idx+1}/{total}] Xong: {name}", LOG_RESULT)
+                self._ui(lambda g=gidx: self._set_row_status(g, "done"))
+                self._log_msg(f"OK  [{idx+1}/{total}] Xong: {name}", LOG_RESULT)
 
             except Exception as exc:
                 _safe_remove(tmp_dl)
                 _safe_remove(tmp_out)
+                if voice_mp3:
+                    _safe_remove(voice_mp3)
                 with lock:
                     errors += 1
+                    out_refs[id(vid)] = "Lỗi"   # ghi vào CSV output cột video_url
                 self._ui(lambda g=gidx: self._set_row_status(g, "error"))
-                self._log_msg(f"X  [{idx+1}/{total}] Lỗi: {name}\n     → {exc}",
-                              LOG_RESULT)
+                exc_summary = " ".join([line.strip() for line in str(exc).splitlines() if line.strip()])
+                self._log_msg(f"X  [{idx+1}/{total}] Lỗi: {name} → {exc_summary}",
+                              LOG_ERROR)
 
             finally:
                 with lock:
@@ -1820,7 +1850,7 @@ class App(ctk.CTk):
             for vid in self._videos:
                 row = dict(vid)
                 if id(vid) in out_refs:
-                    row["video_url"] = out_refs[id(vid)]
+                    row["video_url"] = out_refs[id(vid)]   # link Drive/local path hoặc "Lỗi"
                 writer.writerow(row)
 
 
