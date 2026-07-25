@@ -1612,7 +1612,7 @@ class App(ctk.CTk):
                 # 1. Download
                 def _dl_log(m):
                     prefix = f"[{idx+1}/{total}] "
-                    msg = m if m.startswith(prefix) or m.startswith("X ") or m.startswith("! ") else f"{prefix}{m}"
+                    msg = m if m.startswith(prefix) else f"{prefix}{m}"
                     cat = LOG_ERROR if ("lỗi" in m.lower() or "fail" in m.lower() or "không" in m.lower()) else LOG_DOWNLOAD
                     self._log_msg(msg, cat)
 
