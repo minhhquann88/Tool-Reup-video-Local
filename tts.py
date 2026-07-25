@@ -19,10 +19,12 @@ GEMINI_URL = (
 )
 GOOGLE_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
 # VIDEOAI_TTS_URL = "https://videoai.ddns.net/v1/tts"
-VIDEOAI_TTS_URL = "http://videoai3.ddns.net:8000/v1/tts"
+# VIDEOAI_TTS_URL = "http://videoai3.ddns.net:8000/v1/tts"
+VIDEOAI_TTS_URL = "https://autovoice.vn/rest/tts/synthesize"
 
-# Giọng mặc định cho Voice API (videoai)
-DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
+# Giọng mặc định cho Voice API (autovoice)
+# DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
+DEFAULT_VIDEOAI_VOICE = "pv-fdb7a34a-243d-42f2-bbcb-cb78cfd027fa"
 
 # Prompt mặc định. Hỗ trợ chèn BẤT KỲ cột nào trong CSV theo cú pháp ${tên_cột},
 # ví dụ ${nd_video}. Riêng ${nd_video} sẽ fallback sang product_name nếu rỗng.
@@ -364,9 +366,17 @@ def synthesize_voice_videoai(
         raise ValueError("Thiếu text để tạo voice")
 
     headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
+    # Request body cũ (videoai):
+    # body = {
+    #     "text": str(text),
+    #     "voice_name": voice_name or DEFAULT_VIDEOAI_VOICE,
+    #     "speed": float(speed),
+    # }
+
+    # Request body mới (autovoice.vn):
     body = {
         "text": str(text),
-        "voice_name": voice_name or DEFAULT_VIDEOAI_VOICE,
+        "voiceId": voice_name or DEFAULT_VIDEOAI_VOICE,
         "speed": float(speed),
     }
 
