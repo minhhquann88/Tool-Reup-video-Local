@@ -525,7 +525,7 @@ class App(ctk.CTk):
             self._videoai_box, "X-API-Key:",
             placeholder="Dán API key Voice API")
         self._videoai_voice = self._fullwidth_entry(
-            self._videoai_box, "Giọng (voice_name):",
+            self._videoai_box, "Giọng (voiceId):",
             placeholder=DEFAULT_VIDEOAI_VOICE, default=DEFAULT_VIDEOAI_VOICE)
         self._videoai_speed = self._labeled_entry(
             self._videoai_box, "Tốc độ đọc:", "1")
