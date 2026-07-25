@@ -483,8 +483,8 @@ class VideoDownloader:
         self.session = requests.Session()
         # Retry tự động ngay ở tầng mạng/urllib3 khi gặp lỗi SSL handshake, connection reset, hoặc server lỗi
         retries = Retry(
-            total=3,
-            backoff_factor=1,
+            total=5,
+            backoff_factor=1.5,
             status_forcelist=[500, 502, 503, 504],
             raise_on_status=False,
         )
@@ -493,7 +493,7 @@ class VideoDownloader:
         self.session.mount("https://", adapter)
 
     def download(self, url: str, output_path: str,
-                 progress_cb=None, retries: int = 10, log=None,
+                 progress_cb=None, retries: int = 15, log=None,
                  should_stop=None) -> str:
         """
         Download *url* to *output_path*.
@@ -581,9 +581,9 @@ class VideoDownloader:
                 if log:
                     log(f"! Tải lần {attempt}/{retries} lỗi: {exc}")
                 if attempt < retries:
-                    # Chờ cố định 5s giữa các lần (giống các API), thoát sớm nếu
-                    # bấm Dừng để khỏi treo lâu khi đã có 10 lần thử.
-                    for _ in range(5):
+                    # Chờ với thời gian tăng dần để tránh làm quá tải/bị chặn (tăng dần 1s mỗi lần thử, bắt đầu từ 5s)
+                    delay_seconds = 4 + attempt
+                    for _ in range(delay_seconds):
                         if should_stop and should_stop():
                             break
                         time.sleep(1)
