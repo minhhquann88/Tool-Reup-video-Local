@@ -578,8 +578,6 @@ class VideoDownloader:
 
             except Exception as exc:
                 last_err = exc
-                if log:
-                    log(f"! Tải lần {attempt}/{retries} lỗi: {exc}")
                 if attempt < retries:
                     # Chờ cố định 5s giữa các lần (giống các API), thoát sớm nếu
                     # bấm Dừng để khỏi treo lâu khi đã có 10 lần thử.
