@@ -1,7 +1,7 @@
 """
 main.py - Render Video Reup Pro
 Flow: CSV → download temp → FFmpeg → lưu (upload Drive | move vào thư mục local)
-      → output CSV (cột video_url = link Drive hoặc đường dẫn local)
+      → output CSV (cột link_video = link Drive hoặc đường dẫn local)
 """
 
 from __future__ import annotations   # cho phép 'X | None' chạy trên Python 3.8/3.9
@@ -1858,7 +1858,7 @@ class App(ctk.CTk):
 
     def _write_output_csv(self, out_path: str, out_refs: dict):
         """
-        Write a new CSV identical to the input, with video_url replaced by the
+        Write a new CSV identical to the input, with link_video set to the
         output reference (Drive link OR local path) for each processed video.
         out_refs is keyed by id(video_dict) so duplicate item_ids map correctly.
         """
@@ -1866,6 +1866,12 @@ class App(ctk.CTk):
             return
 
         fieldnames = list(self._videos[0].keys())
+        if "link_video" not in fieldnames:
+            if "video_url" in fieldnames:
+                idx = fieldnames.index("video_url")
+                fieldnames.insert(idx + 1, "link_video")
+            else:
+                fieldnames.append("link_video")
 
         with open(out_path, "w", newline="", encoding="utf-8-sig") as fh:
             writer = csv.DictWriter(fh, fieldnames=fieldnames)
@@ -1873,7 +1879,7 @@ class App(ctk.CTk):
             for vid in self._videos:
                 row = dict(vid)
                 if id(vid) in out_refs:
-                    row["video_url"] = out_refs[id(vid)]   # link Drive/local path hoặc "Lỗi"
+                    row["link_video"] = out_refs[id(vid)]   # link Drive/local path hoặc "Lỗi"
                 writer.writerow(row)
 
 
