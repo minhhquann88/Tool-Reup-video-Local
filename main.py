@@ -70,8 +70,8 @@ if sys.platform != "win32":
 # ─────────────────────────────────────────────────────────────────────────────
 
 from core import FFMPEG, VideoDownloader, VideoProcessor
-from tts import (DEFAULT_PROMPT, DEFAULT_VIDEOAI_VOICE, DEFAULT_VOICE_LABEL,
-                 VOICE_CHOICES, make_voice)
+from tts import (DEFAULT_PROMPT, DEFAULT_AUTOVOICE_VOICE, DEFAULT_VIDEOAI_VOICE,
+                 DEFAULT_VOICE_LABEL, VOICE_CHOICES, make_voice)
 
 # ── Theme ────────────────────────────────────────────────────────────────────
 ctk.set_appearance_mode("dark")
@@ -493,13 +493,13 @@ class App(ctk.CTk):
                                                 fg_color="transparent")
         self._ai_provider_anchor.pack(fill="x")
 
-        # Nhà cung cấp giọng: Google TTS hoặc Voice API (videoai)
+        # Nhà cung cấp giọng
         prow = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
         prow.pack(fill="x", pady=(6, 2))
         ctk.CTkLabel(prow, text="AI tạo voice:", width=85,
                      anchor="w").pack(side="left")
         self._tts_provider = ctk.CTkOptionMenu(
-            prow, values=["Google TTS", "Voice API (videoai)"],
+            prow, values=["Google TTS", "AutoVoice.vn", "Voice API (videoai)"],
             width=145, command=self._toggle_tts_provider)
         self._tts_provider.set("Google TTS")
         self._tts_provider.pack(side="right")
@@ -519,13 +519,24 @@ class App(ctk.CTk):
         self._tts_speed = self._labeled_entry(
             self._google_box, "Tốc độ đọc:", "1.2")
 
+        # ── Khối AutoVoice.vn ──
+        self._autovoice_box = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
+        self._autovoice_key = self._fullwidth_entry(
+            self._autovoice_box, "X-API-Key:",
+            placeholder="Dán API key AutoVoice")
+        self._autovoice_voice = self._fullwidth_entry(
+            self._autovoice_box, "Giọng (voiceId):",
+            placeholder=DEFAULT_AUTOVOICE_VOICE, default=DEFAULT_AUTOVOICE_VOICE)
+        self._autovoice_speed = self._labeled_entry(
+            self._autovoice_box, "Tốc độ đọc:", "1")
+
         # ── Khối Voice API (videoai) ──
         self._videoai_box = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
         self._videoai_key = self._fullwidth_entry(
             self._videoai_box, "X-API-Key:",
             placeholder="Dán API key Voice API")
         self._videoai_voice = self._fullwidth_entry(
-            self._videoai_box, "Giọng (voiceId):",
+            self._videoai_box, "Giọng (voice_name):",
             placeholder=DEFAULT_VIDEOAI_VOICE, default=DEFAULT_VIDEOAI_VOICE)
         self._videoai_speed = self._labeled_entry(
             self._videoai_box, "Tốc độ đọc:", "1")
@@ -891,12 +902,17 @@ class App(ctk.CTk):
                 pass
 
     def _toggle_tts_provider(self, *_):
-        """Hiện khối Google TTS hoặc Voice API theo dropdown nhà cung cấp."""
+        """Hiện khối Google TTS, AutoVoice hoặc Voice API theo dropdown nhà cung cấp."""
         self._google_box.pack_forget()
+        self._autovoice_box.pack_forget()
         self._videoai_box.pack_forget()
-        box = (self._videoai_box
-               if self._tts_provider.get() == "Voice API (videoai)"
-               else self._google_box)
+        val = self._tts_provider.get()
+        if val == "AutoVoice.vn":
+            box = self._autovoice_box
+        elif val == "Voice API (videoai)":
+            box = self._videoai_box
+        else:
+            box = self._google_box
         box.pack(fill="x", before=self._tts_provider_anchor)
 
     def _toggle_ai_provider(self, *_):
@@ -1371,7 +1387,7 @@ class App(ctk.CTk):
         # Voice AI có độ ưu tiên cao nhất; audio sẽ được sinh riêng cho từng video
         voice_ai = None
         if self._voiceai_var.get():
-            is_videoai = self._tts_provider.get() == "Voice API (videoai)"
+            tts_provider_choice = self._tts_provider.get()
             ai_provider = self._ai_provider.get()
             if ai_provider == "ChatGPT":
                 ai_key = self._chatgpt_key.get().strip()
@@ -1384,18 +1400,25 @@ class App(ctk.CTk):
 
             prompt     = self._prompt_box.get("1.0", "end").strip()
 
-            if is_videoai:
+            if tts_provider_choice == "AutoVoice.vn":
+                tts_key    = self._autovoice_key.get().strip()
+                voice_name = (self._autovoice_voice.get().strip() or DEFAULT_AUTOVOICE_VOICE)
+                speed_str  = self._autovoice_speed.get() or "1"
+                key_warn   = f"Voice AI cần cả {key_warn_prefix} và X-API-Key AutoVoice!"
+                provider   = "autovoice"
+            elif tts_provider_choice == "Voice API (videoai)":
                 tts_key    = self._videoai_key.get().strip()
-                voice_name = (self._videoai_voice.get().strip()
-                              or DEFAULT_VIDEOAI_VOICE)
+                voice_name = (self._videoai_voice.get().strip() or DEFAULT_VIDEOAI_VOICE)
                 speed_str  = self._videoai_speed.get() or "1"
                 key_warn   = f"Voice AI cần cả {key_warn_prefix} và X-API-Key Voice API!"
+                provider   = "videoai"
             else:
                 tts_key    = self._tts_key.get().strip()
                 voice_name = VOICE_CHOICES.get(
                     self._voice_name.get(), "vi-VN-Standard-C")
                 speed_str  = self._tts_speed.get() or "1.2"
                 key_warn   = f"Voice AI cần cả {key_warn_prefix} và API Key Google TTS!"
+                provider   = "google"
 
             if not ai_key or not tts_key:
                 messagebox.showwarning("Thiếu API key", key_warn)
@@ -1413,7 +1436,7 @@ class App(ctk.CTk):
                 "ai_provider": ai_provider,
                 "ai_key":      ai_key,
                 "model":       ai_model,
-                "provider":    "videoai" if is_videoai else "google",
+                "provider":    provider,
                 "tts_key":     tts_key,
                 "voice_name":  voice_name,
                 "speed":       speed,
