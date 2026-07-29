@@ -9,8 +9,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION=$(python3 -c "import re; print(re.search(r'APP_VERSION\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]', open('main.py').read()).group(1))" 2>/dev/null || echo "v1.0.0")
-APP="${APP:-RenderVideoReupPro}"
+DEFAULT_APP=$(python3 -c "import main, license; base = 'RenderVideoReupPro' if getattr(license, 'APP_ID', '') == 'tool_reup_video_pro' else 'RenderVideoReup'; print(f'{base}_{main.APP_VERSION}')" 2>/dev/null || echo "RenderVideoReup_v1.0.0")
+APP="${APP:-$DEFAULT_APP}"
+VERSION=$(python3 -c "import main; print(main.APP_VERSION)" 2>/dev/null || echo "v1.0.0")
 case "$APP" in
     *"$VERSION"*) ;;
     *) APP="${APP}_${VERSION}" ;;

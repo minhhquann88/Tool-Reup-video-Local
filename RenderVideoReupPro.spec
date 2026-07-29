@@ -3,13 +3,12 @@ import re
 from PyInstaller.utils.hooks import collect_all
 
 try:
-    with open('main.py', encoding='utf-8') as f:
-        match = re.search(r'APP_VERSION\s*=\s*["\']([^"\']+)["\']', f.read())
-        ver = match.group(1) if match else "v1.0.0"
+    import main
+    import license
+    base_name = 'RenderVideoReupPro' if getattr(license, 'APP_ID', '') == 'tool_reup_video_pro' else 'RenderVideoReup'
+    app_name = f"{base_name}_{getattr(main, 'APP_VERSION', 'v1.0.0')}"
 except Exception:
-    ver = "v1.0.0"
-
-app_name = f"RenderVideoReupPro_{ver}"
+    app_name = "RenderVideoReup_v1.0.0"
 
 datas = [('client_secret.json', '.'), ('bin', 'bin')]
 binaries = []
