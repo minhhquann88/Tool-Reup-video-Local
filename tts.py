@@ -18,13 +18,11 @@ GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
 GOOGLE_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
-# VIDEOAI_TTS_URL = "https://videoai.ddns.net/v1/tts"
-# VIDEOAI_TTS_URL = "http://videoai3.ddns.net:8000/v1/tts"
-VIDEOAI_TTS_URL = "https://autovoice.vn/rest/tts/synthesize"
+AUTOVOICE_TTS_URL = "https://autovoice.vn/rest/tts/synthesize"
+DEFAULT_AUTOVOICE_VOICE = "pv-fdb7a34a-243d-42f2-bbcb-cb78cfd027fa"
 
-# Giọng mặc định cho Voice API (autovoice)
-# DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
-DEFAULT_VIDEOAI_VOICE = "pv-fdb7a34a-243d-42f2-bbcb-cb78cfd027fa"
+VIDEOAI_TTS_URL = "http://videoai3.ddns.net:8000/v1/tts"
+DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
 
 # Prompt mặc định. Hỗ trợ chèn BẤT KỲ cột nào trong CSV theo cú pháp ${tên_cột},
 # ví dụ ${nd_video}. Riêng ${nd_video} sẽ fallback sang product_name nếu rỗng.
@@ -339,6 +337,81 @@ def synthesize_voice(
     raise RuntimeError(f"Google TTS thất bại sau {retries} lần: {last_err}")
 
 
+def synthesize_voice_autovoice(
+    text,
+    out_path,
+    *,
+    api_key,
+    voice_name=DEFAULT_AUTOVOICE_VOICE,
+    speed=1.0,
+    retries=20,
+    backoff=2,
+    log=None,
+    should_stop=None,
+):
+    if not api_key:
+        raise ValueError("Thiếu API Key AutoVoice")
+    if not text or not str(text).strip():
+        raise ValueError("Thiếu text để tạo voice")
+
+    headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
+    body = {
+        "text": str(text),
+        "voiceId": voice_name or DEFAULT_AUTOVOICE_VOICE,
+        "speed": float(speed),
+    }
+
+    last_err = None
+    for attempt in range(1, retries + 1):
+        if should_stop and should_stop():
+            raise RuntimeError("Đã dừng theo yêu cầu")
+        try:
+            resp = requests.post(
+                AUTOVOICE_TTS_URL, headers=headers, json=body, timeout=180)
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+
+            if "application/json" in ctype:
+                data = resp.json()
+                if isinstance(data, dict) and data.get("error"):
+                    err = data["error"]
+                    msg = err.get("message", err) if isinstance(err, dict) else err
+                    raise RuntimeError(f"AutoVoice API error: {msg}")
+                audio_b64 = None
+                if isinstance(data, dict):
+                    audio_b64 = (data.get("audioContent")
+                                 or data.get("audio")
+                                 or data.get("data"))
+                if not audio_b64:
+                    raise RuntimeError(f"AutoVoice API trả JSON không có audio: {data}")
+                audio_bytes = base64.b64decode(audio_b64)
+            else:
+                if resp.status_code >= 400:
+                    raise RuntimeError(
+                        f"AutoVoice API HTTP {resp.status_code}: "
+                        f"{resp.text[:200]}")
+                audio_bytes = resp.content
+
+            if not audio_bytes:
+                raise RuntimeError("AutoVoice API trả về audio rỗng")
+            with open(out_path, "wb") as fh:
+                fh.write(audio_bytes)
+            _validate_audio_file(out_path)
+            return out_path
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            try:
+                if os.path.exists(out_path):
+                    os.remove(out_path)
+            except OSError:
+                pass
+            if log:
+                log(f"! AutoVoice API lần {attempt}/{retries} lỗi: {exc}")
+            if attempt < retries:
+                _sleep_or_stop(backoff, should_stop)
+
+    raise RuntimeError(f"AutoVoice API thất bại sau {retries} lần: {last_err}")
+
+
 def synthesize_voice_videoai(
     text,
     out_path,
@@ -351,32 +424,15 @@ def synthesize_voice_videoai(
     log=None,
     should_stop=None,
 ):
-    """
-    Gọi Voice API (videoai.ddns.net) chuyển text -> file mp3 tại out_path.
-    Trả về out_path. Ném RuntimeError nếu thất bại sau `retries` lần.
-
-    API trả về có thể là:
-      - audio nhị phân (Content-Type: audio/*)  -> ghi thẳng
-      - JSON chứa base64 (audioContent/audio/data) -> decode rồi ghi
-    Xử lý phòng thủ cho cả hai trường hợp.
-    """
     if not api_key:
-        raise ValueError("Thiếu API Key Voice API")
+        raise ValueError("Thiếu API Key Voice API (videoai)")
     if not text or not str(text).strip():
         raise ValueError("Thiếu text để tạo voice")
 
     headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
-    # Request body cũ (videoai):
-    # body = {
-    #     "text": str(text),
-    #     "voice_name": voice_name or DEFAULT_VIDEOAI_VOICE,
-    #     "speed": float(speed),
-    # }
-
-    # Request body mới (autovoice.vn):
     body = {
         "text": str(text),
-        "voiceId": voice_name or DEFAULT_VIDEOAI_VOICE,
+        "voice_name": voice_name or DEFAULT_VIDEOAI_VOICE,
         "speed": float(speed),
     }
 
@@ -389,7 +445,6 @@ def synthesize_voice_videoai(
                 VIDEOAI_TTS_URL, headers=headers, json=body, timeout=180)
             ctype = (resp.headers.get("Content-Type") or "").lower()
 
-            # Trường hợp lỗi: thường trả JSON kèm field "error"
             if "application/json" in ctype:
                 data = resp.json()
                 if isinstance(data, dict) and data.get("error"):
@@ -405,7 +460,6 @@ def synthesize_voice_videoai(
                     raise RuntimeError(f"Voice API trả JSON không có audio: {data}")
                 audio_bytes = base64.b64decode(audio_b64)
             else:
-                # Không phải JSON -> coi như audio nhị phân
                 if resp.status_code >= 400:
                     raise RuntimeError(
                         f"Voice API HTTP {resp.status_code}: "
@@ -416,13 +470,10 @@ def synthesize_voice_videoai(
                 raise RuntimeError("Voice API trả về audio rỗng")
             with open(out_path, "wb") as fh:
                 fh.write(audio_bytes)
-            # Kiểm tra audio vừa nhận có hợp lệ không (tránh tiếng 'pít').
-            # Nếu duration < 0.5s hoặc size < 2KB → raise → trigger retry.
             _validate_audio_file(out_path)
             return out_path
         except Exception as exc:  # noqa: BLE001
             last_err = exc
-            # Xóa file audio hỏng (nếu có) để lần retry ghi lại sạch
             try:
                 if os.path.exists(out_path):
                     os.remove(out_path)
@@ -431,7 +482,6 @@ def synthesize_voice_videoai(
             if log:
                 log(f"! Voice API lần {attempt}/{retries} lỗi: {exc}")
             if attempt < retries:
-                # Chờ cố định `backoff` giây (mặc định 5s), không tăng dần.
                 _sleep_or_stop(backoff, should_stop)
 
     raise RuntimeError(f"Voice API thất bại sau {retries} lần: {last_err}")
@@ -501,7 +551,19 @@ def make_voice(
     elif log:
         preview = script if len(script) <= 120 else script[:117] + "..."
         log(f" Lời thoại: {preview}")
-    if provider == "videoai":
+    if provider == "autovoice":
+        synthesize_voice_autovoice(
+            script,
+            out_path,
+            api_key=tts_key,
+            voice_name=voice_name,
+            speed=speaking_rate,
+            retries=tts_retries,
+            backoff=tts_backoff,
+            log=log,
+            should_stop=should_stop,
+        )
+    elif provider == "videoai":
         synthesize_voice_videoai(
             script,
             out_path,
