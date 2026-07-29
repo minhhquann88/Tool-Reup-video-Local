@@ -29,10 +29,9 @@ echo.
 echo [1/3] Cai PyInstaller...
 pip install pyinstaller -q
 
-:: Get APP_VERSION from main.py
-for /f "tokens=*" %%a in ('python -c "import re; print(re.search(r'APP_VERSION\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]', open('main.py', encoding='utf-8').read()).group(1))"') do set APP_VER=%%a
-if "%APP_VER%"=="" set APP_VER=v1.0.0
-set APP_NAME=RenderVideoReupPro_%APP_VER%
+:: Get APP_NAME & APP_VERSION dynamically from python
+for /f "tokens=*" %%a in ('python -c "import main, license; base = 'RenderVideoReupPro' if getattr(license, 'APP_ID', '') == 'tool_reup_video_pro' else 'RenderVideoReup'; print(f'{base}_{main.APP_VERSION}')"') do set APP_NAME=%%a
+if "%APP_NAME%"=="" set APP_NAME=RenderVideoReup_v1.0.0
 
 :: Build
 echo.
