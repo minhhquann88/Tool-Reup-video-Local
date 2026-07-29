@@ -1858,7 +1858,8 @@ class App(ctk.CTk):
 
     def _write_output_csv(self, out_path: str, out_refs: dict):
         """
-        Write a new CSV based on input CSV, replacing 'video_url' column with 'Link Video'.
+        Write a new CSV based on input CSV, replacing 'video_url' column with 'Link Video'
+        and adding an empty 'hagtag' column to the right of 'Link Video'.
         - Processed video: Drive link OR local path
         - Error: "Lỗi"
         - Unprocessed/stopped: "" (empty)
@@ -1866,16 +1867,20 @@ class App(ctk.CTk):
         if not self._videos:
             return
 
-        # Tạo danh sách fieldnames thay cột video_url bằng "Link Video"
+        # Tạo danh sách fieldnames thay cột video_url bằng "Link Video" và thêm "hagtag" ở bên phải
         fieldnames = []
         for fn in self._videos[0].keys():
             if fn == "video_url":
                 if "Link Video" not in fieldnames:
                     fieldnames.append("Link Video")
-            else:
+                    fieldnames.append("hagtag")
+            elif fn not in ("Link Video", "hagtag"):
                 fieldnames.append(fn)
         if "Link Video" not in fieldnames:
             fieldnames.append("Link Video")
+        if "hagtag" not in fieldnames:
+            idx = fieldnames.index("Link Video")
+            fieldnames.insert(idx + 1, "hagtag")
 
         with open(out_path, "w", newline="", encoding="utf-8-sig") as fh:
             writer = csv.DictWriter(fh, fieldnames=fieldnames)
@@ -1887,6 +1892,7 @@ class App(ctk.CTk):
                     row["Link Video"] = out_refs[id(vid)]   # link Drive/local path hoặc "Lỗi"
                 else:
                     row["Link Video"] = ""                  # Chưa chạy đến thì để trống
+                row["hagtag"] = ""                          # Cột hagtag rỗng ở bên phải Link Video
                 writer.writerow(row)
 
 
