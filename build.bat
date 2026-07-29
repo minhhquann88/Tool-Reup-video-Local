@@ -29,11 +29,16 @@ echo.
 echo [1/3] Cai PyInstaller...
 pip install pyinstaller -q
 
+:: Get APP_VERSION from main.py
+for /f "tokens=*" %%a in ('python -c "import re; print(re.search(r'APP_VERSION\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]', open('main.py', encoding='utf-8').read()).group(1))"') do set APP_VER=%%a
+if "%APP_VER%"=="" set APP_VER=v1.0.0
+set APP_NAME=RenderVideoReupPro_%APP_VER%
+
 :: Build
 echo.
-echo [2/3] Dang dong goi...
+echo [2/3] Dang dong goi %APP_NAME%...
 pyinstaller --noconfirm --onedir --windowed ^
-    --name "RenderVideoReup" ^
+    --name "%APP_NAME%" ^
     --icon "video.ico" ^
     --add-data "client_secret.json;." ^
     --add-data "video.ico;." ^
@@ -57,19 +62,19 @@ if errorlevel 1 (
 )
 
 :: Remove token.json from dist if it sneaked in
-if exist "dist\RenderVideoReup\token.json" (
-    del /f /q "dist\RenderVideoReup\token.json"
+if exist "dist\%APP_NAME%\token.json" (
+    del /f /q "dist\%APP_NAME%\token.json"
     echo [INFO] Da xoa token.json khoi dist.
 )
 
 echo.
 echo [3/3] Hoan thanh!
 echo.
-echo  App o: dist\RenderVideoReup\RenderVideoReup.exe
+echo  App o: dist\%APP_NAME%\%APP_NAME%.exe
 echo.
 echo  Luu y:
 echo    - token.json se duoc tao ben canh .exe sau khi dang nhap lan dau
 echo    - Khong commit token.json len git
-echo    - De phan phoi: zip toan bo thu muc dist\RenderVideoReup\
+echo    - De phan phoi: zip toan bo thu muc dist\%APP_NAME%\
 
 pause

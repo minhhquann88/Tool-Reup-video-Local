@@ -9,7 +9,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="${APP:-RenderVideoReupPro}"
+VERSION=$(python3 -c "import re; print(re.search(r'APP_VERSION\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]', open('main.py').read()).group(1))" 2>/dev/null || echo "v1.0.0")
+APP="${APP:-RenderVideoReupPro_${VERSION}}"
 ARCH="x86_64"
 # Python dùng để TẠO venv. Đổi qua biến môi trường PYTHON khi cần — ví dụ build
 # trong Docker Ubuntu cũ (glibc thấp) nhưng cần Python mới: PYTHON=python3.11.
