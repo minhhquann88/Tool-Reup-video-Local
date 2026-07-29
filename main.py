@@ -48,11 +48,12 @@ if sys.platform != "win32":
     except Exception:
         pass
 
+APP_VERSION = "v1.0.0"
 IS_PRO = (getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro")
 APP_TITLE = (
-    "Render Video Reup Pro"
+    f"Render Video Reup Pro {APP_VERSION}"
     if IS_PRO
-    else "Render Video Reup"
+    else f"Render Video Reup {APP_VERSION}"
 )
 
 # ── Fix X11 BadLength — Layer 2: tắt CTk DPI auto-detect trước khi tạo bất kỳ cửa sổ nào ──
