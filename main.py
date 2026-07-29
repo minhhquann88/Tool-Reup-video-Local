@@ -1,7 +1,7 @@
 """
 main.py - Render Video Reup Pro
 Flow: CSV → download temp → FFmpeg → lưu (upload Drive | move vào thư mục local)
-      → output CSV (cột link_video = link Drive hoặc đường dẫn local)
+      → output CSV (xoá cột video_url, thay bằng cột 'Link Video' = link Drive/local path, lỗi = "Lỗi", chưa chạy = rỗng)
 """
 
 from __future__ import annotations   # cho phép 'X | None' chạy trên Python 3.8/3.9
@@ -1759,7 +1759,7 @@ class App(ctk.CTk):
                     _safe_remove(voice_mp3)
                 with lock:
                     errors += 1
-                    out_refs[id(vid)] = "Lỗi"   # ghi vào CSV output cột video_url
+                    out_refs[id(vid)] = "Lỗi"   # ghi vào CSV output cột Link Video
                 self._ui(lambda g=gidx: self._set_row_status(g, "error"))
                 exc_summary = " ".join([line.strip() for line in str(exc).splitlines() if line.strip()])
                 self._log_msg(f"X  [{idx+1}/{total}] Lỗi: {name} → {exc_summary}",
@@ -1858,28 +1858,35 @@ class App(ctk.CTk):
 
     def _write_output_csv(self, out_path: str, out_refs: dict):
         """
-        Write a new CSV identical to the input, with link_video set to the
-        output reference (Drive link OR local path) for each processed video.
-        out_refs is keyed by id(video_dict) so duplicate item_ids map correctly.
+        Write a new CSV based on input CSV, replacing 'video_url' column with 'Link Video'.
+        - Processed video: Drive link OR local path
+        - Error: "Lỗi"
+        - Unprocessed/stopped: "" (empty)
         """
         if not self._videos:
             return
 
-        fieldnames = list(self._videos[0].keys())
-        if "link_video" not in fieldnames:
-            if "video_url" in fieldnames:
-                idx = fieldnames.index("video_url")
-                fieldnames.insert(idx + 1, "link_video")
+        # Tạo danh sách fieldnames thay cột video_url bằng "Link Video"
+        fieldnames = []
+        for fn in self._videos[0].keys():
+            if fn == "video_url":
+                if "Link Video" not in fieldnames:
+                    fieldnames.append("Link Video")
             else:
-                fieldnames.append("link_video")
+                fieldnames.append(fn)
+        if "Link Video" not in fieldnames:
+            fieldnames.append("Link Video")
 
         with open(out_path, "w", newline="", encoding="utf-8-sig") as fh:
             writer = csv.DictWriter(fh, fieldnames=fieldnames)
             writer.writeheader()
             for vid in self._videos:
                 row = dict(vid)
+                row.pop("video_url", None)   # Xoá cột video_url
                 if id(vid) in out_refs:
-                    row["link_video"] = out_refs[id(vid)]   # link Drive/local path hoặc "Lỗi"
+                    row["Link Video"] = out_refs[id(vid)]   # link Drive/local path hoặc "Lỗi"
+                else:
+                    row["Link Video"] = ""                  # Chưa chạy đến thì để trống
                 writer.writerow(row)
 
 
