@@ -281,10 +281,17 @@ class VideoProcessor:
         video_preset  = str(settings.get("video_preset", "veryfast"))
         audio_bitrate = str(settings.get("audio_bitrate", "192k"))
 
-        # ── Force 1080p (fake metadata 1920×1080 cho các nền tảng yêu cầu 1080p) ─
-        # Scale toàn bộ frame lên 1920×1080 bằng thuật toán bicubic.
-        # Chất lượng pixel thực không tăng nhưng metadata output = 1080p hợp lệ.
+        # ── Force 1080p dọc (1080×1920) ───────────────────────────────────────────
+        # Scale video lên đúng chuẩn video dọc mạng xã hội (Shopee, TikTok, Reels).
+        # Dùng force_original_aspect_ratio=decrease để giữ tỷ lệ không bị méo,
+        # sau đó pad viền đen nếu video gốc không đúng tỷ lệ 9:16.
         force_1080p   = bool(settings.get("force_1080p", False))
+        _SCALE_1080_VF = (
+            "scale=1080:1920:"
+            "force_original_aspect_ratio=decrease:"
+            "flags=bicubic,"
+            "pad=1080:1920:-1:-1:color=black"
+        )
 
         info         = self.get_video_info(input_path)
         duration     = info["duration"]          # 0.0 if unknown
@@ -357,9 +364,9 @@ class VideoProcessor:
         # ── filters ─────────────────────────────────────────────────────────
 
         if logo_idx is not None:
-            # Video source node: thêm scale 1080p vào đầu chain nếu force_1080p.
+            # Video source node: thêm scale 1080p dọc vào đầu chain nếu force_1080p.
             if force_1080p:
-                video_node = "[0:v]scale=1920:1080:flags=bicubic[scaled1080]"
+                video_node = f"[0:v]{_SCALE_1080_VF}[scaled1080]"
                 src = "[scaled1080]"
             else:
                 video_node = ""
@@ -392,7 +399,7 @@ class VideoProcessor:
         elif force_1080p:
             # Không có logo nhưng cần scale: dùng -vf đơn giản hơn filter_complex.
             cmd += ["-map", "0:v",
-                    "-vf", "scale=1920:1080:flags=bicubic"]
+                    "-vf", _SCALE_1080_VF]
         else:
             cmd += ["-map", "0:v"]
 
