@@ -171,40 +171,31 @@ EOF
 mkdir -p "$APPDIR/usr/share/applications"
 cp "$APPDIR/$APP.desktop" "$APPDIR/usr/share/applications/"
 
-# AppRun — gọi binary PyInstaller bên trong AppDir
-# Fix X11 BadLength (RenderAddGlyphs): set biến môi trường để tránh lỗi font render
-<<<<<<< HEAD
-cat > "$APPDIR/AppRun" <<'APPRUN_EOF'
-#!/bin/sh
-HERE="$(dirname "$(readlink -f "$0")")"
-=======
 cat > "$APPDIR/AppRun" <<EOF
 #!/bin/sh
 HERE="\$(dirname "\$(readlink -f "\$0")")"
->>>>>>> Byscom
 
 # ── Fix: X Error BadLength - RenderAddGlyphs ──────────────────────────────────
-# 1-bit monochrome glyphs (XFT_ANTIALIAS=0) giảm 97% kích thước bitmap glyphs.
+# Ép DPI = 96 (scaling = 1.0) & 1-bit monochrome glyphs để tránh bão bitmap font làm tràn X11 socket (BadLength)
 export XFT_ANTIALIAS=0
-export XFT_MAX_GLYPH_MEMORY=10485760
-export XFT_RGBA=none
 export XFT_HINTING=0
+export XFT_RGBA=none
+export XFT_MAX_GLYPH_MEMORY=10485760
 export XLIB_SKIP_ARGB_VISUALS=1
+export GDK_SCALE=1
+export GDK_DPI_SCALE=1
+export QT_SCALE_FACTOR=1
+export QT_AUTO_SCREEN_SCALE_FACTOR=0
 export TK_SCALING=1
 export WAYLAND_DISPLAY=
-<<<<<<< HEAD
-# Fix sâu hơn (CTk DPI + Tk scaling) nằm trực tiếp trong main.py
-# ─────────────────────────────────────────────────────────────────────────────
 
-APPRUN_EOF
-# Thêm dòng exec riêng để $APP được mở rộng đúng lúc build (không phải lúc chạy)
-echo "exec \"\$HERE/usr/bin/$APP\" \"\$@\"" >> "$APPDIR/AppRun"
-=======
+# Set Xft.dpi = 96 vào X resources database nếu có lệnh xrdb
+echo "Xft.dpi: 96" | xrdb -merge 2>/dev/null || true
+echo "Xft.antialias: 0" | xrdb -merge 2>/dev/null || true
 # ─────────────────────────────────────────────────────────────────────────────
 
 exec "\$HERE/usr/bin/$APP" "\$@"
 EOF
->>>>>>> Byscom
 chmod +x "$APPDIR/AppRun"
 
 # ── appimagetool + runtime FUSE-less → AppImage ───────────────────────────────
