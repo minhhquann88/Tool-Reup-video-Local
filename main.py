@@ -248,6 +248,9 @@ class VideoRow(ctk.CTkFrame):
         val = video_data.get("product_name") if video_data.get("product_name") is not None else video_data.get("productName")
         p_name = "" if val is None or str(val).strip().lower() in ("", "nan", "none") else str(val).strip()
         name = p_name if p_name else "(dữ liệu product_name rỗng)"
+        # TRUNCATE to avoid X11 BadLength (RenderAddGlyphs) crash on very long CSV strings
+        if len(name) > 200:
+            name = name[:197] + "..."
         self.name_lbl = ctk.CTkLabel(
             self, text=name, anchor="w",
             font=("", 12), wraplength=500, justify="left",
@@ -1125,7 +1128,11 @@ class App(ctk.CTk):
             if self._is_log_match(sel, cat, text):
                 at_bottom = self._is_at_bottom()
                 self._log.configure(state="normal")
-                self._log.insert("end", text + "\n")
+                # Chunk insert to avoid X11 BadLength crash
+                full_text = text + "\n"
+                chunk_size = 4000
+                for i in range(0, len(full_text), chunk_size):
+                    self._log.insert("end", full_text[i:i+chunk_size])
                 if at_bottom:
                     self._log.see("end")
                 self._log.configure(state="disabled")
@@ -1143,7 +1150,11 @@ class App(ctk.CTk):
         self._log.configure(state="normal")
         self._log.delete("1.0", "end")
         if lines:
-            self._log.insert("1.0", "\n".join(lines) + "\n")
+            # Chunk insert to avoid X11 BadLength crash on Linux (RenderAddGlyphs)
+            full_text = "\n".join(lines) + "\n"
+            chunk_size = 4000
+            for i in range(0, len(full_text), chunk_size):
+                self._log.insert("end", full_text[i:i+chunk_size])
         self._log.see("end")
         self._log.configure(state="disabled")
 
