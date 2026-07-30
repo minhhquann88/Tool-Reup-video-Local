@@ -174,14 +174,22 @@ cat > "$APPDIR/AppRun" <<EOF
 HERE="\$(dirname "\$(readlink -f "\$0")")"
 
 # ── Fix: X Error BadLength - RenderAddGlyphs ──────────────────────────────────
-# 1-bit monochrome glyphs (XFT_ANTIALIAS=0) giảm 97% kích thước bitmap glyphs.
+# Ép DPI = 96 (scaling = 1.0) & 1-bit monochrome glyphs để tránh bão bitmap font làm tràn X11 socket (BadLength)
 export XFT_ANTIALIAS=0
-export XFT_MAX_GLYPH_MEMORY=10485760
-export XFT_RGBA=none
 export XFT_HINTING=0
+export XFT_RGBA=none
+export XFT_MAX_GLYPH_MEMORY=10485760
 export XLIB_SKIP_ARGB_VISUALS=1
+export GDK_SCALE=1
+export GDK_DPI_SCALE=1
+export QT_SCALE_FACTOR=1
+export QT_AUTO_SCREEN_SCALE_FACTOR=0
 export TK_SCALING=1
 export WAYLAND_DISPLAY=
+
+# Set Xft.dpi = 96 vào X resources database nếu có lệnh xrdb
+echo "Xft.dpi: 96" | xrdb -merge 2>/dev/null || true
+echo "Xft.antialias: 0" | xrdb -merge 2>/dev/null || true
 # ─────────────────────────────────────────────────────────────────────────────
 
 exec "\$HERE/usr/bin/$APP" "\$@"

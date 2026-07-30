@@ -82,13 +82,12 @@ _WIN_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def _apply_linux_x11_fix(tk_root) -> None:
-    """Áp dụng workaround cho lỗi X11 BadLength - RenderAddGlyphs trên Linux.
+    """Áp dụng workaround triệt để cho lỗi X11 BadLength - RenderAddGlyphs trên Linux.
 
-    Fix bao gồm 3 bước sau khi mỗi cửa sổ CTk được tạo:
-    1. Tắt CTk DPI auto-detect (tương tự module-level, làm lại sau super().__init__()).
-    2. Ép Tk internal scaling = 1.0 → glyph nhỏ hơn → request X11 không vượt giới hạn.
-    3. Dùng font DejaVu Sans đơn giản → batch glyph gọn hơn font Unicode mặc định của CTk.
-    Không có tác dụng gì trên Windows.
+    Fix bao gồm các bước khi mỗi cửa sổ CTk được tạo:
+    1. Tắt CTk DPI auto-detect & ép widget/window scaling = 1.0.
+    2. Ép Tk internal scaling = 1.0 → glyph nhỏ hơn → request X11 không vượt giới hạn (64KB).
+    3. Tự động phát hiện font hệ thống có sẵn (Ubuntu, Liberation Sans, FreeSans, Arial) → fallback an toàn.
     """
     if sys.platform == "win32":
         return
@@ -102,16 +101,28 @@ def _apply_linux_x11_fix(tk_root) -> None:
             ctk.set_window_scaling(1.0)
         except Exception:
             pass
-        tk_root.tk.call("tk", "scaling", 1.0)
-        tk_root.tk.call("tk", "scaling", "-displayof", ".", 1.0)
+        try:
+            tk_root.tk.call("tk", "scaling", 1.0)
+            tk_root.tk.call("tk", "scaling", "-displayof", ".", 1.0)
+        except Exception:
+            pass
         import tkinter.font as tkfont
-        for fn in ("TkDefaultFont", "TkTextFont", "TkFixedFont", "TkMenuFont", "TkHeadingFont", "TkCaptionFont", "TkTooltipFont"):
+        try:
+            avail = set(tkfont.families(tk_root))
+            chosen = "sans-serif"
+            for f_cand in ("Ubuntu", "Liberation Sans", "DejaVu Sans", "FreeSans", "Arial", "sans-serif"):
+                if f_cand in avail:
+                    chosen = f_cand
+                    break
+            for fn in ("TkDefaultFont", "TkTextFont", "TkFixedFont", "TkMenuFont", "TkHeadingFont", "TkCaptionFont", "TkTooltipFont"):
+                try:
+                    tkfont.nametofont(fn).configure(family=chosen, size=10)
+                except Exception:
+                    pass
             try:
-                tkfont.nametofont(fn).configure(family="DejaVu Sans", size=10)
+                ctk.FontManager._font_family = chosen
             except Exception:
                 pass
-        try:
-            ctk.FontManager._font_family = "DejaVu Sans"
         except Exception:
             pass
     except Exception:
