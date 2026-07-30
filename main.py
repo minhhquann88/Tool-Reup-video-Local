@@ -249,8 +249,8 @@ class VideoRow(ctk.CTkFrame):
         p_name = "" if val is None or str(val).strip().lower() in ("", "nan", "none") else str(val).strip()
         name = p_name if p_name else "(dữ liệu product_name rỗng)"
         # TRUNCATE to avoid X11 BadLength (RenderAddGlyphs) crash on very long CSV strings
-        if len(name) > 200:
-            name = name[:197] + "..."
+        if len(name) > 50:
+            name = name[:47] + "..."
         self.name_lbl = ctk.CTkLabel(
             self, text=name, anchor="w",
             font=("", 12), wraplength=500, justify="left",
