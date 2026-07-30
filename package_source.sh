@@ -41,7 +41,11 @@ cp "${FILES[@]}" "$STAGE"/
 chmod +x "$STAGE/run_linux.sh" 2>/dev/null || true
 
 rm -f "$OUT"
+<<<<<<< HEAD
 tar -czf "$OUT" -C "$STAGE_ROOT" RenderVideoReup
+=======
+tar -czf "$OUT" -C "$STAGE_ROOT" RenderVideoReupPro
+>>>>>>> Byscom
 rm -rf "$STAGE_ROOT"
 
 echo
@@ -49,6 +53,11 @@ echo "========================================================"
 echo " Xong: $OUT"
 echo "========================================================"
 echo " Gửi DUY NHẤT file này cho người dùng. Họ chạy:"
+<<<<<<< HEAD
 echo "   tar -xzf RenderVideoReup-src.tar.gz"
 echo "   cd RenderVideoReup"
+=======
+echo "   tar -xzf RenderVideoReupPro-src.tar.gz"
+echo "   cd RenderVideoReupPro"
+>>>>>>> Byscom
 echo "   bash run_linux.sh"

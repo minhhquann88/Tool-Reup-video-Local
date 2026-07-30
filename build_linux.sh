@@ -153,10 +153,15 @@ mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp video.png "$APPDIR/usr/share/icons/hicolor/256x256/apps/$APP.png"
 
 # .desktop (Icon/Exec phải khớp tên $APP)
+APP_TITLE=$(python3 -c "import main; print(main.APP_TITLE)" 2>/dev/null || echo "Render Video Reup")
 cat > "$APPDIR/$APP.desktop" <<EOF
 [Desktop Entry]
 Type=Application
+<<<<<<< HEAD
 Name=Render Video Reup
+=======
+Name=$APP_TITLE
+>>>>>>> Byscom
 Comment=Tool reup video
 Exec=$APP
 Icon=$APP
@@ -168,9 +173,15 @@ cp "$APPDIR/$APP.desktop" "$APPDIR/usr/share/applications/"
 
 # AppRun — gọi binary PyInstaller bên trong AppDir
 # Fix X11 BadLength (RenderAddGlyphs): set biến môi trường để tránh lỗi font render
+<<<<<<< HEAD
 cat > "$APPDIR/AppRun" <<'APPRUN_EOF'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
+=======
+cat > "$APPDIR/AppRun" <<EOF
+#!/bin/sh
+HERE="\$(dirname "\$(readlink -f "\$0")")"
+>>>>>>> Byscom
 
 # ── Fix: X Error BadLength - RenderAddGlyphs ──────────────────────────────────
 # 1-bit monochrome glyphs (XFT_ANTIALIAS=0) giảm 97% kích thước bitmap glyphs.
@@ -181,12 +192,19 @@ export XFT_HINTING=0
 export XLIB_SKIP_ARGB_VISUALS=1
 export TK_SCALING=1
 export WAYLAND_DISPLAY=
+<<<<<<< HEAD
 # Fix sâu hơn (CTk DPI + Tk scaling) nằm trực tiếp trong main.py
 # ─────────────────────────────────────────────────────────────────────────────
 
 APPRUN_EOF
 # Thêm dòng exec riêng để $APP được mở rộng đúng lúc build (không phải lúc chạy)
 echo "exec \"\$HERE/usr/bin/$APP\" \"\$@\"" >> "$APPDIR/AppRun"
+=======
+# ─────────────────────────────────────────────────────────────────────────────
+
+exec "\$HERE/usr/bin/$APP" "\$@"
+EOF
+>>>>>>> Byscom
 chmod +x "$APPDIR/AppRun"
 
 # ── appimagetool + runtime FUSE-less → AppImage ───────────────────────────────

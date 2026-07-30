@@ -70,16 +70,27 @@ tail -n +$((LINE + 1)) "$0" | tar -xz -C "$INSTALL_PARENT"
 # Lối tắt trong menu ứng dụng (mở bằng double-click sau này)
 APPS_DIR="$HOME/.local/share/applications"
 mkdir -p "$APPS_DIR"
+<<<<<<< HEAD
 cat > "$APPS_DIR/rendervideoreup.desktop" <<DESK
 [Desktop Entry]
 Type=Application
 Name=Render Video Reup
+=======
+cat > "$APPS_DIR/rendervideoreuppro.desktop" <<DESK
+[Desktop Entry]
+Type=Application
+Name=Render Video Reup Pro
+>>>>>>> Byscom
 Exec=bash -c "cd '$APP_DIR' && bash run_linux.sh"
 Icon=$APP_DIR/video.png
 Terminal=true
 Categories=AudioVideo;
 DESK
+<<<<<<< HEAD
 chmod +x "$APPS_DIR/rendervideoreup.desktop" 2>/dev/null || true
+=======
+chmod +x "$APPS_DIR/rendervideoreuppro.desktop" 2>/dev/null || true
+>>>>>>> Byscom
 
 echo
 echo "Đã cài. Khởi động lần đầu (cài thư viện Python — cần mạng, vài phút)..."

@@ -20,7 +20,7 @@ from pathlib import Path
 import requests
 
 API_URL = "https://key.byscom.vn/api/validate-key"
-APP_ID  = "tool_reup_video"          # đã đăng ký trong bảng apps (giữ đúng chữ thường)
+APP_ID  = "tool_reup_video"          # đã đăng ký trong bảng apps (bản khách)
 
 _TIMEOUT = 15                        # giây — lỗi/timeout coi như không hợp lệ (chặt)
 _NET_ERR = "Không thể kết nối máy chủ bản quyền."
@@ -40,7 +40,8 @@ def _exe_dir() -> Path:
         here = Path(appimg).parent
         if os.access(str(here), os.W_OK):
             return here
-        cfg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")) / "RenderVideoReup"
+        _cfg_name = "RenderVideoReupPro" if APP_ID == "tool_reup_video_pro" else "RenderVideoReup"
+        cfg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")) / _cfg_name
         try:
             cfg.mkdir(parents=True, exist_ok=True)
         except OSError:

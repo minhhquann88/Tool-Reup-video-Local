@@ -60,10 +60,14 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: Remove token.json from dist if it sneaked in
+:: Remove token.json and license.json from dist if they sneaked in
 if exist "dist\%APP_NAME%\token.json" (
     del /f /q "dist\%APP_NAME%\token.json"
     echo [INFO] Da xoa token.json khoi dist.
+)
+if exist "dist\%APP_NAME%\license.json" (
+    del /f /q "dist\%APP_NAME%\license.json"
+    echo [INFO] Da xoa license.json khoi dist.
 )
 
 echo.
