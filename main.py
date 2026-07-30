@@ -1124,7 +1124,7 @@ class App(ctk.CTk):
         """
         def _do():
             # HARD LIMIT LOG TEXT SIZE to avoid X11 BadLength
-            trunc_text = text if len(text) <= 200 else text[:197] + "..."
+            trunc_text = text if len(text) <= 50 else text[:47] + "..."
             self._log_entries.append((cat, trunc_text))
             sel = self._log_filter.get()
             if self._is_log_match(sel, cat, trunc_text):
