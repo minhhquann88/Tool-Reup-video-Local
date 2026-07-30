@@ -125,6 +125,13 @@ def _apply_linux_x11_fix(tk_root) -> None:
                 pass
         except Exception:
             pass
+        # Vô hiệu hoá hoàn toàn vòng lặp kiểm tra DPI định kỳ của CTk
+        # (belt-and-suspenders thêm vào deactivate_automatic_dpi_awareness).
+        # Nếu _check_dpi_scaling chạy lại sẽ override tk.scaling=1.0 → X11 BadLength crash.
+        try:
+            ctk.CTk._check_dpi_scaling = lambda self: None
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -221,6 +228,7 @@ class VideoRow(ctk.CTkFrame):
         # Lựa chọn lấy từ model (giữ nguyên khi chuyển trang qua lại)
         self.selected     = BooleanVar(value=app._selected[global_index])
         self._ctk_img     = None
+        self._alive       = True   # Guard: set False in destroy() to stop pending async thumb callbacks
 
         self.chk = ctk.CTkCheckBox(
             self, text="", variable=self.selected, command=self._on_toggle,
@@ -257,6 +265,11 @@ class VideoRow(ctk.CTkFrame):
             threading.Thread(target=self._load_thumb, args=(url,),
                              daemon=True).start()
 
+    def destroy(self):
+        """Đánh dấu widget là đã bị huỷ trước khi teardown — ngăn các callback async thumbnail."""
+        self._alive = False
+        super().destroy()
+
     def _on_toggle(self):
         # Ghi lựa chọn trở lại model để giữ qua các trang
         self._app._selected[self.global_index] = self.selected.get()
@@ -270,13 +283,23 @@ class VideoRow(ctk.CTkFrame):
                 img = img.resize(_THUMB_SIZE, PILImage.LANCZOS)
                 ctk_img = ctk.CTkImage(light_image=img, dark_image=img,
                                        size=_THUMB_SIZE)
-                self.after(0, lambda i=ctk_img: self._apply_thumb(i))
+                if not self._alive:          # widget đã bị destroy → bỏ qua
+                    return
+                try:
+                    self.after(0, lambda i=ctk_img: self._apply_thumb(i))
+                except Exception:            # TclError khi widget bị destroy giữa chừng
+                    pass
             except Exception:
                 pass
 
     def _apply_thumb(self, ctk_img: ctk.CTkImage):
-        self._ctk_img = ctk_img
-        self.thumb.configure(image=ctk_img)
+        if not self._alive:                  # widget đã bị destroy trước khi callback chạy
+            return
+        try:
+            self._ctk_img = ctk_img
+            self.thumb.configure(image=ctk_img)
+        except Exception:
+            pass
 
     def set_status(self, status: str):
         self.lbl_status.configure(text=STATUS_ICON.get(status, "?"))
@@ -299,6 +322,13 @@ class App(ctk.CTk):
     def __init__(self, license_data: dict | None = None):
         super().__init__()
         _apply_linux_x11_fix(self)
+        # Belt-and-suspenders: vô hiệu hoá vòng kiểm tra DPI định kỳ ở instance level
+        # (bổ sung cho class-level patch trong _apply_linux_x11_fix)
+        if sys.platform != "win32":
+            try:
+                self._check_dpi_scaling = lambda: None
+            except Exception:
+                pass
         self._license_data = license_data or {}
         self.title(APP_TITLE)
         self.geometry("1220x820")
@@ -855,7 +885,9 @@ class App(ctk.CTk):
         ).grid(row=0, column=2, sticky="e")
 
         # (3) Khung log
-        self._log = ctk.CTkTextbox(bar, height=180, font=("Consolas", 12),
+        # "Consolas" không có trên Ubuntu → Xft fallback to large font → X11 BadLength
+        _log_font = ("Consolas", 12) if sys.platform == "win32" else ("", 11)
+        self._log = ctk.CTkTextbox(bar, height=180, font=_log_font,
                                     state="disabled")
         self._log.grid(row=3, column=0, sticky="nsew", padx=12, pady=(2, 8))
 
@@ -963,7 +995,12 @@ class App(ctk.CTk):
         self.destroy()
 
     def _ui(self, func):
-        self.after(0, func)
+        """Đẩy func về luồng UI. An toàn khi gọi từ background thread kể cả sau khi cửa sổ đóng."""
+        try:
+            if self.winfo_exists():
+                self.after(0, func)
+        except Exception:
+            pass
 
     # ── Kiểm tra license định kỳ ──────────────────────────────────────────────
 
@@ -1950,6 +1987,11 @@ class LicenseDialog(ctk.CTk):
     def __init__(self):
         super().__init__()
         _apply_linux_x11_fix(self)
+        if sys.platform != "win32":
+            try:
+                self._check_dpi_scaling = lambda: None
+            except Exception:
+                pass
         self.activated = False
         self.activated_data = None
 
