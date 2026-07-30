@@ -153,10 +153,11 @@ mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp video.png "$APPDIR/usr/share/icons/hicolor/256x256/apps/$APP.png"
 
 # .desktop (Icon/Exec phải khớp tên $APP)
+APP_TITLE=$(python3 -c "import main; print(main.APP_TITLE)" 2>/dev/null || echo "Render Video Reup")
 cat > "$APPDIR/$APP.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Render Video Reup Pro
+Name=$APP_TITLE
 Comment=Tool reup video
 Exec=$APP
 Icon=$APP
@@ -168,9 +169,9 @@ cp "$APPDIR/$APP.desktop" "$APPDIR/usr/share/applications/"
 
 # AppRun — gọi binary PyInstaller bên trong AppDir
 # Fix X11 BadLength (RenderAddGlyphs): set biến môi trường để tránh lỗi font render
-cat > "$APPDIR/AppRun" <<'EOF'
+cat > "$APPDIR/AppRun" <<EOF
 #!/bin/sh
-HERE="$(dirname "$(readlink -f "$0")")"
+HERE="\$(dirname "\$(readlink -f "\$0")")"
 
 # ── Fix: X Error BadLength - RenderAddGlyphs ──────────────────────────────────
 # 1-bit monochrome glyphs (XFT_ANTIALIAS=0) giảm 97% kích thước bitmap glyphs.
@@ -183,7 +184,7 @@ export TK_SCALING=1
 export WAYLAND_DISPLAY=
 # ─────────────────────────────────────────────────────────────────────────────
 
-exec "$HERE/usr/bin/RenderVideoReupPro" "$@"
+exec "\$HERE/usr/bin/$APP" "\$@"
 EOF
 chmod +x "$APPDIR/AppRun"
 
