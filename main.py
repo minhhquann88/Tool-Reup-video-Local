@@ -1123,14 +1123,16 @@ class App(ctk.CTk):
         Nếu người dùng đang cuộn lên trên xem log cũ, không kéo xuống dưới.
         """
         def _do():
-            self._log_entries.append((cat, text))
+            # HARD LIMIT LOG TEXT SIZE to avoid X11 BadLength
+            trunc_text = text if len(text) <= 200 else text[:197] + "..."
+            self._log_entries.append((cat, trunc_text))
             sel = self._log_filter.get()
-            if self._is_log_match(sel, cat, text):
+            if self._is_log_match(sel, cat, trunc_text):
                 at_bottom = self._is_at_bottom()
                 self._log.configure(state="normal")
                 # Chunk insert to avoid X11 BadLength crash
-                full_text = text + "\n"
-                chunk_size = 4000
+                full_text = trunc_text + "\n"
+                chunk_size = 200
                 for i in range(0, len(full_text), chunk_size):
                     self._log.insert("end", full_text[i:i+chunk_size])
                 if at_bottom:
@@ -1152,7 +1154,7 @@ class App(ctk.CTk):
         if lines:
             # Chunk insert to avoid X11 BadLength crash on Linux (RenderAddGlyphs)
             full_text = "\n".join(lines) + "\n"
-            chunk_size = 4000
+            chunk_size = 200
             for i in range(0, len(full_text), chunk_size):
                 self._log.insert("end", full_text[i:i+chunk_size])
         self._log.see("end")
