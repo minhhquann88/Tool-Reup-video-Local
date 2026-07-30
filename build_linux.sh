@@ -31,9 +31,11 @@ if [ -f /.dockerenv ]; then
     echo "[*] Đang chạy trong Docker. Sử dụng thư mục tạm để tối ưu tốc độ và tránh file lock."
     VENV_DIR="/tmp/venv"
     BUILD_DIR="/tmp/build"
+    DIST_DIR="/tmp/dist"
 else
     VENV_DIR=".venv"
     BUILD_DIR="build"
+    DIST_DIR="dist"
 fi
 VENV_PY="$VENV_DIR/bin/python3"
 
@@ -88,9 +90,11 @@ fi
 # ── PyInstaller (onedir) ──────────────────────────────────────────────────────
 echo
 echo "[2/4] Đóng gói PyInstaller..."
-rm -rf "$BUILD_DIR/$APP" "dist/$APP"
+rm -rf "$BUILD_DIR/$APP" "$DIST_DIR/$APP" "dist/$APP" "$APP.spec" 2>/dev/null || true
+mkdir -p "$DIST_DIR" "dist"
 "$VENV_PY" -m PyInstaller --noconfirm --onedir \
     --workpath "$BUILD_DIR" \
+    --distpath "$DIST_DIR" \
     --name "$APP" \
     --add-data "client_secret.json:." \
     --add-data "bin:bin" \
@@ -106,11 +110,11 @@ rm -rf "$BUILD_DIR/$APP" "dist/$APP"
     main.py
 
 # Không để token/license lọt vào gói
-rm -f "dist/$APP/token.json" "dist/$APP/license.json" 2>/dev/null || true
+rm -f "$DIST_DIR/$APP/token.json" "$DIST_DIR/$APP/license.json" 2>/dev/null || true
 
 # ── Quyền thực thi cho binary chính + ffmpeg/ffprobe ──────────────────────────
-chmod +x "dist/$APP/$APP" 2>/dev/null || true
-find "dist/$APP" -type f \( -name ffmpeg -o -name ffprobe \) \
+chmod +x "$DIST_DIR/$APP/$APP" 2>/dev/null || true
+find "$DIST_DIR/$APP" -type f \( -name ffmpeg -o -name ffprobe \) \
     -exec chmod +x {} + 2>/dev/null || true
 
 # ── Chế độ "tar": dừng ở bản thư mục onedir, nén .tar.gz (KHÔNG AppImage) ──────
@@ -119,7 +123,7 @@ if [ "$PACKAGE" = "tar" ] || [ "$PACKAGE" = "dir" ]; then
     echo "[3/3] Nén gói .tar.gz (bản thư mục, không dùng AppImage)..."
     OUT_TAR="dist/$APP-linux.tar.gz"
     rm -f "$OUT_TAR"
-    tar -czf "$OUT_TAR" -C "dist" "$APP"
+    tar -czf "$OUT_TAR" -C "$DIST_DIR" "$APP"
     echo
     echo "========================================"
     echo " HOÀN THÀNH (bản thư mục, KHÔNG AppImage)!"
@@ -140,7 +144,7 @@ echo "[3/4] Dựng AppDir..."
 APPDIR="$BUILD_DIR/$APP.AppDir"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin"
-cp -a "dist/$APP/." "$APPDIR/usr/bin/"
+cp -a "$DIST_DIR/$APP/." "$APPDIR/usr/bin/"
 
 # Quyền thực thi cho binary chính + ffmpeg/ffprobe (dù nằm ở đâu trong gói)
 chmod +x "$APPDIR/usr/bin/$APP"
