@@ -13,7 +13,9 @@
 ### 1. Cài công cụ (chỉ 1 lần)
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-full python3-tk curl
+sudo apt install -y python3 python3-venv python3-full python3-tk curl \
+  build-essential pkg-config libfontconfig1-dev libfreetype6-dev \
+  libxrender-dev fonts-dejavu-core
 ```
 > `python3-venv` + `python3-full` là bắt buộc — thiếu nó sẽ gặp lỗi
 > `externally-managed-environment` (PEP 668) trên Ubuntu 23.04+/24.04.
@@ -32,8 +34,11 @@ cd tool_reup_video_local
 chmod +x build_linux.sh
 ./build_linux.sh
 ```
-Script tự: tạo `.venv` (chắc chắn có pip), cài thư viện, tải `ffmpeg`/`ffprobe`
-Linux, chạy PyInstaller, dựng AppDir, tải `appimagetool` và đóng gói.
+Script tự: tạo `.venv` (chắc chắn có pip), cài thư viện, build và bundle
+**libXft 2.3.8**, đóng gói font DejaVu cùng chính sách loại color/emoji font,
+tải `ffmpeg`/`ffprobe`, chạy PyInstaller, dựng AppDir và tạo AppImage. Build sẽ
+dừng nếu không xác minh được libXft đúng phiên bản, tránh phát hành nhầm bản còn
+lỗi X11 `BadLength (RenderAddGlyphs)`.
 
 ### 4. Kết quả
 ```
@@ -125,6 +130,7 @@ Double-click không hiện gì thì chạy từ terminal để thấy lỗi:
 | `GLIBC_2.XX not found` | Build lại trên Ubuntu cũ hơn (mục D.1) |
 | `error while loading shared libraries: libXXX` | `sudo apt install` lib đó trên máy đích |
 | `no display name and no $DISPLAY` | Phải chạy trên máy có desktop |
+| `BadLength ... RenderAddGlyphs` | Không dùng gói cũ; build lại để bundle libXft 2.3.8 và chạy stress test X11 |
 | Vẫn nghi do FUSE | Chạy `./VideoReupTool.AppImage --appimage-extract-and-run` |
 
 App cũng tự ghi `crash.log` (cạnh file .AppImage hoặc trong `~/.config/VideoReupTool/`)

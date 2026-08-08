@@ -32,10 +32,22 @@ jobs:
       - name: Cài gói hệ thống (Python + Tkinter)
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-venv python3-tk python3-dev curl file binutils
+          sudo apt-get install -y python3-venv python3-tk python3-dev curl file binutils \
+            build-essential pkg-config libfontconfig1-dev libfreetype6-dev \
+            libxrender-dev fonts-dejavu-core xvfb
 
       - name: Build AppImage
         run: bash build_linux.sh
+
+      - name: Stress test Tk/X11 với libXft đã bundle
+        run: |
+          INTERNAL_DIR="$(find dist -type d -name _internal | head -n 1)"
+          test -n "$INTERNAL_DIR"
+          strings "$INTERNAL_DIR/libXft.so.2" | grep -F "2.3.8"
+          xvfb-run -a env \
+            LD_LIBRARY_PATH="$INTERNAL_DIR" \
+            FONTCONFIG_FILE="$INTERNAL_DIR/linux-fontconfig.conf" \
+            .venv/bin/python3 tests/linux_x11_render_stress.py
 
       - name: Tải lên Artifact (tải về từ tab Actions)
         uses: actions/upload-artifact@v4

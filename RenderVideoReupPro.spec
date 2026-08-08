@@ -10,7 +10,8 @@ try:
 except Exception:
     app_name = "RenderVideoReup_v1.0.0"
 
-datas = [('client_secret.json', '.'), ('bin', 'bin')]
+datas = [('client_secret.json', '.'), ('bin', 'bin'),
+         ('linux-fontconfig.conf', '.')]
 binaries = []
 hiddenimports = ['PIL._tkinter_finder', 'google.auth.transport.requests', 'google.oauth2.credentials', 'google_auth_oauthlib.flow', 'googleapiclient.discovery', 'googleapiclient.http', 'googleapiclient._helpers', 'openpyxl']
 tmp_ret = collect_all('customtkinter')
