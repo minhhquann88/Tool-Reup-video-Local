@@ -932,13 +932,7 @@ class App(ctk.CTk):
         ).grid(row=0, column=2, sticky="e")
 
         # (3) Khung log
-<<<<<<< HEAD
-        # "Consolas" không có trên Ubuntu → Xft fallback to large font → X11 BadLength
-        _log_font = ("Consolas", 12) if sys.platform == "win32" else ("", 11)
-        self._log = ctk.CTkTextbox(bar, height=180, font=_log_font,
-=======
         self._log = ctk.CTkTextbox(bar, height=180, font=(_UI_MONO_FONT, 12),
->>>>>>> d77e303 (Update Linux build scripts, optimize logging and UI)
                                     state="disabled")
         self._log.grid(row=3, column=0, sticky="nsew", padx=12, pady=(2, 8))
 
@@ -1233,20 +1227,7 @@ class App(ctk.CTk):
         Nếu người dùng đang cuộn lên trên xem log cũ, không kéo xuống dưới.
         """
         def _do():
-<<<<<<< HEAD
-            # HARD LIMIT LOG TEXT SIZE to avoid X11 BadLength
-            trunc_text = text if len(text) <= 50 else text[:47] + "..."
-            self._log_entries.append((cat, trunc_text))
-            sel = self._log_filter.get()
-            if self._is_log_match(sel, cat, trunc_text):
-                at_bottom = self._is_at_bottom()
-                self._log.configure(state="normal")
-                # Chunk insert to avoid X11 BadLength crash
-                full_text = trunc_text + "\n"
-                chunk_size = 200
-                for i in range(0, len(full_text), chunk_size):
-                    self._log.insert("end", full_text[i:i+chunk_size])
-=======
+
             disp_text = _clean_ui_text(text, max_len=60)
             if cat == LOG_ERROR:
                 self._append_error_log(text)
@@ -1300,7 +1281,7 @@ class App(ctk.CTk):
                     chunk_size = 200
                     for i in range(0, len(full_text), chunk_size):
                         self._log.insert("end", full_text[i:i+chunk_size])
->>>>>>> d77e303 (Update Linux build scripts, optimize logging and UI)
+
                 if at_bottom:
                     self._log.see("end")
                 self._log.configure(state="disabled")
@@ -1318,20 +1299,13 @@ class App(ctk.CTk):
         self._log.configure(state="normal")
         self._log.delete("1.0", "end")
         if lines:
-<<<<<<< HEAD
-            # Chunk insert to avoid X11 BadLength crash on Linux (RenderAddGlyphs)
-=======
->>>>>>> d77e303 (Update Linux build scripts, optimize logging and UI)
+
             full_text = "\n".join(lines) + "\n"
             chunk_size = 200
             for i in range(0, len(full_text), chunk_size):
                 self._log.insert("end", full_text[i:i+chunk_size])
-<<<<<<< HEAD
-        self._log.see("end")
-=======
         if scroll_to_end:
             self._log.see("end")
->>>>>>> d77e303 (Update Linux build scripts, optimize logging and UI)
         self._log.configure(state="disabled")
 
     # ── File pickers ─────────────────────────────────────────────────────────
