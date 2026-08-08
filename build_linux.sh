@@ -24,6 +24,7 @@ PYTHON="${PYTHON:-python3}"
 # Kiểu đóng gói: "appimage" (mặc định) hoặc "tar" (thư mục onedir nén .tar.gz,
 # KHÔNG dùng AppImage → không cần FUSE, mở nhanh hơn).
 PACKAGE="${PACKAGE:-appimage}"
+XFT_VERSION="${XFT_VERSION:-2.3.8}"
 
 # Nếu chạy trong Docker, sử dụng thư mục tạm /tmp/venv và /tmp/build để tránh ghi đè
 # hoặc gặp lỗi file lock trên thư mục mount của Windows (/app/.venv).
@@ -81,6 +82,11 @@ echo "[1/4] Cài thư viện (dùng pip CỦA venv, không đụng Python hệ t
 "$VENV_PY" -m pip install -r requirements.txt -q
 "$VENV_PY" -m pip install pyinstaller -q
 
+# Build trên Ubuntu 22.04 để giữ glibc 2.35, nhưng không bundle libXft 2.3.4
+# của distro vì bản đó vẫn có thể abort ở RenderAddGlyphs. Tự build bản đã vá.
+XFT_PREFIX="$BUILD_DIR/libxft-$XFT_VERSION-install"
+bash packaging/build-libxft.sh "$XFT_PREFIX" "$BUILD_DIR/libxft-source"
+
 # ── FFmpeg Linux trong bin/ (để bundle kèm) ───────────────────────────────────
 if [ ! -x "bin/ffmpeg" ]; then
     echo "[*] Chưa có bin/ffmpeg (Linux) - tải qua setup_ffmpeg.py..."
@@ -98,6 +104,7 @@ mkdir -p "$DIST_DIR" "dist"
     --name "$APP" \
     --add-data "client_secret.json:." \
     --add-data "bin:bin" \
+    --add-data "linux-fontconfig.conf:." \
     --collect-all customtkinter \
     --hidden-import "PIL._tkinter_finder" \
     --hidden-import "google.auth.transport.requests" \
@@ -108,6 +115,34 @@ mkdir -p "$DIST_DIR" "dist"
     --hidden-import "googleapiclient._helpers" \
     --hidden-import "openpyxl" \
     main.py
+
+# PyInstaller collects the build host's libXft transitively through _tkinter.
+# Replace it with the known-good version built above and fail closed if the
+# bundle would still ship the vulnerable 2.3.4 library.
+PYI_LIB_DIR="dist/$APP"
+if [ -d "$PYI_LIB_DIR/_internal" ]; then
+    PYI_LIB_DIR="$PYI_LIB_DIR/_internal"
+fi
+cp packaging/linux-fontconfig-bundled.conf "$PYI_LIB_DIR/linux-fontconfig.conf"
+cp -Lf "$XFT_PREFIX/lib/libXft.so.2" "$PYI_LIB_DIR/libXft.so.2"
+if ! strings "$PYI_LIB_DIR/libXft.so.2" | grep -F "$XFT_VERSION" >/dev/null; then
+    echo "[ERROR] Gói build không chứa libXft $XFT_VERSION; dừng để tránh phát hành bản còn lỗi RenderAddGlyphs."
+    exit 1
+fi
+echo "[OK] Đã bundle libXft $XFT_VERSION thay cho libXft hệ thống."
+
+mkdir -p "$PYI_LIB_DIR/fonts"
+for font_file in \
+    /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+    /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf \
+    /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf \
+    /usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf; do
+    if [ ! -f "$font_file" ]; then
+        echo "[ERROR] Thiếu font $font_file. Cài: sudo apt install fonts-dejavu-core"
+        exit 1
+    fi
+    cp "$font_file" "$PYI_LIB_DIR/fonts/"
+done
 
 # Không để token/license lọt vào gói
 rm -f "$DIST_DIR/$APP/token.json" "$DIST_DIR/$APP/license.json" 2>/dev/null || true
@@ -171,8 +206,14 @@ EOF
 mkdir -p "$APPDIR/usr/share/applications"
 cp "$APPDIR/$APP.desktop" "$APPDIR/usr/share/applications/"
 
+# Font policy độc lập với máy người dùng: ưu tiên font outline DejaVu đã bundle
+# và loại bỏ hoàn toàn Noto Color Emoji/color bitmap glyphs khỏi fallback.
+FONT_POLICY_DIR="$APPDIR/usr/share/render-video-fontconfig"
+mkdir -p "$FONT_POLICY_DIR/fonts"
+cp packaging/linux-fontconfig-bundled.conf "$FONT_POLICY_DIR/fonts.conf"
+cp -a "$PYI_LIB_DIR/fonts/." "$FONT_POLICY_DIR/fonts/"
+
 # AppRun — gọi binary PyInstaller bên trong AppDir
-# Fix X11 BadLength (RenderAddGlyphs): set biến môi trường để tránh lỗi font render
 cat > "$APPDIR/AppRun" <<EOF
 #!/bin/sh
 HERE="\$(dirname "\$(readlink -f "\$0")")"
@@ -190,13 +231,16 @@ export QT_SCALE_FACTOR=1
 export QT_AUTO_SCREEN_SCALE_FACTOR=0
 export TK_SCALING=1
 export WAYLAND_DISPLAY=
-
-# Set Xft.dpi = 96 vào X resources database nếu có lệnh xrdb
-echo "Xft.dpi: 96" | xrdb -merge 2>/dev/null || true
-echo "Xft.antialias: 0" | xrdb -merge 2>/dev/null || true
+export FONTCONFIG_FILE="\$HERE/usr/share/render-video-fontconfig/fonts.conf"
+export FONTCONFIG_PATH="\$HERE/usr/share/render-video-fontconfig"
 # ─────────────────────────────────────────────────────────────────────────────
 
-exec "\$HERE/usr/bin/$APP" "\$@"
+MAIN_BIN="\$(find "\$HERE/usr/bin" -maxdepth 1 -type f -name "RenderVideoReup*" ! -name "*.so*" ! -name "*.png" | head -n 1)"
+if [ -z "\$MAIN_BIN" ]; then
+    MAIN_BIN="\$HERE/usr/bin/$APP"
+fi
+
+exec "\$MAIN_BIN" "\$@"
 EOF
 chmod +x "$APPDIR/AppRun"
 

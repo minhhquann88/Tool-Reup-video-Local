@@ -21,6 +21,18 @@ from pathlib import Path
 # ── Fix X11 BadLength (RenderAddGlyphs) — Layer 1: env vars trước khi import Tk ───────
 # Ép Xft dùng 1-bit monochrome glyphs (giảm 97% kích thước bitmap) & 24-bit visuals
 if sys.platform != "win32":
+    # Fontconfig is initialized by Tk/Xft during the first font creation, so
+    # this must point at our policy before tkinter/customtkinter is imported.
+    _fontconfig_base = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
+    _fontconfig_candidates = (
+        _fontconfig_base / "linux-fontconfig.conf",
+        Path(__file__).parent / "linux-fontconfig.conf",
+    )
+    if "FONTCONFIG_FILE" not in os.environ:
+        for _fontconfig_file in _fontconfig_candidates:
+            if _fontconfig_file.is_file():
+                os.environ["FONTCONFIG_FILE"] = str(_fontconfig_file)
+                break
     os.environ["XFT_ANTIALIAS"] = "0"
     os.environ["XFT_HINTING"] = "0"
     os.environ["XFT_RGBA"] = "none"
@@ -40,11 +52,12 @@ from PIL import Image as PILImage
 import license as license_mod
 import single_instance
 
-# Vô hiệu hóa load_font TTF ngoài của CTk trên Linux để tránh bão font handles Xft
+# CTk normally draws rounded corners/checkmarks with a private OTF glyph font.
+# On X11 that creates an avoidable RenderAddGlyphs path, so use polygons instead.
 if sys.platform != "win32":
     try:
-        import customtkinter.windows.widgets.utility.font_manager as ctk_fm
-        ctk_fm.FontManager.load_font = lambda *args, **kwargs: True
+        from customtkinter.windows.widgets.core_rendering.draw_engine import DrawEngine
+        DrawEngine.preferred_drawing_method = "polygon_shapes"
     except Exception:
         pass
 
@@ -55,6 +68,20 @@ APP_TITLE = (
     if IS_PRO
     else f"Render Video Reup {APP_VERSION}"
 )
+_UI_FONT = "Segoe UI" if sys.platform == "win32" else "DejaVu Sans"
+_UI_MONO_FONT = "Consolas" if sys.platform == "win32" else "DejaVu Sans Mono"
+
+def _clean_ui_text(text: str, max_len: int = 60) -> str:
+    """Sanitize text for display in UI widgets to prevent X11 BadLength (RenderAddGlyphs) crash on Linux."""
+    if not text:
+        return ""
+    s = str(text).strip()
+    if sys.platform != "win32":
+        s = "".join(c for c in s if ord(c) <= 0xFFFF)
+    if len(s) > max_len:
+        s = s[:max_len-3] + "..."
+    return s
+
 
 # ── Fix X11 BadLength — Layer 2: tắt CTk DPI auto-detect trước khi tạo bất kỳ cửa sổ nào ──
 # CTk 5.2+ có _check_dpi_scaling chạy định kỳ và override tk.scaling → gây crash.
@@ -77,6 +104,11 @@ from tts import (DEFAULT_PROMPT, DEFAULT_AUTOVOICE_VOICE, DEFAULT_VIDEOAI_VOICE,
 # ── Theme ────────────────────────────────────────────────────────────────────
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
+if sys.platform != "win32":
+    try:
+        ctk.ThemeManager.theme["CTkFont"]["family"] = _UI_FONT
+    except (AttributeError, KeyError, TypeError):
+        pass
 
 _WIN_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
@@ -159,7 +191,11 @@ def _crash_dir() -> Path:
 def _write_crash(tb: str) -> None:
     """Ghi traceback ra crash.log để chẩn đoán khi chạy không có console."""
     try:
-        (_crash_dir() / "crash.log").write_text(tb, encoding="utf-8")
+        path = _crash_dir() / "crash.log"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        with path.open("a", encoding="utf-8") as crash_file:
+            crash_file.write(f"\n[{timestamp}]\n{str(tb).rstrip()}\n")
     except Exception:
         pass
 
@@ -187,6 +223,16 @@ LOG_ERROR    = "Lỗi"
 LOG_CATS        = (LOG_DOWNLOAD, LOG_TEXT, LOG_VOICE, LOG_PROCESS, LOG_UPLOAD, LOG_RESULT, LOG_ERROR)
 LOG_FILTER_ALL  = "Tất cả"
 LOG_FILTER_OPTS = (LOG_FILTER_ALL,) + LOG_CATS
+
+# Error entries are intentionally kept for the whole application session.  Only
+# ordinary progress/system entries are capped, which keeps the Tk/X11 text
+# buffer bounded during large batches without hiding diagnostic information.
+MAX_UI_LOGS = 1000
+_RETRY_LOG_RE = re.compile(
+    r"^(?P<prefix>.*?(?:tải\s+lần|thử\s+lại)\s+)"
+    r"(?P<attempt>\d+)\s*/\s*(?P<total>\d+)(?P<suffix>.*)$",
+    re.IGNORECASE,
+)
 
 
 # ── Hiển thị danh sách (phân trang) ───────────────────────────────────────────
@@ -236,7 +282,7 @@ class VideoRow(ctk.CTkFrame):
         )
         self.chk.pack(side="left", padx=(8, 2))
 
-        self.lbl_status = ctk.CTkLabel(self, text="...", width=26, font=("", 14))
+        self.lbl_status = ctk.CTkLabel(self, text="...", width=26, font=(_UI_FONT, 14))
         self.lbl_status.pack(side="left", padx=2)
 
         self.thumb = ctk.CTkLabel(
@@ -248,12 +294,10 @@ class VideoRow(ctk.CTkFrame):
         val = video_data.get("product_name") if video_data.get("product_name") is not None else video_data.get("productName")
         p_name = "" if val is None or str(val).strip().lower() in ("", "nan", "none") else str(val).strip()
         name = p_name if p_name else "(dữ liệu product_name rỗng)"
-        # TRUNCATE to avoid X11 BadLength (RenderAddGlyphs) crash on very long CSV strings
-        if len(name) > 50:
-            name = name[:47] + "..."
+        disp_name = _clean_ui_text(name, max_len=60)
         self.name_lbl = ctk.CTkLabel(
-            self, text=name, anchor="w",
-            font=("", 12), wraplength=500, justify="left",
+            self, text=disp_name, anchor="w",
+            font=(_UI_FONT, 12), wraplength=500, justify="left",
         )
         self.name_lbl.pack(side="left", fill="x", expand=True, padx=(0, 8))
 
@@ -433,10 +477,10 @@ class App(ctk.CTk):
         bar.grid_propagate(False)
 
         ctk.CTkLabel(bar, text=f" {APP_TITLE}",
-                     font=("", 18, "bold")).pack(side="left", padx=16)
+                     font=(_UI_FONT, 18, "bold")).pack(side="left", padx=16)
 
         self._csv_label = ctk.CTkLabel(bar, text="Chưa import CSV/Excel",
-                                        text_color="gray", font=("", 12))
+                                        text_color="gray", font=(_UI_FONT, 12))
         self._csv_label.pack(side="left", padx=6)
 
         ctk.CTkButton(bar, text=" Import CSV/Excel", width=130, height=32,
@@ -447,7 +491,7 @@ class App(ctk.CTk):
                       command=self._pick_csv_out).pack(side="right", padx=10)
 
         self._csv_out_label = ctk.CTkLabel(bar, text="Chưa chọn nơi lưu CSV",
-                                            text_color="gray", font=("", 12))
+                                        text_color="gray", font=(_UI_FONT, 12))
         self._csv_out_label.pack(side="right", padx=6)
 
     # ── Settings panel ───────────────────────────────────────────────────────
@@ -475,7 +519,7 @@ class App(ctk.CTk):
         self._section(pane, "  Thay Voice")
 
         self._audio_label = ctk.CTkLabel(pane, text="Chưa chọn file audio",
-                                          text_color="gray", font=("", 11),
+                                          text_color="gray", font=(_UI_FONT, 11),
                                           wraplength=230, justify="left")
         self._audio_label.pack(anchor="w", pady=(0, 4))
 
@@ -596,7 +640,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(
             self._voiceai_box,
             text="Chèn dữ liệu CSV bằng ${tên_cột} (vd ${product_name}).",
-            text_color="gray", font=("", 10), wraplength=230, justify="left",
+            text_color="gray", font=(_UI_FONT, 10), wraplength=230, justify="left",
         ).pack(anchor="w")
         self._prompt_box = ctk.CTkTextbox(self._voiceai_box, height=120,
                                           wrap="word")
@@ -615,7 +659,7 @@ class App(ctk.CTk):
         self._section(pane, "  Logo / Watermark")
 
         self._logo_label = ctk.CTkLabel(pane, text="Chưa chọn file logo",
-                                         text_color="gray", font=("", 11),
+                                         text_color="gray", font=(_UI_FONT, 11),
                                          wraplength=230, justify="left")
         self._logo_label.pack(anchor="w", pady=(0, 4))
 
@@ -703,7 +747,7 @@ class App(ctk.CTk):
         self._drive_box = ctk.CTkFrame(pane, fg_color="transparent")
         self._login_label = ctk.CTkLabel(
             self._drive_box, text="Chưa đăng nhập",
-            text_color="gray", font=("", 11),
+            text_color="gray", font=(_UI_FONT, 11),
         )
         self._login_label.pack(anchor="w", pady=(0, 6))
 
@@ -721,7 +765,7 @@ class App(ctk.CTk):
         self._local_box = ctk.CTkFrame(pane, fg_color="transparent")
         self._local_label = ctk.CTkLabel(
             self._local_box, text="Chưa chọn thư mục",
-            text_color="gray", font=("", 11), wraplength=230, justify="left",
+            text_color="gray", font=(_UI_FONT, 11), wraplength=230, justify="left",
         )
         self._local_label.pack(anchor="w", pady=(0, 4))
         ctk.CTkButton(self._local_box, text=" Chọn thư mục lưu", height=34,
@@ -748,7 +792,7 @@ class App(ctk.CTk):
 
         self._btn_process = ctk.CTkButton(
             pane, text="XỬ LÝ VIDEO", height=44,
-            font=("", 14, "bold"), fg_color="#1565C0",
+            font=(_UI_FONT, 14, "bold"), fg_color="#1565C0",
             command=self._start_processing,
         )
         self._btn_process.pack(fill="x", pady=(0, 6))
@@ -768,11 +812,11 @@ class App(ctk.CTk):
         expiry = data.get("expire_date") or "Vô thời hạn"
         ctk.CTkLabel(
             pane, text=f" Bản quyền: {masked}\nHết hạn: {expiry}",
-            text_color="gray", font=("", 11), justify="left",
+            text_color="gray", font=(_UI_FONT, 11), justify="left",
         ).pack(anchor="w")
         ctk.CTkButton(
             pane, text="Hủy kích hoạt", height=28, fg_color="#555",
-            font=("", 11), command=self._deactivate_license,
+            font=(_UI_FONT, 11), command=self._deactivate_license,
         ).pack(anchor="w", pady=(4, 0))
 
     # ── Video list ───────────────────────────────────────────────────────────
@@ -789,15 +833,15 @@ class App(ctk.CTk):
         hdr.grid_propagate(False)
 
         self._list_title = ctk.CTkLabel(hdr, text="  Danh sách video  (0)",
-                                         font=("", 13, "bold"))
+                                        font=(_UI_FONT, 13, "bold"))
         self._list_title.pack(side="left", padx=12)
 
         ctk.CTkButton(hdr, text="[v] Tất cả", width=80, height=28,
-                      font=("", 11),
+                      font=(_UI_FONT, 11),
                       command=lambda: self._select_all(True)).pack(
                           side="right", padx=4)
         ctk.CTkButton(hdr, text="[ ] Bỏ hết", width=80, height=28,
-                      font=("", 11), fg_color="#555",
+                      font=(_UI_FONT, 11), fg_color="#555",
                       command=lambda: self._select_all(False)).pack(
                           side="right", padx=4)
 
@@ -808,7 +852,7 @@ class App(ctk.CTk):
         self._empty_lbl = ctk.CTkLabel(
             self._scroll,
             text="  Chưa có video\nBấm  'Import CSV'  để bắt đầu",
-            font=("", 14), text_color="gray",
+            font=(_UI_FONT, 14), text_color="gray",
         )
         self._empty_lbl.pack(expand=True, pady=80)
 
@@ -819,14 +863,14 @@ class App(ctk.CTk):
         pager.grid_propagate(False)
 
         self._btn_prev = ctk.CTkButton(pager, text="< Trước", width=84, height=28,
-                                       font=("", 11), command=self._prev_page)
+                                       font=(_UI_FONT, 11), command=self._prev_page)
         self._btn_prev.pack(side="left", padx=(10, 4), pady=6)
 
         self._btn_next = ctk.CTkButton(pager, text="Sau >", width=84, height=28,
-                                       font=("", 11), command=self._next_page)
+                                       font=(_UI_FONT, 11), command=self._next_page)
         self._btn_next.pack(side="left", padx=4, pady=6)
 
-        self._page_lbl = ctk.CTkLabel(pager, text="", font=("", 11),
+        self._page_lbl = ctk.CTkLabel(pager, text="", font=(_UI_FONT, 11),
                                       text_color="gray")
         self._page_lbl.pack(side="left", padx=12)
 
@@ -864,7 +908,7 @@ class App(ctk.CTk):
         prow.grid_columnconfigure(0, weight=1)
 
         self._progress_lbl = ctk.CTkLabel(prow, text="Sẵn sàng",
-                                           anchor="w", font=("", 12))
+                                           anchor="w", font=(_UI_FONT, 12))
         self._progress_lbl.grid(row=0, column=0, sticky="w")
 
         self._progress_bar = ctk.CTkProgressBar(prow, height=12)
@@ -872,25 +916,29 @@ class App(ctk.CTk):
         self._progress_bar.set(0)
 
         self._progress_pct = ctk.CTkLabel(prow, text="0 %", width=55,
-                                           font=("", 11))
+                                           font=(_UI_FONT, 11))
         self._progress_pct.grid(row=1, column=1, padx=8)
 
         # (2) Hàng tiêu đề log + dropdown lọc
         hrow = ctk.CTkFrame(bar, fg_color="transparent")
         hrow.grid(row=2, column=0, sticky="ew", padx=12, pady=(2, 0))
         hrow.grid_columnconfigure(1, weight=1)
-        ctk.CTkLabel(hrow, text="Nhật ký:", font=("", 12)).grid(
+        ctk.CTkLabel(hrow, text="Nhật ký:", font=(_UI_FONT, 12)).grid(
             row=0, column=0, sticky="w")
         ctk.CTkOptionMenu(
             hrow, variable=self._log_filter, values=list(LOG_FILTER_OPTS),
-            width=140, height=26, font=("", 11),
+            width=140, height=26, font=(_UI_FONT, 11),
             command=lambda _v: self._render_log(),
         ).grid(row=0, column=2, sticky="e")
 
         # (3) Khung log
+<<<<<<< HEAD
         # "Consolas" không có trên Ubuntu → Xft fallback to large font → X11 BadLength
         _log_font = ("Consolas", 12) if sys.platform == "win32" else ("", 11)
         self._log = ctk.CTkTextbox(bar, height=180, font=_log_font,
+=======
+        self._log = ctk.CTkTextbox(bar, height=180, font=(_UI_MONO_FONT, 12),
+>>>>>>> d77e303 (Update Linux build scripts, optimize logging and UI)
                                     state="disabled")
         self._log.grid(row=3, column=0, sticky="nsew", padx=12, pady=(2, 8))
 
@@ -908,7 +956,7 @@ class App(ctk.CTk):
 
     @staticmethod
     def _section(parent, text: str):
-        ctk.CTkLabel(parent, text=text, font=("", 13, "bold")).pack(
+        ctk.CTkLabel(parent, text=text, font=(_UI_FONT, 13, "bold")).pack(
             anchor="w", pady=(14, 4))
 
     @staticmethod
@@ -1070,9 +1118,9 @@ class App(ctk.CTk):
         overlay = ctk.CTkFrame(self, fg_color="#0d0d1a")
         overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
         ctk.CTkLabel(overlay, text=" Bản quyền không hợp lệ",
-                     font=("", 22, "bold"), text_color="#ff4757"
+                     font=(_UI_FONT, 22, "bold"), text_color="#ff4757"
                      ).pack(pady=(180, 10))
-        ctk.CTkLabel(overlay, text=message, font=("", 14),
+        ctk.CTkLabel(overlay, text=message, font=(_UI_FONT, 14),
                      wraplength=600, justify="center").pack(pady=10)
         ctk.CTkButton(overlay, text="Kích hoạt lại / Thoát",
                       width=240, height=40,
@@ -1116,6 +1164,68 @@ class App(ctk.CTk):
         except Exception:
             return True
 
+    @staticmethod
+    def _retry_log_key(text: str):
+        """Return a stable key for retry lines whose X/Y counter may change."""
+        match = _RETRY_LOG_RE.match((text or "").strip())
+        if not match:
+            return None
+        # The prefix includes the per-video marker (for example [3/50]), so
+        # concurrent workers update their own retry line instead of each other.
+        prefix = " ".join(match.group("prefix").casefold().split())
+        return prefix, int(match.group("total"))
+
+    def _log_update_last(self, cat, text: str):
+        """Update a task's latest retry entry and return its old value/index."""
+        key = self._retry_log_key(text)
+        if key is None:
+            return None
+        for index in range(len(self._log_entries) - 1, -1, -1):
+            old_cat, old_text = self._log_entries[index]
+            if self._retry_log_key(old_text) == key:
+                self._log_entries[index] = (cat, text)
+                return index, (old_cat, old_text)
+        return None
+
+    def _trim_ui_logs(self) -> list[int]:
+        """Trim ordinary rows and return their pre-trim list indices."""
+        normal_count = sum(cat != LOG_ERROR for cat, _ in self._log_entries)
+        remove_count = normal_count - MAX_UI_LOGS
+        if remove_count <= 0:
+            return []
+
+        kept = []
+        removed_indices = []
+        for index, entry in enumerate(self._log_entries):
+            if entry[0] != LOG_ERROR and remove_count:
+                remove_count -= 1
+                removed_indices.append(index)
+                continue
+            kept.append(entry)
+        self._log_entries[:] = kept
+        return removed_indices
+
+    def _visible_log_line(self, entries: list[tuple], index: int, sel: str) -> int:
+        """Map an entry index to its one-based line number in the active filter."""
+        return 1 + sum(
+            self._is_log_match(sel, cat, text)
+            for cat, text in entries[:index]
+        )
+
+    @staticmethod
+    def _append_error_log(text: str) -> None:
+        """Persist the unabridged error message independently from the UI."""
+        try:
+            path = _crash_dir() / "app_error.log"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            with path.open("a", encoding="utf-8") as log_file:
+                log_file.write(f"[{timestamp}] {str(text).rstrip()}\n")
+        except Exception:
+            # Logging must never turn a recoverable processing error into a UI
+            # crash (for example on a read-only AppImage mount).
+            pass
+
     def _log_add(self, text: str, cat=None):
         """
         Thêm 1 dòng log kèm nhãn phân loại `cat` (None = dòng hệ thống, chỉ hiện
@@ -1123,6 +1233,7 @@ class App(ctk.CTk):
         Nếu người dùng đang cuộn lên trên xem log cũ, không kéo xuống dưới.
         """
         def _do():
+<<<<<<< HEAD
             # HARD LIMIT LOG TEXT SIZE to avoid X11 BadLength
             trunc_text = text if len(text) <= 50 else text[:47] + "..."
             self._log_entries.append((cat, trunc_text))
@@ -1135,6 +1246,61 @@ class App(ctk.CTk):
                 chunk_size = 200
                 for i in range(0, len(full_text), chunk_size):
                     self._log.insert("end", full_text[i:i+chunk_size])
+=======
+            disp_text = _clean_ui_text(text, max_len=60)
+            if cat == LOG_ERROR:
+                self._append_error_log(text)
+
+            at_bottom = self._is_at_bottom()
+            updated = self._log_update_last(cat, disp_text)
+            if updated is None:
+                self._log_entries.append((cat, disp_text))
+            entries_before_trim = list(self._log_entries)
+            removed_indices = self._trim_ui_logs()
+            sel = self._log_filter.get()
+            if updated is not None:
+                if removed_indices:
+                    # Only possible if a retry changes category from error to
+                    # ordinary while the buffer was already at its cap.
+                    self._render_log(scroll_to_end=at_bottom)
+                    return
+                index, old_entry = updated
+                old_visible = self._is_log_match(sel, *old_entry)
+                new_visible = self._is_log_match(sel, cat, disp_text)
+                if old_visible and new_visible:
+                    line = self._visible_log_line(
+                        entries_before_trim, index, sel
+                    )
+                    self._log.configure(state="normal")
+                    self._log.delete(f"{line}.0", f"{line}.end")
+                    self._log.insert(f"{line}.0", disp_text)
+                    if at_bottom:
+                        self._log.see("end")
+                    self._log.configure(state="disabled")
+                elif old_visible != new_visible:
+                    self._render_log(scroll_to_end=at_bottom)
+                return
+
+            removed_lines = []
+            for index in removed_indices:
+                old_cat, old_text = entries_before_trim[index]
+                if self._is_log_match(sel, old_cat, old_text):
+                    removed_lines.append(
+                        self._visible_log_line(entries_before_trim, index, sel)
+                    )
+
+            new_visible = self._is_log_match(sel, cat, disp_text)
+            if removed_lines or new_visible:
+                self._log.configure(state="normal")
+                # Delete bottom-up so earlier Tk line numbers remain valid.
+                for line in reversed(removed_lines):
+                    self._log.delete(f"{line}.0", f"{line + 1}.0")
+                if new_visible:
+                    full_text = disp_text + "\n"
+                    chunk_size = 200
+                    for i in range(0, len(full_text), chunk_size):
+                        self._log.insert("end", full_text[i:i+chunk_size])
+>>>>>>> d77e303 (Update Linux build scripts, optimize logging and UI)
                 if at_bottom:
                     self._log.see("end")
                 self._log.configure(state="disabled")
@@ -1145,19 +1311,27 @@ class App(ctk.CTk):
         for line in str(msg).split("\n"):
             self._log_add(line, cat)
 
-    def _render_log(self):
+    def _render_log(self, scroll_to_end: bool = True):
         """Dựng lại nội dung textbox theo bộ lọc hiện tại (khi đổi dropdown)."""
         sel = self._log_filter.get()
         lines = [t for c, t in self._log_entries if self._is_log_match(sel, c, t)]
         self._log.configure(state="normal")
         self._log.delete("1.0", "end")
         if lines:
+<<<<<<< HEAD
             # Chunk insert to avoid X11 BadLength crash on Linux (RenderAddGlyphs)
+=======
+>>>>>>> d77e303 (Update Linux build scripts, optimize logging and UI)
             full_text = "\n".join(lines) + "\n"
             chunk_size = 200
             for i in range(0, len(full_text), chunk_size):
                 self._log.insert("end", full_text[i:i+chunk_size])
+<<<<<<< HEAD
         self._log.see("end")
+=======
+        if scroll_to_end:
+            self._log.see("end")
+>>>>>>> d77e303 (Update Linux build scripts, optimize logging and UI)
         self._log.configure(state="disabled")
 
     # ── File pickers ─────────────────────────────────────────────────────────
@@ -1335,7 +1509,7 @@ class App(ctk.CTk):
             self._empty_lbl = ctk.CTkLabel(
                 self._scroll,
                 text="  Chưa có video\nBấm  'Import CSV'  để bắt đầu",
-                font=("", 14), text_color="gray",
+                font=(_UI_FONT, 14), text_color="gray",
             )
             self._empty_lbl.pack(expand=True, pady=80)
             self._update_pager()
@@ -1548,11 +1722,12 @@ class App(ctk.CTk):
         self._progress_bar.set(0)
         self._progress_pct.configure(text="0 %")
 
-        # Xoá log của lần chạy trước (tránh tích luỹ qua nhiều lần xử lý)
-        self._log_entries.clear()
-        self._log.configure(state="normal")
-        self._log.delete("1.0", "end")
-        self._log.configure(state="disabled")
+        # Bắt đầu batch mới: bỏ log tiến trình cũ nhưng giữ toàn bộ lịch sử lỗi
+        # của phiên làm việc theo đúng chính sách chẩn đoán.
+        self._log_entries[:] = [
+            entry for entry in self._log_entries if entry[0] == LOG_ERROR
+        ]
+        self._render_log()
 
         threading.Thread(
             target=self._run_batch,
@@ -2013,9 +2188,9 @@ class LicenseDialog(ctk.CTk):
         self.resizable(False, False)
 
         ctk.CTkLabel(self, text=" Kích hoạt bản quyền",
-                     font=("", 18, "bold")).pack(pady=(22, 2))
+                     font=(_UI_FONT, 18, "bold")).pack(pady=(22, 2))
         ctk.CTkLabel(self, text=APP_TITLE,
-                     text_color="gray", font=("", 12)).pack(pady=(0, 14))
+                     text_color="gray", font=(_UI_FONT, 12)).pack(pady=(0, 14))
 
         self._entry = ctk.CTkEntry(self, width=340, height=38,
                                    placeholder_text="Nhập key bản quyền…")
@@ -2027,12 +2202,12 @@ class LicenseDialog(ctk.CTk):
         self._btn.pack(pady=(0, 6))
 
         self._msg = ctk.CTkLabel(self, text="", text_color="#ff4757",
-                                 font=("", 12), wraplength=360, justify="left")
+                                  font=(_UI_FONT, 12), wraplength=360, justify="left")
         self._msg.pack(pady=(0, 6))
 
         dev = license_mod.get_device_id()
         ctk.CTkLabel(self, text=f"Mã thiết bị: {dev}",
-                     text_color="#666", font=("", 10),
+                     text_color="#666", font=(_UI_FONT, 10),
                      wraplength=380, justify="center").pack(side="bottom",
                                                             pady=8)
 

@@ -84,5 +84,6 @@ export XFT_HINTING=0
 export XLIB_SKIP_ARGB_VISUALS=1
 export TK_SCALING=1
 export WAYLAND_DISPLAY=
+export FONTCONFIG_FILE="$PWD/linux-fontconfig.conf"
 
 python3 main.py

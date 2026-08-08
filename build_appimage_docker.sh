@@ -53,7 +53,8 @@ docker run --rm \
     "$BASE_IMAGE" bash -c '
         set -e
         apt-get update
-        apt-get install -y ca-certificates curl file binutils
+        apt-get install -y ca-certificates curl file binutils build-essential pkg-config \
+            libfontconfig1-dev libfreetype6-dev libxrender-dev fonts-dejavu-core
         if [ -n "$PYVER" ]; then
             apt-get install -y software-properties-common
             add-apt-repository -y ppa:deadsnakes/ppa
