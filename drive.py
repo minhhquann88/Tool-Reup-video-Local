@@ -10,6 +10,7 @@ Files are uploaded to the authenticated user's own Drive → no quota issue.
 from __future__ import annotations
 
 import os
+import random
 import sys
 import threading
 import time
@@ -26,6 +27,30 @@ MIME_DIR = "application/vnd.google-apps.folder"
 MIME_MP4 = "video/mp4"
 
 _CREDS_LOCK = threading.Lock()
+
+
+def _is_retryable_drive_error(exc: Exception) -> bool:
+    """Retry only transient/rate-limit errors; never hide auth or ACL errors."""
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    if status in (429, 500, 502, 503, 504):
+        return True
+    if status != 403:
+        return False
+    content = getattr(exc, "content", b"")
+    if isinstance(content, bytes):
+        content = content.decode("utf-8", errors="ignore")
+    detail = str(content or exc).casefold()
+    return "userratelimitexceeded" in detail or "ratelimitexceeded" in detail
+
+
+def _wait_or_stop(seconds: float, should_stop=None) -> bool:
+    """Wait interruptibly.  Returns False when cancellation was requested."""
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if should_stop and should_stop():
+            return False
+        time.sleep(min(0.2, max(0.0, deadline - time.monotonic())))
+    return not should_stop or not should_stop()
 
 
 def _bundle_dir() -> Path:
@@ -88,39 +113,61 @@ def _get_credentials() -> Credentials:
     token = get_token_path()
     creds: Credentials | None = None
 
-    if token.exists():
-        creds = Credentials.from_authorized_user_file(str(token), SCOPES)
+    def _read_token() -> Credentials | None:
+        if not token.exists():
+            return None
+        try:
+            return Credentials.from_authorized_user_file(str(token), SCOPES)
+        except Exception:
+            # A prior crash can leave a truncated token.  Treat it as absent so
+            # the user can authenticate again instead of blocking every worker.
+            return None
 
-    if creds and creds.valid:
-        return creds
+    def _write_token(value: Credentials) -> None:
+        tmp = token.with_name(f"{token.name}.{threading.get_ident()}.tmp")
+        try:
+            tmp.write_text(value.to_json(), encoding="utf-8")
+            os.replace(tmp, token)
+        finally:
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
 
-    if creds and creds.expired and creds.refresh_token:
-        with _CREDS_LOCK:
-            creds.refresh(Request())
-            token.write_text(creds.to_json(), encoding="utf-8")
-        return creds
-
-    # Browser login — do NOT hold lock here; this blocks until user completes
-    # (or timeout). Multiple concurrent logins are fine: each gets its own
-    # local server port, last writer wins for token.json.
-    #
-    # timeout_seconds must be generous: first-time login goes through the
-    # "Google hasn't verified this app" warning + account picker + consent
-    # screen, which easily takes more than 2 minutes. If the local callback
-    # server closes before Google redirects back, the browser shows
-    # "Unable to connect to localhost:<port>" even though auth succeeded.
-    flow  = InstalledAppFlow.from_client_secrets_file(str(secret), SCOPES)
-    creds = flow.run_local_server(
-        port=0,
-        timeout_seconds=600,
-        open_browser=True,
-        success_message=(
-            "Đăng nhập thành công! Bạn có thể đóng tab này và quay lại tool."
-        ),
-    )
-
+    # Reading and rewriting token.json must be one critical section: a worker
+    # must not parse the file while another worker is refreshing credentials.
     with _CREDS_LOCK:
-        token.write_text(creds.to_json(), encoding="utf-8")
+        creds = _read_token()
+        if creds and creds.valid:
+            return creds
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            _write_token(creds)
+            return creds
+
+    # Serialize first-time OAuth too.  Opening many browser windows and letting
+    # the last token writer win is confusing and can leave worker startup in an
+    # indeterminate state.  Recheck the token after obtaining the lock because
+    # another login may have completed while this caller was waiting.
+    with _CREDS_LOCK:
+        creds = _read_token()
+        if creds and creds.valid:
+            return creds
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            _write_token(creds)
+            return creds
+
+        flow = InstalledAppFlow.from_client_secrets_file(str(secret), SCOPES)
+        creds = flow.run_local_server(
+            port=0,
+            timeout_seconds=600,
+            open_browser=True,
+            success_message=(
+                "Đăng nhập thành công! Bạn có thể đóng tab này và quay lại tool."
+            ),
+        )
+        _write_token(creds)
 
     return creds
 
@@ -137,14 +184,30 @@ class DriveUploader:
         about = self._svc.about().get(fields="user").execute()
         return about["user"]["emailAddress"]
 
-    def create_folder(self, name: str) -> str:
+    def create_folder(self, name: str, should_stop=None, log=None) -> str:
         """Create a folder in My Drive. Returns folder ID."""
         meta   = {"name": name, "mimeType": MIME_DIR}
-        folder = self._svc.files().create(body=meta, fields="id").execute()
-        return folder["id"]
+        for attempt in range(8):
+            if should_stop and should_stop():
+                raise RuntimeError("Đã dừng theo yêu cầu")
+            try:
+                folder = self._svc.files().create(body=meta, fields="id").execute()
+                return folder["id"]
+            except Exception as exc:
+                if not _is_retryable_drive_error(exc) or attempt == 7:
+                    raise
+                wait = min(2 ** attempt + random.uniform(0, 1), 32)
+                if log:
+                    log(f"! Drive quá tải, thử tạo folder lại sau {wait:.1f}s "
+                        f"({attempt + 1}/8)")
+                if not _wait_or_stop(wait, should_stop):
+                    raise RuntimeError("Đã dừng theo yêu cầu")
+
+        raise RuntimeError("Không thể tạo folder trên Drive")
 
     def upload_video(self, local_path: str, filename: str,
-                     folder_id: str, progress_cb=None) -> str:
+                     folder_id: str, progress_cb=None, should_stop=None,
+                     log=None) -> str:
         """Upload video, make public, return shareable view link."""
         meta    = {"name": filename, "parents": [folder_id]}
         media   = MediaFileUpload(local_path, mimetype=MIME_MP4, resumable=True)
@@ -153,8 +216,24 @@ class DriveUploader:
         )
 
         response = None
+        retry_attempt = 0
         while response is None:
-            status, response = request.next_chunk()
+            if should_stop and should_stop():
+                raise RuntimeError("Đã dừng theo yêu cầu")
+            try:
+                status, response = request.next_chunk()
+                retry_attempt = 0
+            except Exception as exc:
+                if not _is_retryable_drive_error(exc) or retry_attempt >= 7:
+                    raise
+                wait = min(2 ** retry_attempt + random.uniform(0, 1), 32)
+                retry_attempt += 1
+                if log:
+                    log(f"! Drive quá tải, thử upload lại sau {wait:.1f}s "
+                        f"({retry_attempt}/8)")
+                if not _wait_or_stop(wait, should_stop):
+                    raise RuntimeError("Đã dừng theo yêu cầu")
+                continue
             if status and progress_cb:
                 progress_cb(status.progress())
 
@@ -163,17 +242,25 @@ class DriveUploader:
 
         file_id = response["id"]
 
-        # Google Drive permissions API can return transient 500 errors — retry
-        for attempt in range(4):
+        # Permission requests are also rate-limited.  Retry only documented
+        # transient/rate errors with exponential backoff + jitter.
+        for attempt in range(8):
+            if should_stop and should_stop():
+                raise RuntimeError("Đã dừng theo yêu cầu")
             try:
                 self._svc.permissions().create(
                     fileId=file_id,
                     body={"role": "reader", "type": "anyone"},
                 ).execute()
                 break
-            except Exception:
-                if attempt == 3:
+            except Exception as exc:
+                if not _is_retryable_drive_error(exc) or attempt == 7:
                     raise
-                time.sleep(1)
+                wait = min(2 ** attempt + random.uniform(0, 1), 32)
+                if log:
+                    log(f"! Drive quá tải, thử cấp quyền lại sau {wait:.1f}s "
+                        f"({attempt + 1}/8)")
+                if not _wait_or_stop(wait, should_stop):
+                    raise RuntimeError("Đã dừng theo yêu cầu")
 
         return f"https://drive.google.com/file/d/{file_id}/view"

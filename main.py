@@ -9,6 +9,7 @@ from __future__ import annotations   # cho phép 'X | None' chạy trên Python 
 import csv
 import io
 import os
+import queue
 import re
 import shutil
 import subprocess
@@ -333,7 +334,9 @@ class VideoRow(ctk.CTkFrame):
                 if not self._alive:          # widget đã bị destroy → bỏ qua
                     return
                 try:
-                    self.after(0, lambda i=ctk_img: self._apply_thumb(i))
+                    # Never call Tk from the thumbnail worker.  The app drains
+                    # this callback on the Tk thread.
+                    self._app._ui(lambda i=ctk_img: self._apply_thumb(i))
                 except Exception:            # TclError khi widget bị destroy giữa chừng
                     pass
             except Exception:
@@ -390,10 +393,14 @@ class App(ctk.CTk):
         self._row_by_index: dict[int, VideoRow] = {}  # global index → widget hiện thị
         self._page       = 0                     # trang đang xem (0-based)
         self._csv_path:  str            = ""
-        self._stop_flag  = False
+        self._cancel_event = threading.Event()
         self._processing = False
+        self._batch_executor = None
+        self._batch_futures = []
+        self._ui_queue = queue.Queue()
+        self._ui_alive = True
+        self._ui_drain_job = None
 
-        self._downloader = VideoDownloader()
         self._processor  = VideoProcessor()
 
         self._creds_path   = StringVar(value="")
@@ -406,6 +413,7 @@ class App(ctk.CTk):
         self._login_cancel_flag = threading.Event()
 
         self._build_ui()
+        self._ui_drain_job = self.after(25, self._drain_ui_queue)
         self._check_ffmpeg()
 
         # ── Trạng thái kiểm tra license định kỳ ──
@@ -1040,12 +1048,28 @@ class App(ctk.CTk):
         self.destroy()
 
     def _ui(self, func):
-        """Đẩy func về luồng UI. An toàn khi gọi từ background thread kể cả sau khi cửa sổ đóng."""
+        """Queue UI work; only the Tk thread ever touches Tk methods."""
+        if self._ui_alive:
+            self._ui_queue.put(func)
+
+    def _drain_ui_queue(self):
+        """Run a bounded number of queued UI callbacks on the Tk thread."""
+        if not self._ui_alive:
+            return
+        for _ in range(200):
+            try:
+                func = self._ui_queue.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                func()
+            except Exception:
+                # A stale widget callback must not stop processing later UI work.
+                pass
         try:
-            if self.winfo_exists():
-                self.after(0, func)
+            self._ui_drain_job = self.after(25, self._drain_ui_queue)
         except Exception:
-            pass
+            self._ui_alive = False
 
     # ── Kiểm tra license định kỳ ──────────────────────────────────────────────
 
@@ -1060,7 +1084,7 @@ class App(ctk.CTk):
         (kể cả winfo_exists). Chỉ gọi API rồi đẩy kết quả về luồng UI.
         """
         status = license_mod.recheck_license()       # block ~15s, an toàn vì ở nền
-        self.after(0, lambda: self._on_recheck_result(status))
+        self._ui(lambda: self._on_recheck_result(status))
 
     def _on_recheck_result(self, status: str):
         """Chạy trên luồng UI chính — xử lý 3 kịch bản."""
@@ -1106,7 +1130,10 @@ class App(ctk.CTk):
             self._recheck_job = None
 
         # Dừng tác vụ xử lý video đang chạy (nếu có)
-        self._stop_flag = True
+        self._cancel_event.set()
+        self._processor.cancel_active()
+        for future in list(self._batch_futures):
+            future.cancel()
 
         # Overlay che toàn cửa sổ → chặn mọi tương tác bên dưới
         overlay = ctk.CTkFrame(self, fg_color="#0d0d1a")
@@ -1130,6 +1157,17 @@ class App(ctk.CTk):
 
     def destroy(self):
         # Hủy job đang chờ trước khi đóng để tránh callback trên widget đã hủy
+        self._ui_alive = False
+        self._cancel_event.set()
+        self._processor.cancel_active()
+        for future in list(self._batch_futures):
+            future.cancel()
+        if getattr(self, "_ui_drain_job", None) is not None:
+            try:
+                self.after_cancel(self._ui_drain_job)
+            except Exception:
+                pass
+            self._ui_drain_job = None
         if getattr(self, "_recheck_job", None) is not None:
             try:
                 self.after_cancel(self._recheck_job)
@@ -1311,6 +1349,9 @@ class App(ctk.CTk):
     # ── File pickers ─────────────────────────────────────────────────────────
 
     def _import_file(self):
+        if self._processing:
+            messagebox.showwarning("Đang xử lý", "Không thể import file mới khi batch đang chạy.")
+            return
         path = filedialog.askopenfilename(
             title="Chọn file CSV hoặc Excel",
             filetypes=[
@@ -1423,6 +1464,9 @@ class App(ctk.CTk):
     # ── Drive login ──────────────────────────────────────────────────────────
 
     def _login_drive(self):
+        if self._processing:
+            messagebox.showwarning("Đang xử lý", "Không thể đăng nhập Google Drive khi batch đang chạy.")
+            return
         # Cancel any in-progress login, then start fresh
         if self._login_in_progress:
             self._login_cancel_flag.set()
@@ -1457,6 +1501,9 @@ class App(ctk.CTk):
         threading.Thread(target=_do, daemon=True).start()
 
     def _logout_drive(self):
+        if self._processing:
+            messagebox.showwarning("Đang xử lý", "Không thể đăng xuất Google Drive khi batch đang chạy.")
+            return
         from drive import get_token_path
         _TOKEN_PATH = get_token_path()
         if _TOKEN_PATH.exists():
@@ -1689,8 +1736,11 @@ class App(ctk.CTk):
             "local_dir":     self._local_dir.get(),
         }
 
+        # The batch owns immutable copies.  UI actions after this point cannot
+        # redirect a running worker to a newly imported CSV.
+        settings["videos_snapshot"] = [dict(video) for video in self._videos]
         self._processing = True
-        self._stop_flag  = False
+        self._cancel_event.clear()
         self._btn_process.configure(state="disabled")
         self._btn_stop.configure(state="normal")
         self._progress_bar.set(0)
@@ -1710,17 +1760,21 @@ class App(ctk.CTk):
         ).start()
 
     def _request_stop(self):
-        self._stop_flag = True
+        self._cancel_event.set()
+        self._processor.cancel_active()
+        for future in list(self._batch_futures):
+            future.cancel()
         self._log_msg("[Dung] Dừng sau khi xong video hiện tại…")
         self._btn_stop.configure(state="disabled")
 
     # ── Batch runner ─────────────────────────────────────────────────────────
 
     def _run_batch(self, indices: list[int], settings: dict):
-        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
         from drive import DriveUploader
 
         save_mode   = settings.get("save_mode", "drive")
+        batch_videos = settings["videos_snapshot"]
         total       = len(indices)
         out_refs: dict[int, str] = {}      # id(video_dict) → Drive link / local path
         lock        = threading.Lock()
@@ -1765,7 +1819,11 @@ class App(ctk.CTk):
             try:
                 self._log_msg("@ Đang kết nối Google Drive…")
                 init_uploader = DriveUploader()
-                folder_id = init_uploader.create_folder(settings["folder_name"])
+                folder_id = init_uploader.create_folder(
+                    settings["folder_name"],
+                    should_stop=self._cancel_event.is_set,
+                    log=lambda message: self._log_msg(message, LOG_UPLOAD),
+                )
                 self._log_msg(
                     f"OK Đã tạo folder '{settings['folder_name']}' trên Drive")
             except Exception as exc:
@@ -1778,6 +1836,10 @@ class App(ctk.CTk):
         # Dù workers = 8, tối đa 4 FFmpeg chạy song song để tránh I/O
         # bão hòa + Windows handle limit (giai đoạn download vẫn song song).
         _ffmpeg_sem = threading.Semaphore(min(workers, 4))
+        # Drive may throttle a burst of resumable uploads from the same user.
+        # Allow two final upload/permission stages at once: still conservative
+        # for quota, but less likely to bottleneck batches with many videos.
+        _drive_upload_sem = threading.Semaphore(2) if save_mode == "drive" else None
 
         # Cổng giãn cách: đặt chỗ một "khe khởi động" cách video trước >= delay
         # giây, rồi chờ tới khe đó. Atomic dưới start_lock nên dù nhiều luồng gọi
@@ -1788,7 +1850,7 @@ class App(ctk.CTk):
             with start_lock:
                 slot = max(time.monotonic(), next_start[0])
                 next_start[0] = slot + delay
-            while not self._stop_flag:
+            while not self._cancel_event.is_set():
                 remaining = slot - time.monotonic()
                 if remaining <= 0:
                     break
@@ -1800,10 +1862,10 @@ class App(ctk.CTk):
         def process_one(idx: int, gidx: int):
             nonlocal done, errors, completed
 
-            if self._stop_flag:
+            if self._cancel_event.is_set():
                 return
 
-            vid     = self._videos[gidx]
+            vid     = batch_videos[gidx]
             item_id = (vid.get("item_id") or "").strip() or f"video_{idx}"
             url     = (vid.get("video_url") or "").strip()
             val_p   = vid.get("product_name") if vid.get("product_name") is not None else vid.get("productName")
@@ -1812,6 +1874,7 @@ class App(ctk.CTk):
             # idx is unique within this batch → no temp collision on dup item_id
             tmp_dl  = os.path.join(tmp_dir, f"dl_{idx}.mp4")
             tmp_out = os.path.join(tmp_dir, f"out_{idx}.mp4")
+            voice_mp3 = None
 
             if not url:
                 with lock:
@@ -1831,17 +1894,18 @@ class App(ctk.CTk):
                 ])
                 return
 
-            # Each worker owns its Drive client (not thread-safe to share);
-            # chế độ Local không cần Drive.
-            worker_uploader = DriveUploader() if save_mode == "drive" else None
-
             try:
-                if self._stop_flag:
+                # Each worker owns its Drive client (not thread-safe to share).
+                # Keep this inside the try block so auth/setup failures are
+                # surfaced as a normal per-video error.
+                worker_downloader = VideoDownloader()
+                worker_uploader = DriveUploader() if save_mode == "drive" else None
+                if self._cancel_event.is_set():
                     return
                 # Giãn cách khởi động (hàng đợi liên tục): chờ tới khe của video
                 # này để không nổ request cùng lúc với video khác.
                 _gate_start()
-                if self._stop_flag:
+                if self._cancel_event.is_set():
                     return
                 # 1. Download
                 def _dl_log(m):
@@ -1851,15 +1915,15 @@ class App(ctk.CTk):
                     self._log_msg(msg, cat)
 
                 self._ui(lambda g=gidx: self._set_row_status(g, "downloading"))
-                self._downloader.download(
+                worker_downloader.download(
                     url, tmp_dl,
                     progress_cb=lambda p, g=gidx: self._ui(
                         lambda: self._set_row_progress(g, p)),
                     log=_dl_log,
-                    should_stop=lambda: self._stop_flag,
+                    should_stop=self._cancel_event.is_set,
                 )
                 self._log_add(f"OK  [{idx+1}/{total}] Tải xong: {name}", LOG_DOWNLOAD)
-                if self._stop_flag:
+                if self._cancel_event.is_set():
                     return
 
                 # 2. Voice AI (tuỳ chọn): prompt + dữ liệu CSV → Gemini → TTS
@@ -1867,7 +1931,6 @@ class App(ctk.CTk):
                 #    Không fallback về audio gốc.
                 row_settings = settings
                 voice_ai = settings.get("voice_ai")
-                voice_mp3 = None
                 if voice_ai:
                     self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
                     out_mp3 = os.path.join(tmp_dir, f"voice_{idx}.mp3")
@@ -1910,14 +1973,14 @@ class App(ctk.CTk):
                         tts_backoff=2,
                         log=_voice_log,
                         on_script=_on_script,
-                        should_stop=lambda: self._stop_flag,
+                        should_stop=self._cancel_event.is_set,
                     )
                     voice_mp3 = out_mp3
                     row_settings["audio_path"] = out_mp3   # thay audio gốc
                     self._log_add(
                         f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
 
-                if self._stop_flag:
+                if self._cancel_event.is_set():
                     if voice_mp3:
                         _safe_remove(voice_mp3)
                     return
@@ -1927,12 +1990,15 @@ class App(ctk.CTk):
                 # Giới hạn số FFmpeg song song (semaphore): download vẫn chạy
                 # tối đa `workers` luồng, nhưng FFmpeg encode tối đa 4 cài cùng lúc.
                 with _ffmpeg_sem:
-                    self._processor.process_video(tmp_dl, tmp_out, row_settings)
+                    self._processor.process_video(
+                        tmp_dl, tmp_out, row_settings,
+                        should_stop=self._cancel_event.is_set,
+                    )
                 self._log_add(f"OK  [{idx+1}/{total}] Xử lý xong: {name}", LOG_PROCESS)
                 _safe_remove(tmp_dl)
                 if voice_mp3:
                     _safe_remove(voice_mp3)
-                if self._stop_flag:
+                if self._cancel_event.is_set():
                     _safe_remove(tmp_out)
                     return
 
@@ -1947,15 +2013,23 @@ class App(ctk.CTk):
                     ref = os.path.abspath(final_path)
                     self._log_add(f"OK  [{idx+1}/{total}] Lưu xong: {name}", LOG_UPLOAD)
                 else:
-                    ref = worker_uploader.upload_video(
-                        tmp_out, filename=f"{item_id}.mp4", folder_id=folder_id,
-                        progress_cb=lambda p, g=gidx: self._ui(
-                            lambda: self._set_row_progress(g, p)),
-                    )
+                    def _upload_log(message, i=idx):
+                        self._log_msg(f"[{i+1}/{total}] {message}", LOG_UPLOAD)
+
+                    with _drive_upload_sem:
+                        ref = worker_uploader.upload_video(
+                            tmp_out, filename=f"{item_id}.mp4", folder_id=folder_id,
+                            progress_cb=lambda p, g=gidx: self._ui(
+                                lambda: self._set_row_progress(g, p)),
+                            should_stop=self._cancel_event.is_set,
+                            log=_upload_log,
+                        )
                     _safe_remove(tmp_out)
                     self._log_add(
                         f"OK  [{idx+1}/{total}] Upload xong: {name}", LOG_UPLOAD)
 
+                if self._cancel_event.is_set():
+                    return
                 with lock:
                     # Key by dict identity → robust against duplicate item_id
                     out_refs[id(vid)] = ref
@@ -1968,6 +2042,9 @@ class App(ctk.CTk):
                 _safe_remove(tmp_out)
                 if voice_mp3:
                     _safe_remove(voice_mp3)
+                if self._cancel_event.is_set():
+                    self._ui(lambda g=gidx: self._set_row_status(g, "pending"))
+                    return
                 with lock:
                     errors += 1
                     out_refs[id(vid)] = "Lỗi"   # ghi vào CSV output cột Link Video
@@ -1999,24 +2076,34 @@ class App(ctk.CTk):
             # như khoảng giãn cách KHỞI ĐỘNG giữa các video → trải đều request,
             # không dồn cùng lúc.
             with ThreadPoolExecutor(max_workers=workers) as executor:
+                self._batch_executor = executor
                 futures = [
                     executor.submit(process_one, b, gidx)
                     for b, gidx in enumerate(indices)
                 ]
-                for _ in as_completed(futures):
-                    pass   # progress is updated inside process_one
+                self._batch_futures = futures
+                for future in as_completed(futures):
+                    try:
+                        future.result()
+                    except CancelledError:
+                        # Cancellation is an expected Stop outcome, not a worker failure.
+                        pass
+                    except Exception as exc:
+                        # This is a final safety net for programming errors that
+                        # escaped process_one; never silently lose a video.
+                        self._log_msg(f"X Worker dừng bất thường: {exc}", LOG_ERROR)
 
             # ── Cleanup ───────────────────────────────────────────────────────
             _safe_rmdir(tmp_dir)
 
             if out_refs:
                 try:
-                    self._write_output_csv(settings["csv_out"], out_refs)
+                    self._write_output_csv(settings["csv_out"], out_refs, batch_videos)
                     self._log_msg(f"\n Đã lưu CSV: {settings['csv_out']}")
                 except Exception as exc:
                     self._log_msg(f"X Lỗi lưu CSV: {exc}")
 
-            if self._stop_flag:
+            if self._cancel_event.is_set():
                 self._log_msg(
                     f"\n[Dung] Đã dừng.  {done}/{total} hoàn tất trước khi dừng"
                     + (f"  X {errors} lỗi" if errors else "")
@@ -2039,11 +2126,14 @@ class App(ctk.CTk):
                             f"  CSV: {settings['csv_out']}",
                         ))
         finally:
+            _safe_rmdir(tmp_dir)
+            self._batch_futures = []
+            self._batch_executor = None
             self._ui(lambda: [
                 self._btn_process.configure(state="normal"),
                 self._btn_stop.configure(state="disabled"),
             ])
-            self._stop_flag  = False
+            self._cancel_event.clear()
             self._processing = False
 
     def _finish_local(self, done: int, total: int, dest_dir: str, csv_out: str):
@@ -2067,7 +2157,8 @@ class App(ctk.CTk):
 
     # ── CSV writer ────────────────────────────────────────────────────────────
 
-    def _write_output_csv(self, out_path: str, out_refs: dict):
+    def _write_output_csv(self, out_path: str, out_refs: dict,
+                          videos: list[dict] | None = None):
         """
         Write a new CSV based on input CSV, replacing 'video_url' column with 'Link Video'
         and adding an empty 'hagtag' column to the right of 'Link Video'.
@@ -2075,12 +2166,13 @@ class App(ctk.CTk):
         - Error: "Lỗi"
         - Unprocessed/stopped: "" (empty)
         """
-        if not self._videos:
+        videos = self._videos if videos is None else videos
+        if not videos:
             return
 
         # Tạo danh sách fieldnames thay cột video_url bằng "Link Video" và thêm "hagtag" ở bên phải
         fieldnames = []
-        for fn in self._videos[0].keys():
+        for fn in videos[0].keys():
             if fn == "video_url":
                 if "Link Video" not in fieldnames:
                     fieldnames.append("Link Video")
@@ -2093,18 +2185,25 @@ class App(ctk.CTk):
             idx = fieldnames.index("Link Video")
             fieldnames.insert(idx + 1, "hagtag")
 
-        with open(out_path, "w", newline="", encoding="utf-8-sig") as fh:
-            writer = csv.DictWriter(fh, fieldnames=fieldnames)
-            writer.writeheader()
-            for vid in self._videos:
-                row = dict(vid)
-                row.pop("video_url", None)   # Xoá cột video_url
-                if id(vid) in out_refs:
-                    row["Link Video"] = out_refs[id(vid)]   # link Drive/local path hoặc "Lỗi"
-                else:
-                    row["Link Video"] = ""                  # Chưa chạy đến thì để trống
-                row["hagtag"] = ""                          # Cột hagtag rỗng ở bên phải Link Video
-                writer.writerow(row)
+        # Write beside the destination then atomically replace it.  A crash or
+        # Stop during CSV generation must never leave a half-written output CSV.
+        tmp_out = f"{out_path}.{threading.get_ident()}.tmp"
+        try:
+            with open(tmp_out, "w", newline="", encoding="utf-8-sig") as fh:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames)
+                writer.writeheader()
+                for vid in videos:
+                    row = dict(vid)
+                    row.pop("video_url", None)   # Xoá cột video_url
+                    if id(vid) in out_refs:
+                        row["Link Video"] = out_refs[id(vid)]
+                    else:
+                        row["Link Video"] = ""
+                    row["hagtag"] = ""
+                    writer.writerow(row)
+            os.replace(tmp_out, out_path)
+        finally:
+            _safe_remove(tmp_out)
 
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
