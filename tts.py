@@ -24,6 +24,10 @@ DEFAULT_AUTOVOICE_VOICE = "pv-fdb7a34a-243d-42f2-bbcb-cb78cfd027fa"
 VIDEOAI_TTS_URL = "http://videoai3.ddns.net:8000/v1/tts"
 DEFAULT_VIDEOAI_VOICE = "vi_anh_duong_reviewer_female"
 
+# API responses are small.  A finite read timeout keeps Stop/app-close bounded;
+# retries already handle a temporarily slow provider.
+_API_TIMEOUT = (15, 45)
+
 # Prompt mặc định. Hỗ trợ chèn BẤT KỲ cột nào trong CSV theo cú pháp ${tên_cột},
 # ví dụ ${nd_video}. Riêng ${nd_video} sẽ fallback sang product_name nếu rỗng.
 DEFAULT_PROMPT = (
@@ -180,7 +184,7 @@ def generate_script(
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
-            resp = requests.post(url, headers=headers, json=body, timeout=180)
+            resp = requests.post(url, headers=headers, json=body, timeout=_API_TIMEOUT)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
                 raise RuntimeError(data["error"].get("message", "Gemini API error"))
@@ -246,7 +250,7 @@ def generate_script_openai(
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
-            resp = requests.post(url, headers=headers, json=body, timeout=180)
+            resp = requests.post(url, headers=headers, json=body, timeout=_API_TIMEOUT)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
                 raise RuntimeError(data["error"].get("message", "OpenAI API error"))
@@ -308,7 +312,7 @@ def synthesize_voice(
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
-            resp = requests.post(url, headers=headers, json=body, timeout=180)
+            resp = requests.post(url, headers=headers, json=body, timeout=_API_TIMEOUT)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
                 raise RuntimeError(data["error"].get("message", "Google TTS API error"))
@@ -367,7 +371,7 @@ def synthesize_voice_autovoice(
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
             resp = requests.post(
-                AUTOVOICE_TTS_URL, headers=headers, json=body, timeout=180)
+                AUTOVOICE_TTS_URL, headers=headers, json=body, timeout=_API_TIMEOUT)
             ctype = (resp.headers.get("Content-Type") or "").lower()
 
             if "application/json" in ctype:
@@ -442,7 +446,7 @@ def synthesize_voice_videoai(
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
             resp = requests.post(
-                VIDEOAI_TTS_URL, headers=headers, json=body, timeout=180)
+                VIDEOAI_TTS_URL, headers=headers, json=body, timeout=_API_TIMEOUT)
             ctype = (resp.headers.get("Content-Type") or "").lower()
 
             if "application/json" in ctype:

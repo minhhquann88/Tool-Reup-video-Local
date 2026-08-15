@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlencode
@@ -198,6 +199,21 @@ def _logo_overlay_xy(motion: str, speed: str, start_pos: str) -> tuple[str, str]
 class VideoProcessor:
     """Wraps FFmpeg to trim, mute/replace audio, and overlay logo."""
 
+    def __init__(self):
+        self._process_lock = threading.Lock()
+        self._active_processes: set[subprocess.Popen] = set()
+
+    def cancel_active(self) -> None:
+        """Request termination of every FFmpeg process owned by this batch."""
+        with self._process_lock:
+            processes = list(self._active_processes)
+        for process in processes:
+            if process.poll() is None:
+                try:
+                    process.terminate()
+                except OSError:
+                    pass
+
     # ── public ──────────────────────────────────────────────────────────────
 
     def get_video_info(self, video_path: str) -> dict:
@@ -241,7 +257,7 @@ class VideoProcessor:
         return {"duration": duration, "width": width, "height": height}
 
     def process_video(self, input_path: str, output_path: str,
-                      settings: dict) -> str:
+                      settings: dict, should_stop=None) -> str:
         """
         Build and run a single FFmpeg command that applies all edits.
 
@@ -448,12 +464,41 @@ class VideoProcessor:
         cmd += [output_path]
 
         # ── run ──────────────────────────────────────────────────────────────
-        r = subprocess.run(cmd, capture_output=True, text=True,
-                           creationflags=_WIN_FLAGS,
-                           timeout=600)     # 10 phút max: tránh zombie khi I/O bão hòa
-        if r.returncode != 0:
+        if should_stop and should_stop():
+            raise RuntimeError("Đã dừng theo yêu cầu")
+
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            creationflags=_WIN_FLAGS,
+        )
+        with self._process_lock:
+            self._active_processes.add(process)
+        try:
+            deadline = time.monotonic() + 600
+            while True:
+                try:
+                    stdout, stderr = process.communicate(timeout=0.25)
+                    break
+                except subprocess.TimeoutExpired:
+                    if should_stop and should_stop():
+                        process.terminate()
+                        try:
+                            process.communicate(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                            process.communicate()
+                        raise RuntimeError("Đã dừng theo yêu cầu")
+                    if time.monotonic() >= deadline:
+                        process.kill()
+                        process.communicate()
+                        raise RuntimeError("FFmpeg quá thời hạn 10 phút")
+        finally:
+            with self._process_lock:
+                self._active_processes.discard(process)
+
+        if process.returncode != 0:
             # Return last 800 chars of stderr for diagnosis
-            raise RuntimeError(f"FFmpeg lỗi:\n{r.stderr[-800:]}")
+            raise RuntimeError(f"FFmpeg lỗi:\n{stderr[-800:]}")
 
         # Kiểm tra file output thực sự tồn tại và có dữ liệu hợp lệ.
         # Trên Windows khi nhiều FFmpeg chạy song song + I/O bão hòa,
@@ -461,12 +506,12 @@ class VideoProcessor:
         if not os.path.exists(output_path):
             raise RuntimeError(
                 f"FFmpeg báo thành công nhưng output không tồn tại: {output_path}\n"
-                f"Stderr: {r.stderr[-400:]}")
+                f"Stderr: {stderr[-400:]}")
         out_size = os.path.getsize(output_path)
         if out_size < 2048:   # < 2KB: chắc chắn không phải video hợp lệ
             raise RuntimeError(
                 f"FFmpeg output quá nhỏ ({out_size} byte) — có thể bị cắt hoặc rỗng.\n"
-                f"Stderr: {r.stderr[-400:]}")
+                f"Stderr: {stderr[-400:]}")
 
         return output_path
 
@@ -516,6 +561,7 @@ class VideoDownloader:
         for attempt in range(1, retries + 1):
             if should_stop and should_stop():
                 break
+            resp = None
             try:
                 resp = self.session.get(
                     req_url, stream=True, headers=self.HEADERS,
@@ -554,6 +600,8 @@ class VideoDownloader:
 
                 with open(output_path, "wb") as fh:
                     for chunk in resp.iter_content(chunk_size=1048576):  # 1MB/chunk
+                        if should_stop and should_stop():
+                            raise RuntimeError("Đã dừng theo yêu cầu")
                         if chunk:
                             fh.write(chunk)
                             downloaded += len(chunk)
@@ -585,6 +633,8 @@ class VideoDownloader:
 
             except Exception as exc:
                 last_err = exc
+                if should_stop and should_stop():
+                    break
                 if log:
                     # Keep this stable so the UI can update X/Y in-place.  The
                     # final exception below still carries the complete reason.
@@ -596,6 +646,12 @@ class VideoDownloader:
                         if should_stop and should_stop():
                             break
                         time.sleep(1)
+            finally:
+                if resp is not None:
+                    try:
+                        resp.close()
+                    except Exception:
+                        pass
 
         # Thất bại hẳn: dọn file hỏng/dở để không bị đem đi xử lý nhầm.
         try:
