@@ -219,7 +219,7 @@ def generate_script_openai(
     row,
     *,
     api_key,
-    model="gpt-4o-mini",
+    model="gpt-5-nano",
     language_name="Tiếng Việt",
     max_chars=600,
     retries=10,
@@ -524,7 +524,7 @@ def make_voice(
     Trả về (out_path, script_text). Ném RuntimeError nếu thất bại.
     """
     actual_ai_key = ai_key or gemini_key
-    actual_model = model or ("gemini-3.1-flash-lite" if ai_provider == "Gemini" else "gpt-4o-mini")
+    actual_model = model or ("gemini-3.1-flash-lite" if ai_provider == "Gemini" else "gpt-5-nano")
 
     if ai_provider == "ChatGPT":
         script = generate_script_openai(
