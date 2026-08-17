@@ -31,10 +31,13 @@ _API_TIMEOUT = (15, 45)
 # Prompt mặc định. Hỗ trợ chèn BẤT KỲ cột nào trong CSV theo cú pháp ${tên_cột},
 # ví dụ ${nd_video}. Riêng ${nd_video} sẽ fallback sang product_name nếu rỗng.
 DEFAULT_PROMPT = (
-    "Tạo nội dung review sản phẩm bằng tiếng Việt cho video ngắn bán hàng trên sàn Thương mại điện tử.\n"
-    "YÊU CẦU BẮT BUỘC VỀ ĐỘ DÀI: Kết quả trả ra BẮT BUỘC phải là một đoạn kịch bản có độ dài CHÍNH XÁC từ 350 đến 370 ký tự (không được ngắn hơn 350 ký tự và không được dài quá 370 ký tự). Hãy đếm kỹ số ký tự trước khi xuất kết quả.\n"
-    "Yêu cầu nội dung: Lời thoại tự nhiên, mạch lạc. Ngôn từ trung thực, khách quan, không phóng đại hoặc so sánh với sản phẩm khác, không kêu gọi mua hàng ngoài nền tảng, không nhắc tên nền tảng khác. Không chứa ký tự đặc biệt, hashtag, chú thích, câu chào hay lặp ý. Trả về DUY NHẤT một đoạn văn lời thoại bằng tiếng Việt, không kèm bất kỳ câu dẫn nào khác.\n\n"
-    "Tên sản phẩm: ${product_name}"
+    "Viết 1 đoạn review sản phẩm bằng tiếng Việt để tạo voice cho video bán hàng ngắn. "
+    "Độ dài bắt buộc từ 350 đến 370 ký tự, tính cả dấu cách. "
+    "Lời thoại tự nhiên, mạch lạc, trung thực, khách quan, không phóng đại, không so sánh "
+    "với sản phẩm khác, không nhắc nền tảng khác, không kêu gọi mua ngoài sàn, không hashtag, "
+    "ký tự đặc biệt, chú thích, câu chào hoặc lặp ý. "
+    "Chỉ trả về duy nhất 1 đoạn lời thoại, không xuống dòng, không giải thích thêm. "
+    "Sản phẩm: ${product_name}"
 )
 
 # Giọng tiếng Việt của Google TTS: nhãn dễ hiểu -> mã giọng thật
@@ -244,13 +247,18 @@ def generate_script_openai(
         "model": model,
         "messages": [{"role": "user", "content": prompt}]
     }
+    # GPT-5 mặc định reasoning ~7k-14k token ẩn → 48-84s/call, vượt read
+    # timeout. low → 6-10s, chất lượng lời thoại không đổi.
+    if model.startswith("gpt-5"):
+        body["reasoning_effort"] = "low"
 
     last_err = None
     for attempt in range(1, retries + 1):
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
         try:
-            resp = requests.post(url, headers=headers, json=body, timeout=_API_TIMEOUT)
+            resp = requests.post(url, headers=headers, json=body,
+                                 timeout=(15, 120))
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
                 raise RuntimeError(data["error"].get("message", "OpenAI API error"))
