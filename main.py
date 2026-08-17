@@ -1833,9 +1833,9 @@ class App(ctk.CTk):
         tmp_dir = tempfile.mkdtemp(prefix="reup_")
 
         # Semaphore giới hạn số FFmpeg process chạy đồng thời.
-        # Dù workers = 8, tối đa 4 FFmpeg chạy song song để tránh I/O
-        # bão hòa + Windows handle limit (giai đoạn download vẫn song song).
-        _ffmpeg_sem = threading.Semaphore(min(workers, 4))
+        # Máy 36 lõi: 6 encode song song x threads auto vẫn dư CPU, giai
+        # đoạn download vẫn song song không bị semaphore này chặn.
+        _ffmpeg_sem = threading.Semaphore(min(workers, 6))
         # Drive may throttle a burst of resumable uploads from the same user.
         # Allow two final upload/permission stages at once: still conservative
         # for quota, but less likely to bottleneck batches with many videos.
