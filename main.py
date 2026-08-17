@@ -584,7 +584,7 @@ class App(ctk.CTk):
             placeholder="sk-...")
         self._chatgpt_model = self._fullwidth_entry(
             self._chatgpt_box, "Model ChatGPT:",
-            placeholder="gpt-4o-mini", default="gpt-4o-mini")
+            placeholder="gpt-5-nano", default="gpt-5-nano")
 
         self._ai_provider_anchor = ctk.CTkFrame(self._voiceai_box, height=0,
                                                 fg_color="transparent")
@@ -1648,7 +1648,7 @@ class App(ctk.CTk):
             ai_provider = self._ai_provider.get()
             if ai_provider == "ChatGPT":
                 ai_key = self._chatgpt_key.get().strip()
-                ai_model = self._chatgpt_model.get().strip() or "gpt-4o-mini"
+                ai_model = self._chatgpt_model.get().strip() or "gpt-5-nano"
                 key_warn_prefix = "API Key OpenAI"
             else:
                 ai_key = self._gemini_key.get().strip()
