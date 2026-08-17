@@ -443,7 +443,7 @@ class VideoProcessor:
         # ── codecs ───────────────────────────────────────────────────────────
         if need_reencode_video:
             cmd += ["-c:v", "libx264", "-preset", video_preset,
-                    "-crf", video_crf, "-pix_fmt", "yuv420p", "-threads", "2"]
+                    "-crf", video_crf, "-pix_fmt", "yuv420p", "-threads", "0"]
         else:
             cmd += ["-c:v", "copy"]
 
