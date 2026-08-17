@@ -9,7 +9,6 @@ client_secret.json
 # (sẽ chặn nhầm client_secret.json).
 
 # ── FFmpeg binaries (large, auto-downloaded by setup_ffmpeg.py) ───────────────
-bin/
 
 # ── Data files ────────────────────────────────────────────────────────────────
 *.csv

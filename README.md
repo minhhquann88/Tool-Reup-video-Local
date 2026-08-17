@@ -60,3 +60,15 @@ Sau khi publish, mục **OAuth user cap** hiển thị giới hạn **100 users*
 | Chạy từ file `.exe`        | Cùng thư mục với `VideoReupTool.exe` |
 
 > `token.json` sẽ tự tạo ra sau lần đăng nhập đầu tiên — không cần tạo thủ công.
+
+---
+
+## Lưu ý khi Clone Project (Git LFS)
+
+Project này sử dụng **Git LFS** để lưu trữ các file thực thi nặng trong thư mục `bin/` (như `ffmpeg.exe`, `ffprobe.exe`). Khi clone về máy mới, bạn cần làm theo các bước sau:
+
+1. **Cài đặt Git LFS trước**: Truy cập [git-lfs.com](https://git-lfs.com/) để tải và cài đặt Git LFS cho hệ điều hành của bạn.
+2. Mở Terminal/CMD và chạy lệnh: `git lfs install` (chỉ cần chạy 1 lần trên máy).
+3. Sau đó clone project như bình thường: `git clone <url_repo>`. Git sẽ tự động kéo các file binary thực tế về thư mục `bin/`.
+
+> **Lưu ý**: Nếu bạn đã lỡ clone trước khi cài Git LFS, thư mục `bin/` sẽ chỉ chứa các file text con trỏ (dung lượng rất nhỏ) và tool sẽ bị lỗi. Cách khắc phục: cài Git LFS, sau đó mở terminal ở thư mục project và chạy lệnh `git lfs pull`.
