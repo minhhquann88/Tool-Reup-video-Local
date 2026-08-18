@@ -545,7 +545,7 @@ class VideoDownloader:
         self.session.mount("https://", adapter)
 
     def download(self, url: str, output_path: str,
-                 progress_cb=None, retries: int = 15, log=None,
+                 progress_cb=None, retries: int = 7, log=None,
                  should_stop=None) -> str:
         """
         Download *url* to *output_path*.
