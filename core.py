@@ -640,9 +640,8 @@ class VideoDownloader:
                     # final exception below still carries the complete reason.
                     log(f"! Tải lần {attempt}/{retries}")
                 if attempt < retries:
-                    # Chờ với thời gian tăng dần để tránh làm quá tải/bị chặn (tăng dần 1s mỗi lần thử, bắt đầu từ 5s)
-                    delay_seconds = 4 + attempt
-                    for _ in range(delay_seconds):
+                    # Chờ cố định 2s giữa các lần thử (mặc định).
+                    for _ in range(2):
                         if should_stop and should_stop():
                             break
                         time.sleep(1)
