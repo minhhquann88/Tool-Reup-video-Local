@@ -187,19 +187,19 @@ class DriveUploader:
     def create_folder(self, name: str, should_stop=None, log=None) -> str:
         """Create a folder in My Drive. Returns folder ID."""
         meta   = {"name": name, "mimeType": MIME_DIR}
-        for attempt in range(8):
+        for attempt in range(7):
             if should_stop and should_stop():
                 raise RuntimeError("Đã dừng theo yêu cầu")
             try:
                 folder = self._svc.files().create(body=meta, fields="id").execute()
                 return folder["id"]
             except Exception as exc:
-                if not _is_retryable_drive_error(exc) or attempt == 7:
+                if not _is_retryable_drive_error(exc) or attempt == 6:
                     raise
                 wait = min(2 ** attempt + random.uniform(0, 1), 32)
                 if log:
                     log(f"! Drive quá tải, thử tạo folder lại sau {wait:.1f}s "
-                        f"({attempt + 1}/8)")
+                        f"({attempt + 1}/7)")
                 if not _wait_or_stop(wait, should_stop):
                     raise RuntimeError("Đã dừng theo yêu cầu")
 
@@ -224,13 +224,13 @@ class DriveUploader:
                 status, response = request.next_chunk()
                 retry_attempt = 0
             except Exception as exc:
-                if not _is_retryable_drive_error(exc) or retry_attempt >= 7:
+                if not _is_retryable_drive_error(exc) or retry_attempt >= 6:
                     raise
                 wait = min(2 ** retry_attempt + random.uniform(0, 1), 32)
                 retry_attempt += 1
                 if log:
                     log(f"! Drive quá tải, thử upload lại sau {wait:.1f}s "
-                        f"({retry_attempt}/8)")
+                        f"({retry_attempt}/7)")
                 if not _wait_or_stop(wait, should_stop):
                     raise RuntimeError("Đã dừng theo yêu cầu")
                 continue
@@ -244,7 +244,7 @@ class DriveUploader:
 
         # Permission requests are also rate-limited.  Retry only documented
         # transient/rate errors with exponential backoff + jitter.
-        for attempt in range(8):
+        for attempt in range(7):
             if should_stop and should_stop():
                 raise RuntimeError("Đã dừng theo yêu cầu")
             try:
@@ -254,12 +254,12 @@ class DriveUploader:
                 ).execute()
                 break
             except Exception as exc:
-                if not _is_retryable_drive_error(exc) or attempt == 7:
+                if not _is_retryable_drive_error(exc) or attempt == 6:
                     raise
                 wait = min(2 ** attempt + random.uniform(0, 1), 32)
                 if log:
                     log(f"! Drive quá tải, thử cấp quyền lại sau {wait:.1f}s "
-                        f"({attempt + 1}/8)")
+                        f"({attempt + 1}/7)")
                 if not _wait_or_stop(wait, should_stop):
                     raise RuntimeError("Đã dừng theo yêu cầu")
 
