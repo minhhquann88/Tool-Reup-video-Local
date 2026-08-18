@@ -10,7 +10,6 @@ Files are uploaded to the authenticated user's own Drive → no quota issue.
 from __future__ import annotations
 
 import os
-import random
 import sys
 import threading
 import time
@@ -196,7 +195,7 @@ class DriveUploader:
             except Exception as exc:
                 if not _is_retryable_drive_error(exc) or attempt == 6:
                     raise
-                wait = min(2 ** attempt + random.uniform(0, 1), 32)
+                wait = 2.0   # chờ cố định 2s giữa các lần thử
                 if log:
                     log(f"! Drive quá tải, thử tạo folder lại sau {wait:.1f}s "
                         f"({attempt + 1}/7)")
@@ -226,7 +225,7 @@ class DriveUploader:
             except Exception as exc:
                 if not _is_retryable_drive_error(exc) or retry_attempt >= 6:
                     raise
-                wait = min(2 ** retry_attempt + random.uniform(0, 1), 32)
+                wait = 2.0   # chờ cố định 2s giữa các lần thử
                 retry_attempt += 1
                 if log:
                     log(f"! Drive quá tải, thử upload lại sau {wait:.1f}s "
@@ -243,7 +242,7 @@ class DriveUploader:
         file_id = response["id"]
 
         # Permission requests are also rate-limited.  Retry only documented
-        # transient/rate errors with exponential backoff + jitter.
+        # transient/rate errors with a fixed 2s delay.
         for attempt in range(7):
             if should_stop and should_stop():
                 raise RuntimeError("Đã dừng theo yêu cầu")
@@ -256,7 +255,7 @@ class DriveUploader:
             except Exception as exc:
                 if not _is_retryable_drive_error(exc) or attempt == 6:
                     raise
-                wait = min(2 ** attempt + random.uniform(0, 1), 32)
+                wait = 2.0   # chờ cố định 2s giữa các lần thử
                 if log:
                     log(f"! Drive quá tải, thử cấp quyền lại sau {wait:.1f}s "
                         f"({attempt + 1}/7)")
