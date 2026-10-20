@@ -7,7 +7,6 @@ Flow: CSV → download temp → FFmpeg → lưu (upload Drive | move vào thư m
 from __future__ import annotations   # cho phép 'X | None' chạy trên Python 3.8/3.9
 
 import csv
-import io
 import os
 import queue
 import re
@@ -17,6 +16,7 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 from pathlib import Path
 
 # ── Fix X11 BadLength (RenderAddGlyphs) — Layer 1: env vars trước khi import Tk ───────
@@ -47,8 +47,6 @@ if sys.platform != "win32":
 from tkinter import BooleanVar, StringVar, filedialog, messagebox
 
 import customtkinter as ctk
-import requests
-from PIL import Image as PILImage
 
 import license as license_mod
 import single_instance
@@ -62,7 +60,7 @@ if sys.platform != "win32":
     except Exception:
         pass
 
-APP_VERSION = "v1.0.0"
+APP_VERSION = "v1.0.1"
 IS_PRO = (getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro")
 APP_TITLE = (
     f"Render Video Reup Pro {APP_VERSION}"
@@ -98,7 +96,8 @@ if sys.platform != "win32":
         pass
 # ─────────────────────────────────────────────────────────────────────────────
 
-from core import FFMPEG, VideoDownloader, VideoProcessor
+from core import FFMPEG, VideoDownloader, VideoProcessor, link_expiry
+from error_text import explain as explain_error
 from tts import (DEFAULT_PROMPT, DEFAULT_AUTOVOICE_VOICE, DEFAULT_VIDEOAI_VOICE,
                  DEFAULT_VOICE_LABEL, VOICE_CHOICES, make_voice)
 
@@ -200,17 +199,6 @@ def _write_crash(tb: str) -> None:
     except Exception:
         pass
 
-STATUS_ICON = {
-    "pending":     "...",
-    "downloading": "DL",
-    "processing":  "*",
-    "uploading":   "@",
-    "done":        "OK",
-    "warning":     "!",
-    "error":       "X",
-}
-
-
 # ── Phân loại log ─────────────────────────────────────────────────────────────
 # Mỗi dòng log gắn 1 nhãn để lọc bằng dropdown. Dòng hệ thống (cat=None) chỉ
 # xuất hiện ở mục "Tất cả".
@@ -225,10 +213,9 @@ LOG_CATS        = (LOG_DOWNLOAD, LOG_TEXT, LOG_VOICE, LOG_PROCESS, LOG_UPLOAD, L
 LOG_FILTER_ALL  = "Tất cả"
 LOG_FILTER_OPTS = (LOG_FILTER_ALL,) + LOG_CATS
 
-# Error entries are intentionally kept for the whole application session.  Only
-# ordinary progress/system entries are capped, which keeps the Tk/X11 text
-# buffer bounded during large batches without hiding diagnostic information.
-MAX_UI_LOGS = 1000
+# Keep only the latest 100 UI log lines, including errors.
+MAX_UI_LOGS = 100
+_ERROR_LOG_LOCK = threading.Lock()
 _RETRY_LOG_RE = re.compile(
     r"^(?P<prefix>.*?(?:tải\s+lần|thử\s+lại)\s+)"
     r"(?P<attempt>\d+)\s*/\s*(?P<total>\d+)(?P<suffix>.*)$",
@@ -240,28 +227,12 @@ _RETRY_LOG_RE = re.compile(
 # Chỉ render mỗi trang _PAGE_SIZE dòng để tránh treo khi CSV có hàng nghìn video.
 _PAGE_SIZE = 20
 
-# ── Thumbnail helpers ─────────────────────────────────────────────────────────
-
-_THUMB_SIZE  = (64, 64)
-# Giới hạn số ảnh tải đồng thời (tránh bão thread/mạng khi mở 1 trang nhiều ảnh).
-_THUMB_SEM   = threading.Semaphore(8)
-_THUMB_HEADS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "Referer":    "https://shopee.vn/",
-}
-_PLACEHOLDER = ctk.CTkImage(
-    light_image=PILImage.new("RGB", _THUMB_SIZE, (60, 60, 60)),
-    dark_image =PILImage.new("RGB", _THUMB_SIZE, (60, 60, 60)),
-    size=_THUMB_SIZE,
-)
-
-
 # ── VideoRow ─────────────────────────────────────────────────────────────────
 
 class VideoRow(ctk.CTkFrame):
-    """One row: checkbox | status | thumbnail 64×64 | product name  (80px)"""
+    """Compact row showing only a selection checkbox and product name."""
 
-    _ROW_H = 80
+    _ROW_H = 32
 
     def __init__(self, parent, app, video_data: dict, global_index: int, **kw):
         bg = "#2a2a2a" if global_index % 2 == 0 else "#313131"
@@ -274,8 +245,6 @@ class VideoRow(ctk.CTkFrame):
         self.video_data   = video_data
         # Lựa chọn lấy từ model (giữ nguyên khi chuyển trang qua lại)
         self.selected     = BooleanVar(value=app._selected[global_index])
-        self._ctk_img     = None
-        self._alive       = True   # Guard: set False in destroy() to stop pending async thumb callbacks
 
         self.chk = ctk.CTkCheckBox(
             self, text="", variable=self.selected, command=self._on_toggle,
@@ -283,87 +252,19 @@ class VideoRow(ctk.CTkFrame):
         )
         self.chk.pack(side="left", padx=(8, 2))
 
-        self.lbl_status = ctk.CTkLabel(self, text="...", width=26, font=(_UI_FONT, 14))
-        self.lbl_status.pack(side="left", padx=2)
-
-        self.thumb = ctk.CTkLabel(
-            self, image=_PLACEHOLDER, text="",
-            width=_THUMB_SIZE[0], height=_THUMB_SIZE[1],
-        )
-        self.thumb.pack(side="left", padx=(6, 8), pady=8)
-
         val = video_data.get("product_name") if video_data.get("product_name") is not None else video_data.get("productName")
         p_name = "" if val is None or str(val).strip().lower() in ("", "nan", "none") else str(val).strip()
         name = p_name if p_name else "(dữ liệu product_name rỗng)"
         disp_name = _clean_ui_text(name, max_len=60)
         self.name_lbl = ctk.CTkLabel(
             self, text=disp_name, anchor="w",
-            font=(_UI_FONT, 12), wraplength=500, justify="left",
+            font=(_UI_FONT, 12), justify="left",
         )
         self.name_lbl.pack(side="left", fill="x", expand=True, padx=(0, 8))
-
-        self.pb = ctk.CTkProgressBar(self, width=110, height=8)
-        self.pb.set(0)
-
-        # Khôi phục trạng thái đã lưu (khi quay lại trang đã xử lý xong)
-        self.set_status(app._status[global_index])
-
-        url = video_data.get("link_image", "")
-        if url:
-            threading.Thread(target=self._load_thumb, args=(url,),
-                             daemon=True).start()
-
-    def destroy(self):
-        """Đánh dấu widget là đã bị huỷ trước khi teardown — ngăn các callback async thumbnail."""
-        self._alive = False
-        super().destroy()
 
     def _on_toggle(self):
         # Ghi lựa chọn trở lại model để giữ qua các trang
         self._app._selected[self.global_index] = self.selected.get()
-
-    def _load_thumb(self, url: str):
-        with _THUMB_SEM:                     # giới hạn số ảnh tải đồng thời
-            try:
-                resp = requests.get(url, headers=_THUMB_HEADS, timeout=10)
-                resp.raise_for_status()
-                img = PILImage.open(io.BytesIO(resp.content)).convert("RGB")
-                img = img.resize(_THUMB_SIZE, PILImage.LANCZOS)
-                ctk_img = ctk.CTkImage(light_image=img, dark_image=img,
-                                       size=_THUMB_SIZE)
-                if not self._alive:          # widget đã bị destroy → bỏ qua
-                    return
-                try:
-                    # Never call Tk from the thumbnail worker.  The app drains
-                    # this callback on the Tk thread.
-                    self._app._ui(lambda i=ctk_img: self._apply_thumb(i))
-                except Exception:            # TclError khi widget bị destroy giữa chừng
-                    pass
-            except Exception:
-                pass
-
-    def _apply_thumb(self, ctk_img: ctk.CTkImage):
-        if not self._alive:                  # widget đã bị destroy trước khi callback chạy
-            return
-        try:
-            self._ctk_img = ctk_img
-            self.thumb.configure(image=ctk_img)
-        except Exception:
-            pass
-
-    def set_status(self, status: str):
-        self.lbl_status.configure(text=STATUS_ICON.get(status, "?"))
-        if status in ("downloading", "processing", "uploading"):
-            self.pb.pack(side="right", padx=8)
-        else:
-            try:
-                self.pb.pack_forget()
-            except Exception:
-                pass
-
-    def set_progress(self, value: float):
-        self.pb.set(max(0.0, min(1.0, value)))
-
 
 # ── Main App ─────────────────────────────────────────────────────────────────
 
@@ -395,6 +296,10 @@ class App(ctk.CTk):
         self._csv_path:  str            = ""
         self._cancel_event = threading.Event()
         self._processing = False
+        self._batch_started_at = None
+        self._batch_started_monotonic = None
+        self._batch_ended_monotonic = None
+        self._batch_clock_job = None
         self._batch_executor = None
         self._batch_futures = []
         self._ui_queue = queue.Queue()
@@ -426,6 +331,26 @@ class App(ctk.CTk):
         self._recheck_job = self.after(_RECHECK_SECONDS * 1000,
                                        self._schedule_recheck)
 
+        self._batch_thread = None
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _on_close(self):
+        """Đóng cửa sổ: hỏi lại nếu batch đang chạy (kết quả đã xong vẫn
+        được ghi CSV vì main() chờ luồng batch dọn dẹp trước khi thoát)."""
+        if self._processing and not messagebox.askyesno(
+                "Đang xử lý",
+                "Batch đang chạy. Đóng ứng dụng sẽ dừng xử lý.\n"
+                "Các video đã xong vẫn được lưu vào file CSV.\n\n"
+                "Bạn có chắc muốn đóng?"):
+            return
+        self.destroy()
+
+    def wait_batch_finished(self, timeout: float = 120) -> None:
+        """Chờ luồng batch (đã được báo dừng) ghi CSV xong rồi mới thoát."""
+        thread = self._batch_thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout)
+
     # ── App icon ─────────────────────────────────────────────────────────────
 
     def _set_app_icon(self):
@@ -455,9 +380,10 @@ class App(ctk.CTk):
     # ── Bắt lỗi trong callback GUI (nút bấm, sự kiện) ──────────────────────────
     def report_callback_exception(self, exc, val, tb_obj):
         """Lỗi Python trong callback → ghi crash.log + hiện hộp thoại, KHÔNG đóng app."""
-        import traceback
         tb = "".join(traceback.format_exception(exc, val, tb_obj))
         _write_crash(tb)
+        if hasattr(self, "_log"):
+            self._log_msg(f"X Lỗi giao diện:\n{tb}", LOG_ERROR)
         sys.stderr.write(tb)
         try:
             messagebox.showerror(
@@ -513,7 +439,7 @@ class App(ctk.CTk):
         if IS_PRO:
             self._section(pane, "  Xử lý đồng thời")
             self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "2")
-            self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):", "1")
+            self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):", "0")
         else:
             self._workers = None
             self._delay   = None
@@ -919,13 +845,19 @@ class App(ctk.CTk):
                                            anchor="w", font=(_UI_FONT, 12))
         self._progress_lbl.grid(row=0, column=0, sticky="w")
 
+        self._batch_time_lbl = ctk.CTkLabel(
+            prow, text="Bắt đầu: --  |  Đã chạy: 00:00:00",
+            anchor="w", font=(_UI_FONT, 11), text_color="gray",
+        )
+        self._batch_time_lbl.grid(row=1, column=0, columnspan=2, sticky="w")
+
         self._progress_bar = ctk.CTkProgressBar(prow, height=12)
-        self._progress_bar.grid(row=1, column=0, sticky="ew", pady=(2, 0))
+        self._progress_bar.grid(row=2, column=0, sticky="ew", pady=(2, 0))
         self._progress_bar.set(0)
 
         self._progress_pct = ctk.CTkLabel(prow, text="0 %", width=55,
                                            font=(_UI_FONT, 11))
-        self._progress_pct.grid(row=1, column=1, padx=8)
+        self._progress_pct.grid(row=2, column=1, padx=8)
 
         # (2) Hàng tiêu đề log + dropdown lọc
         hrow = ctk.CTkFrame(bar, fg_color="transparent")
@@ -945,6 +877,41 @@ class App(ctk.CTk):
         self._log.grid(row=3, column=0, sticky="nsew", padx=12, pady=(2, 8))
 
     # ── Resize khối log ────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _format_elapsed(seconds: float) -> str:
+        hours, remainder = divmod(max(0, int(seconds)), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    def _refresh_batch_clock(self):
+        """Update elapsed time once a second on the Tk thread."""
+        self._batch_clock_job = None
+        if not self._ui_alive or self._batch_started_monotonic is None:
+            return
+        end = self._batch_ended_monotonic
+        elapsed = (time.monotonic() if end is None else end) - self._batch_started_monotonic
+        started = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime(self._batch_started_at))
+        self._batch_time_lbl.configure(
+            text=f"Bắt đầu: {started}  |  Đã chạy: {self._format_elapsed(elapsed)}")
+        if end is None:
+            self._batch_clock_job = self.after(1000, self._refresh_batch_clock)
+
+    def _finish_batch_clock(self, ended_monotonic: float):
+        self._batch_ended_monotonic = ended_monotonic
+        if self._batch_clock_job is not None:
+            self.after_cancel(self._batch_clock_job)
+            self._batch_clock_job = None
+        self._refresh_batch_clock()
+        elapsed = ended_monotonic - self._batch_started_monotonic
+        self._log_msg(f"Kết thúc tiến trình. Tổng thời gian chạy: {self._format_elapsed(elapsed)}")
+
+    def _stop_batch_clock(self):
+        """Freeze the duration when work ends, before completion dialogs open."""
+        if self._batch_started_monotonic is None or self._batch_ended_monotonic is not None:
+            return
+        self._batch_ended_monotonic = time.monotonic()
+        self._ui(lambda end=self._batch_ended_monotonic: self._finish_batch_clock(end))
 
     def _on_log_resize(self, event):
         """Rê tay nắm: đặt lại chiều cao thanh dưới sao cho mép trên bám con trỏ."""
@@ -1100,7 +1067,9 @@ class App(ctk.CTk):
         elif status == license_mod.RECHECK_NETERR:
             # KB3: lỗi mạng → retry tối đa _MAX_RETRIES lần, mỗi lần cách 1'
             self._recheck_retries += 1
-            if self._recheck_retries <= _MAX_RETRIES:
+            # Đang chạy batch thì không khoá giữa chừng chỉ vì mạng chập
+            # chờn (sẽ huỷ cả batch dài) — tiếp tục thử lại mỗi phút.
+            if self._recheck_retries <= _MAX_RETRIES or self._processing:
                 self._recheck_job = self.after(_RETRY_SECONDS * 1000,
                                                self._schedule_recheck)
             else:
@@ -1158,6 +1127,12 @@ class App(ctk.CTk):
     def destroy(self):
         # Hủy job đang chờ trước khi đóng để tránh callback trên widget đã hủy
         self._ui_alive = False
+        if self._batch_clock_job is not None:
+            try:
+                self.after_cancel(self._batch_clock_job)
+            except Exception:
+                pass
+            self._batch_clock_job = None
         self._cancel_event.set()
         self._processor.cancel_active()
         for future in list(self._batch_futures):
@@ -1182,7 +1157,7 @@ class App(ctk.CTk):
         if sel == LOG_ERROR:
             if cat == LOG_ERROR:
                 return True
-            t = (text or "").strip()
+            t = re.sub(r"^\[\d{2}:\d{2}:\d{2}\]\s?", "", text or "").strip()
             return t.startswith("X") or t.startswith("!") or "lỗi" in t.lower()
         return sel == cat
 
@@ -1199,7 +1174,8 @@ class App(ctk.CTk):
     @staticmethod
     def _retry_log_key(text: str):
         """Return a stable key for retry lines whose X/Y counter may change."""
-        match = _RETRY_LOG_RE.match((text or "").strip())
+        text = re.sub(r"^\[\d{2}:\d{2}:\d{2}\]\s?", "", text or "")
+        match = _RETRY_LOG_RE.match(text.strip())
         if not match:
             return None
         # The prefix includes the per-video marker (for example [3/50]), so
@@ -1214,28 +1190,21 @@ class App(ctk.CTk):
             return None
         for index in range(len(self._log_entries) - 1, -1, -1):
             old_cat, old_text = self._log_entries[index]
+            if old_cat == LOG_ERROR:
+                continue
             if self._retry_log_key(old_text) == key:
                 self._log_entries[index] = (cat, text)
                 return index, (old_cat, old_text)
         return None
 
     def _trim_ui_logs(self) -> list[int]:
-        """Trim ordinary rows and return their pre-trim list indices."""
-        normal_count = sum(cat != LOG_ERROR for cat, _ in self._log_entries)
-        remove_count = normal_count - MAX_UI_LOGS
+        """Discard the oldest lines and return their pre-trim list indices."""
+        remove_count = len(self._log_entries) - MAX_UI_LOGS
         if remove_count <= 0:
             return []
 
-        kept = []
-        removed_indices = []
-        for index, entry in enumerate(self._log_entries):
-            if entry[0] != LOG_ERROR and remove_count:
-                remove_count -= 1
-                removed_indices.append(index)
-                continue
-            kept.append(entry)
-        self._log_entries[:] = kept
-        return removed_indices
+        del self._log_entries[:remove_count]
+        return list(range(remove_count))
 
     def _visible_log_line(self, entries: list[tuple], index: int, sel: str) -> int:
         """Map an entry index to its one-based line number in the active filter."""
@@ -1251,7 +1220,8 @@ class App(ctk.CTk):
             path = _crash_dir() / "app_error.log"
             path.parent.mkdir(parents=True, exist_ok=True)
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-            with path.open("a", encoding="utf-8") as log_file:
+            # Nhiều luồng cùng ghi: khoá để traceback dài không đan xen nhau.
+            with _ERROR_LOG_LOCK, path.open("a", encoding="utf-8") as log_file:
                 log_file.write(f"[{timestamp}] {str(text).rstrip()}\n")
         except Exception:
             # Logging must never turn a recoverable processing error into a UI
@@ -1264,14 +1234,25 @@ class App(ctk.CTk):
         ở mục "Tất cả"). Chỉ chèn vào textbox khi khớp bộ lọc đang chọn.
         Nếu người dùng đang cuộn lên trên xem log cũ, không kéo xuống dưới.
         """
+        text = str(text)
+        if "\n" in text:
+            self._log_msg(text, cat)
+            return
+        if text.lstrip().startswith(("X ", "! ")):
+            cat = LOG_ERROR
+        timestamp = time.strftime("%H:%M:%S")
+
         def _do():
 
-            disp_text = _clean_ui_text(text, max_len=60)
             if cat == LOG_ERROR:
                 self._append_error_log(text)
+            disp_text = text.rstrip("\r\n")
+            if sys.platform != "win32":
+                disp_text = "".join(c for c in disp_text if ord(c) <= 0xFFFF)
+            disp_text = f"[{timestamp}] {disp_text}"
 
             at_bottom = self._is_at_bottom()
-            updated = self._log_update_last(cat, disp_text)
+            updated = None if cat == LOG_ERROR else self._log_update_last(cat, disp_text)
             if updated is None:
                 self._log_entries.append((cat, disp_text))
             entries_before_trim = list(self._log_entries)
@@ -1279,8 +1260,7 @@ class App(ctk.CTk):
             sel = self._log_filter.get()
             if updated is not None:
                 if removed_indices:
-                    # Only possible if a retry changes category from error to
-                    # ordinary while the buffer was already at its cap.
+                    # Rebuild after trimming so replacement indices stay valid.
                     self._render_log(scroll_to_end=at_bottom)
                     return
                 index, old_entry = updated
@@ -1330,6 +1310,55 @@ class App(ctk.CTk):
         for line in str(msg).split("\n"):
             self._log_add(line, cat)
 
+    def _warn_expired_links(self, videos: list[dict]) -> None:
+        """Cảnh báo sớm link TikTok CDN đã/sắp hết hạn (CDN sẽ trả 403)."""
+        now = time.time()
+        expired = soon = 0
+        first_expiry = None
+        for vid in videos:
+            expiry = link_expiry((vid.get("video_url") or "").strip())
+            if expiry is None:
+                continue
+            if expiry < now:
+                expired += 1
+            elif expiry < now + 3600:
+                soon += 1
+            first_expiry = expiry if first_expiry is None else min(first_expiry, expiry)
+        if expired:
+            self._log_msg(
+                f"! {expired}/{len(videos)} link video ĐÃ HẾT HẠN (theo giờ máy) — "
+                "các video này sẽ lỗi khi tải. Nên xuất lại file CSV để có link mới.",
+                LOG_ERROR)
+        if soon:
+            self._log_msg(
+                f"! {soon} link video sẽ hết hạn trong 1 giờ tới — nên chạy ngay.")
+        elif first_expiry and not expired:
+            self._log_msg(
+                "  Link video hết hạn sớm nhất lúc "
+                f"{time.strftime('%H:%M %d/%m', time.localtime(first_expiry))}"
+                " — hãy chạy xong trước giờ này.")
+
+    def _log_exception(self, context: str, exc: BaseException,
+                       stage: str | None = None):
+        """
+        Log hiển thị: 3 dòng tiếng Việt ngắn (nguyên nhân, cách xử lý, mã lỗi).
+        app_error.log: thêm traceback + output subprocess đầy đủ cho dev.
+        """
+        info = explain_error(exc, stage)
+        summary = "\n".join([f"X {context}", *info.lines()])
+        details = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+        if isinstance(exc, subprocess.CalledProcessError):
+            for label, output in (("stdout", exc.stdout), ("stderr", exc.stderr)):
+                if output:
+                    if isinstance(output, bytes):
+                        output = output.decode("utf-8", errors="replace")
+                    details += f"\n{label}:\n{output}\n"
+        # Tóm tắt hiện lên UI (và tự ghi vào app_error.log qua _log_add);
+        # traceback chỉ ghi vào file cho dev.
+        self._log_msg(summary, LOG_ERROR)
+        self._append_error_log(
+            f"--- Chi tiết kỹ thuật [{info.code}] {context} ---\n{details.rstrip()}\n")
+
     def _render_log(self, scroll_to_end: bool = True):
         """Dựng lại nội dung textbox theo bộ lọc hiện tại (khi đổi dropdown)."""
         sel = self._log_filter.get()
@@ -1364,25 +1393,11 @@ class App(ctk.CTk):
         if not path:
             return
         try:
-            ext = Path(path).suffix.lower()
-            if ext in (".xlsx", ".xls"):
-                from openpyxl import load_workbook
-                wb = load_workbook(path, read_only=True, data_only=True)
-                sheet = wb.active
-                rows = list(sheet.iter_rows(values_only=True))
-                if not rows:
-                     raise ValueError("File Excel trống!")
-                headers = [str(h).strip() if h is not None else f"column_{i}" for i, h in enumerate(rows[0])]
-                self._videos = []
-                for r in rows[1:]:
-                     if any(v is not None for v in r):
-                         row_dict = {}
-                         for h, v in zip(headers, r):
-                             row_dict[h] = str(v).strip() if v is not None else ""
-                         self._videos.append(row_dict)
-            else:
-                with open(path, encoding="utf-8-sig") as fh:
-                    self._videos = [dict(r) for r in csv.DictReader(fh)]
+            self._videos = _read_table(path)
+            if self._videos and "video_url" not in self._videos[0]:
+                self._log_msg(
+                    "! File không có cột 'video_url' — mọi video sẽ bị bỏ qua. "
+                    "Kiểm tra lại tên cột trong file.", LOG_ERROR)
             self._csv_path = path
             # Khởi tạo state song song (mặc định chọn hết, trạng thái chờ)
             self._selected = [True] * len(self._videos)
@@ -1394,7 +1409,9 @@ class App(ctk.CTk):
             )
             self._populate_list()
             self._log_msg(f"OK Import {len(self._videos)} video từ {Path(path).name}")
+            self._warn_expired_links(self._videos)
         except Exception as exc:
+            self._log_exception(f"Lỗi đọc file: {path}", exc)
             messagebox.showerror("Lỗi đọc File", str(exc))
 
     def _pick_csv_out(self):
@@ -1474,14 +1491,15 @@ class App(ctk.CTk):
         self._login_cancel_flag = threading.Event()
         cancel_flag = self._login_cancel_flag
         self._login_in_progress = True
+        self._login_label.configure(text="Đang đăng nhập…", text_color="gray")
 
         def _do():
             try:
                 from drive import DriveUploader
-                email = DriveUploader().test_connection()
+                email = DriveUploader(should_stop=cancel_flag.is_set).test_connection()
                 if cancel_flag.is_set():
                     return
-                self._ui(lambda e=email: [
+                self._ui(lambda e=email: None if cancel_flag.is_set() else [
                     self._login_label.configure(text=f"OK {e}", text_color="#4CAF50"),
                     messagebox.showinfo("Đăng nhập thành công OK", f"Đã đăng nhập:\n{e}"),
                 ])
@@ -1489,7 +1507,8 @@ class App(ctk.CTk):
             except Exception as exc:
                 if cancel_flag.is_set():
                     return
-                self._ui(lambda e=exc: [
+                self._log_exception("Lỗi đăng nhập Google Drive", exc)
+                self._ui(lambda e=exc: None if cancel_flag.is_set() else [
                     self._login_label.configure(
                         text="Đăng nhập thất bại", text_color="#f44336"),
                     messagebox.showerror("Lỗi đăng nhập X", str(e)),
@@ -1504,6 +1523,8 @@ class App(ctk.CTk):
         if self._processing:
             messagebox.showwarning("Đang xử lý", "Không thể đăng xuất Google Drive khi batch đang chạy.")
             return
+        self._login_cancel_flag.set()
+        self._login_in_progress = False
         from drive import get_token_path
         _TOKEN_PATH = get_token_path()
         if _TOKEN_PATH.exists():
@@ -1585,19 +1606,11 @@ class App(ctk.CTk):
         for row in self._rows:           # cập nhật checkbox đang hiển thị
             row.selected.set(state)
 
-    # ── Cập nhật trạng thái/tiến độ 1 video (an toàn khi dòng không hiển thị) ──
+    # ── Lưu trạng thái xử lý video ──
 
     def _set_row_status(self, gidx: int, status: str):
         if 0 <= gidx < len(self._status):
-            self._status[gidx] = status        # lưu để giữ qua trang
-        row = self._row_by_index.get(gidx)
-        if row is not None:
-            row.set_status(status)
-
-    def _set_row_progress(self, gidx: int, value: float):
-        row = self._row_by_index.get(gidx)
-        if row is not None:
-            row.set_progress(value)
+            self._status[gidx] = status
 
     # ── Processing ───────────────────────────────────────────────────────────
 
@@ -1633,7 +1646,7 @@ class App(ctk.CTk):
             logo_size  = int(self._logo_size.get() or "15")
             if IS_PRO and self._workers and self._delay:
                 workers = max(1, min(8, int(self._workers.get() or "2")))
-                delay   = max(0.0, float(self._delay.get() or "1"))
+                delay   = max(0.0, float(self._delay.get() or "0"))
             else:
                 workers = 1
                 delay   = 60.0
@@ -1746,18 +1759,26 @@ class App(ctk.CTk):
         self._progress_bar.set(0)
         self._progress_pct.configure(text="0 %")
 
-        # Bắt đầu batch mới: bỏ log tiến trình cũ nhưng giữ toàn bộ lịch sử lỗi
-        # của phiên làm việc theo đúng chính sách chẩn đoán.
+        # Bắt đầu batch mới: bỏ log tiến trình cũ, giữ lỗi còn trong 100 dòng gần nhất.
         self._log_entries[:] = [
             entry for entry in self._log_entries if entry[0] == LOG_ERROR
         ]
         self._render_log()
 
-        threading.Thread(
+        self._batch_started_at = time.time()
+        self._batch_started_monotonic = time.monotonic()
+        self._batch_ended_monotonic = None
+        self._refresh_batch_clock()
+        self._progress_lbl.configure(
+            text=f"Đã xử lý 0/{len(selected)}  |  Thành công 0  |  Lỗi 0  |  Còn {len(selected)}")
+        self._log_msg(f"Bắt đầu tiến trình xử lý {len(selected)} video.")
+
+        self._batch_thread = threading.Thread(
             target=self._run_batch,
             args=(selected, settings),
             daemon=True,
-        ).start()
+        )
+        self._batch_thread.start()
 
     def _request_stop(self):
         self._cancel_event.set()
@@ -1780,21 +1801,21 @@ class App(ctk.CTk):
         lock        = threading.Lock()
         done        = 0
         errors      = 0
-        completed   = 0          # finished workers (done + error)
 
         workers     = max(1, int(settings.get("workers", 1)))
-        delay       = max(0.0, float(settings.get("delay", 2)))
+        delay       = max(0.0, float(settings.get("delay", 0)))
         # Giãn cách KHỞI ĐỘNG: 2 video liên tiếp cách nhau >= `delay` giây khi
         # bắt đầu (tránh dồn request). next_start = mốc monotonic sớm nhất cho
         # video kế; bảo vệ bằng start_lock riêng để không tranh chấp với `lock`.
         start_lock  = threading.Lock()
         next_start  = [0.0]
 
-        self._ui(lambda: self._progress_lbl.configure(
-            text=f"Đang xử lý 0 / {total} …"))
-
-        def _abort(msg: str):
-            self._log_msg(msg)
+        def _abort(msg: str, exc: BaseException | None = None):
+            if exc is not None:
+                self._log_exception(msg, exc)
+            else:
+                self._log_msg(msg, LOG_ERROR)
+            self._stop_batch_clock()
             self._ui(lambda: [
                 self._btn_process.configure(state="normal"),
                 self._btn_stop.configure(state="disabled"),
@@ -1812,7 +1833,7 @@ class App(ctk.CTk):
             try:
                 os.makedirs(dest_dir, exist_ok=True)
             except Exception as exc:
-                _abort(f"X Không tạo được thư mục lưu: {exc}")
+                _abort(f"Không tạo được thư mục lưu: {dest_dir}", exc)
                 return
             self._log_msg(f" Lưu video vào: {dest_dir}")
         else:
@@ -1827,19 +1848,139 @@ class App(ctk.CTk):
                 self._log_msg(
                     f"OK Đã tạo folder '{settings['folder_name']}' trên Drive")
             except Exception as exc:
-                _abort(f"X Không thể kết nối Drive: {exc}")
+                _abort("Không thể kết nối Google Drive", exc)
                 return
 
-        tmp_dir = tempfile.mkdtemp(prefix="reup_")
+        # Local: thư mục tạm nằm ngay trong thư mục đích → bước lưu là đổi
+        # tên tức thì (cùng ổ đĩa), không phải chép lại cả video từ ổ C:.
+        tmp_dir = tempfile.mkdtemp(prefix=".reup_tmp_",
+                                   dir=dest_dir if save_mode == "local" else None)
 
-        # Semaphore giới hạn số FFmpeg process chạy đồng thời.
-        # Máy 36 lõi: 6 encode song song x threads auto vẫn dư CPU, giai
-        # đoạn download vẫn song song không bị semaphore này chặn.
-        _ffmpeg_sem = threading.Semaphore(min(workers, 6))
-        # Drive may throttle a burst of resumable uploads from the same user.
-        # Allow two final upload/permission stages at once: still conservative
-        # for quota, but less likely to bottleneck batches with many videos.
-        _drive_upload_sem = threading.Semaphore(2) if save_mode == "drive" else None
+        # ── Dây chuyền theo khâu ──────────────────────────────────────────────
+        # `workers` (người dùng đặt) = số FFmpeg encode chạy đồng thời.
+        # Pool có thêm luồng để khâu Tải/Voice chạy TRƯỚC (prefetch) và khâu
+        # Upload chạy SAU mà không giữ chỗ của encode → encode luôn có việc,
+        # không phải chờ mạng. Mỗi luồng = 1 video đang dở → số file tạm trên
+        # đĩa tối đa = pool_size.
+        _ffmpeg_sem = threading.Semaphore(workers)
+        # Pro allows five concurrent upload/permission stages.
+        upload_n = (5 if IS_PRO else 1) if save_mode == "drive" else 0
+        _drive_upload_sem = threading.Semaphore(upload_n) if upload_n else None
+        _PREFETCH = 2
+        # Pro + Drive: upload chạy ở pool RIÊNG. Luồng xử lý encode xong chỉ
+        # đẩy file vào hàng đợi rồi đi làm video kế → không giữ chỗ của khâu
+        # Tải/Encode khi mạng upload chậm. _upload_slots giới hạn số video đã
+        # encode đang chờ/đang upload (file tạm trên đĩa); đầy thì luồng xử lý
+        # chờ ở đó (backpressure) như hành vi cũ.
+        split_upload = IS_PRO and save_mode == "drive"
+        upload_pool = (ThreadPoolExecutor(max_workers=upload_n,
+                                          thread_name_prefix="upload")
+                       if split_upload else None)
+        _upload_slots = (threading.Semaphore(upload_n + workers)
+                         if split_upload else None)
+        # Bản thường: giữ đúng 1 video/lần như cũ (không chạy chồng).
+        if not IS_PRO:
+            pool_size = workers
+        elif split_upload:
+            pool_size = workers + _PREFETCH
+        else:
+            pool_size = workers + _PREFETCH + upload_n
+        # Voice AI chạy song song với tải video (chỉ cần dữ liệu CSV).
+        voice_pool = (ThreadPoolExecutor(max_workers=pool_size,
+                                         thread_name_prefix="voice")
+                      if settings.get("voice_ai") else None)
+
+        # Mỗi luồng giữ 1 VideoDownloader (tái dùng kết nối HTTP) và 1
+        # DriveUploader (khỏi đọc token + dựng service mỗi video). Không chia
+        # sẻ giữa các luồng vì Drive client không thread-safe.
+        _tls = threading.local()
+
+        def _worker_clients():
+            if getattr(_tls, "downloader", None) is None:
+                _tls.downloader = VideoDownloader()
+            if (save_mode == "drive" and not split_upload
+                    and getattr(_tls, "uploader", None) is None):
+                _tls.uploader = DriveUploader()
+            return _tls.downloader, getattr(_tls, "uploader", None)
+
+        def _upload_client():
+            if getattr(_tls, "uploader", None) is None:
+                _tls.uploader = DriveUploader()
+            return _tls.uploader
+
+        def _report_progress():
+            # Xếp hàng cập nhật UI ngay trong lock: hàng đợi UI là FIFO nên
+            # các lần cập nhật giữ đúng thứ tự (không bị số cũ ghi đè số mới).
+            with lock:
+                _d, _e = done, errors
+                _c = _d + _e
+                pct = _c / total
+                self._ui(lambda p=pct, d=_d, e=_e, c=_c: [
+                    self._progress_bar.set(p),
+                    self._progress_pct.configure(text=f"{int(p*100)} %"),
+                    self._progress_lbl.configure(
+                        text=f"Đã xử lý {c}/{total}  |  Thành công {d}  |  Lỗi {e}  |  Còn {total-c}"
+                    ),
+                ])
+
+        def _mark_done(gidx: int, vid: dict, ref: str, idx: int, name: str):
+            nonlocal done
+            with lock:
+                # Key by dict identity → robust against duplicate item_id
+                out_refs[id(vid)] = ref
+                done += 1
+            self._ui(lambda g=gidx: self._set_row_status(g, "done"))
+            self._log_msg(f"OK  [{idx+1}/{total}] Xong: {name}", LOG_RESULT)
+
+        def _mark_error(gidx: int, vid: dict, idx: int, item_id: str,
+                        p_name: str, exc: BaseException,
+                        stage: str | None = None):
+            nonlocal errors
+            with lock:
+                errors += 1
+                out_refs[id(vid)] = "Lỗi"   # ghi vào CSV output cột Link Video
+            self._ui(lambda g=gidx: self._set_row_status(g, "error"))
+            self._log_exception(
+                f"[{idx+1}/{total}] Lỗi video (item_id={item_id}): "
+                f"{p_name or '(dữ liệu product_name rỗng)'}", exc, stage)
+
+        def _upload_log_for(idx: int):
+            def _upload_log(message):
+                is_error = message.lstrip().startswith(("X ", "! ")) or "lỗi" in message.lower()
+                self._log_msg(f"[{idx+1}/{total}] {message}",
+                              LOG_ERROR if is_error else LOG_UPLOAD)
+            return _upload_log
+
+        # Chạy trên pool upload riêng (chỉ khi split_upload).
+        def upload_one(idx: int, gidx: int, vid: dict, item_id: str,
+                       p_name: str, name: str, out_file: str):
+            try:
+                if self._cancel_event.is_set():
+                    self._ui(lambda g=gidx: self._set_row_status(g, "pending"))
+                    return
+                ref = _upload_client().upload_video(
+                    out_file, filename=f"{item_id}.mp4", folder_id=folder_id,
+                    progress_cb=None,
+                    should_stop=self._cancel_event.is_set,
+                    log=_upload_log_for(idx),
+                )
+                self._log_add(
+                    f"OK  [{idx+1}/{total}] Upload xong: {name}", LOG_UPLOAD)
+                # Đã upload xong thì luôn ghi nhận, kể cả khi vừa bấm Dừng —
+                # nếu bỏ qua, link mất khỏi CSV và lần chạy sau upload trùng.
+                _mark_done(gidx, vid, ref, idx, name)
+            except Exception as exc:
+                if self._cancel_event.is_set():
+                    self._ui(lambda g=gidx: self._set_row_status(g, "pending"))
+                    return
+                _mark_error(gidx, vid, idx, item_id, p_name, exc, "DRIVE")
+            finally:
+                _safe_remove(out_file)
+                _report_progress()
+
+        def _failed(future) -> bool:
+            return (future is not None and future.done()
+                    and not future.cancelled() and future.exception() is not None)
 
         # Cổng giãn cách: đặt chỗ một "khe khởi động" cách video trước >= delay
         # giây, rồi chờ tới khe đó. Atomic dưới start_lock nên dù nhiều luồng gọi
@@ -1860,7 +2001,7 @@ class App(ctk.CTk):
         # idx  = thứ tự trong batch (đặt tên temp + log + tiến độ tổng)
         # gidx = chỉ số video trong self._videos (định tuyến trạng thái/lưu CSV)
         def process_one(idx: int, gidx: int):
-            nonlocal done, errors, completed
+            nonlocal done, errors
 
             if self._cancel_event.is_set():
                 return
@@ -1870,7 +2011,7 @@ class App(ctk.CTk):
             url     = (vid.get("video_url") or "").strip()
             val_p   = vid.get("product_name") if vid.get("product_name") is not None else vid.get("productName")
             p_name  = "" if val_p is None or str(val_p).strip().lower() in ("", "nan", "none") else str(val_p).strip()
-            name    = (p_name if p_name else "(dữ liệu product_name rỗng)")[:50]
+            name    = p_name if p_name else "(dữ liệu product_name rỗng)"
             # idx is unique within this batch → no temp collision on dup item_id
             tmp_dl  = os.path.join(tmp_dir, f"dl_{idx}.mp4")
             tmp_out = os.path.join(tmp_dir, f"out_{idx}.mp4")
@@ -1879,27 +2020,23 @@ class App(ctk.CTk):
             if not url:
                 with lock:
                     errors += 1
-                    completed += 1
-                    _d, _e, _c = done, errors, completed
                     out_refs[id(vid)] = "Lỗi"
                 self._ui(lambda g=gidx: self._set_row_status(g, "error"))
                 self._log_msg(f"X  [{idx+1}/{total}] Bỏ qua (thiếu video_url): {name}",
                               LOG_ERROR)
-                pct = _c / total
-                self._ui(lambda p=pct, d=_d, e=_e, c=_c: [
-                    self._progress_bar.set(p),
-                    self._progress_pct.configure(text=f"{int(p*100)} %"),
-                    self._progress_lbl.configure(
-                        text=f"Xong {c}/{total}  OK {d}  X {e}"),
-                ])
+                _report_progress()
                 return
 
+            voice_future = None              # Voice AI chạy song song với tải
+            stage        = None              # bước đang chạy → mã lỗi đúng bước
+            handed_off   = False             # đã giao cho pool upload
+            voice_abort  = threading.Event() # tải lỗi → dừng voice của video này
+            out_mp3      = os.path.join(tmp_dir, f"voice_{idx}.mp3")
             try:
-                # Each worker owns its Drive client (not thread-safe to share).
+                # Client riêng của luồng (tạo 1 lần, tái dùng cho video sau).
                 # Keep this inside the try block so auth/setup failures are
                 # surfaced as a normal per-video error.
-                worker_downloader = VideoDownloader()
-                worker_uploader = DriveUploader() if save_mode == "drive" else None
+                worker_downloader, worker_uploader = _worker_clients()
                 if self._cancel_event.is_set():
                     return
                 # Giãn cách khởi động (hàng đợi liên tục): chờ tới khe của video
@@ -1907,45 +2044,24 @@ class App(ctk.CTk):
                 _gate_start()
                 if self._cancel_event.is_set():
                     return
-                # 1. Download
-                def _dl_log(m):
-                    prefix = f"[{idx+1}/{total}] "
-                    msg = m if m.startswith(prefix) else f"{prefix}{m}"
-                    cat = LOG_ERROR if ("lỗi" in m.lower() or "fail" in m.lower() or "không" in m.lower()) else LOG_DOWNLOAD
-                    self._log_msg(msg, cat)
 
-                self._ui(lambda g=gidx: self._set_row_status(g, "downloading"))
-                worker_downloader.download(
-                    url, tmp_dl,
-                    progress_cb=lambda p, g=gidx: self._ui(
-                        lambda: self._set_row_progress(g, p)),
-                    log=_dl_log,
-                    should_stop=self._cancel_event.is_set,
-                )
-                self._log_add(f"OK  [{idx+1}/{total}] Tải xong: {name}", LOG_DOWNLOAD)
-                if self._cancel_event.is_set():
-                    return
-
-                # 2. Voice AI (tuỳ chọn): prompt + dữ liệu CSV → Gemini → TTS
-                #    Nếu lỗi sau toàn bộ retry → raise để bỏ qua video hoàn toàn.
+                # 1. Voice AI (tuỳ chọn): prompt + dữ liệu CSV → Gemini → TTS.
+                #    Chỉ cần dữ liệu CSV nên chạy SONG SONG với tải video.
+                #    Nếu lỗi sau toàn bộ retry → bỏ qua video hoàn toàn.
                 #    Không fallback về audio gốc.
                 row_settings = settings
                 voice_ai = settings.get("voice_ai")
                 if voice_ai:
-                    self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
-                    out_mp3 = os.path.join(tmp_dir, f"voice_{idx}.mp3")
-                    row_settings = dict(settings)   # copy riêng, không sửa settings chung
-
                     prompt_txt = voice_ai.get("prompt", "")
-                    val = vid.get("product_name") if vid.get("product_name") is not None else vid.get("productName")
-                    p_name = "" if val is None or str(val).strip().lower() in ("", "nan", "none") else str(val).strip()
+                    if re.search(r"\$?\{\s*(product_name|productName)\s*\}", prompt_txt) and not p_name:
+                        raise RuntimeError(
+                            f"Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV")
 
                     # Lời thoại sinh xong → log nhãn "Tạo text"; retry Gemini cũng
                     # về "Tạo text", còn lại (TTS) về "Tạo voice".
                     def _on_script(s, i=idx):
-                        snip = " ".join(str(s).split())[:60]
                         self._log_add(
-                            f'OK  [{i+1}/{total}] Tạo text xong: "{snip}…"', LOG_TEXT)
+                            f'OK  [{i+1}/{total}] Tạo text xong: "{s}"', LOG_TEXT)
 
                     def _voice_log(m):
                         prefix = f"[{idx+1}/{total}] "
@@ -1954,11 +2070,8 @@ class App(ctk.CTk):
                         cat = LOG_ERROR if is_err else (LOG_TEXT if ("Gemini" in m or "ChatGPT" in m) else LOG_VOICE)
                         self._log_msg(msg, cat)
 
-                    if re.search(r"\$?\{\s*(product_name|productName)\s*\}", prompt_txt) and not p_name:
-                        raise RuntimeError(
-                            f"Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV")
-
-                    make_voice(
+                    voice_future = voice_pool.submit(
+                        make_voice,
                         vid, out_mp3,
                         ai_provider=voice_ai.get("ai_provider", "Gemini"),
                         ai_key=voice_ai["ai_key"],
@@ -1973,9 +2086,43 @@ class App(ctk.CTk):
                         tts_backoff=2,
                         log=_voice_log,
                         on_script=_on_script,
-                        should_stop=self._cancel_event.is_set,
+                        should_stop=lambda: (self._cancel_event.is_set()
+                                             or voice_abort.is_set()),
                     )
+
+                # 2. Download (dừng sớm nếu Voice AI đã thất bại)
+                def _dl_log(m):
+                    prefix = f"[{idx+1}/{total}] "
+                    msg = m if m.startswith(prefix) else f"{prefix}{m}"
+                    cat = LOG_ERROR if ("lỗi" in m.lower() or "fail" in m.lower() or "không" in m.lower()) else LOG_DOWNLOAD
+                    self._log_msg(msg, cat)
+
+                self._ui(lambda g=gidx: self._set_row_status(g, "downloading"))
+                stage = "DL"
+                try:
+                    worker_downloader.download(
+                        url, tmp_dl,
+                        progress_cb=None,
+                        log=_dl_log,
+                        should_stop=lambda: (self._cancel_event.is_set()
+                                             or _failed(voice_future)),
+                    )
+                except Exception:
+                    if _failed(voice_future):
+                        stage = None                     # AI hay TTS: tự đoán
+                        raise voice_future.exception()   # lỗi gốc là voice
+                    raise
+                self._log_add(f"OK  [{idx+1}/{total}] Tải xong: {name}", LOG_DOWNLOAD)
+                if self._cancel_event.is_set():
+                    return
+
+                if voice_future is not None:
+                    self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
+                    stage = None
+                    voice_future.result()            # chờ voice xong / ném lỗi
+                    voice_future = None              # đã dùng → tự dọn ở dưới
                     voice_mp3 = out_mp3
+                    row_settings = dict(settings)    # copy riêng, không sửa settings chung
                     row_settings["audio_path"] = out_mp3   # thay audio gốc
                     self._log_add(
                         f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
@@ -1987,12 +2134,15 @@ class App(ctk.CTk):
 
                 # 3. FFmpeg
                 self._ui(lambda g=gidx: self._set_row_status(g, "processing"))
-                # Giới hạn số FFmpeg song song (semaphore): download vẫn chạy
-                # tối đa `workers` luồng, nhưng FFmpeg encode tối đa 4 cài cùng lúc.
+                stage = "FFMPEG"
+                # Tối đa `workers` FFmpeg cùng lúc; các luồng dư (prefetch/
+                # upload) chờ ở đây với video đã tải sẵn → encode xong là có
+                # video kế tiếp ngay.
                 with _ffmpeg_sem:
                     self._processor.process_video(
                         tmp_dl, tmp_out, row_settings,
                         should_stop=self._cancel_event.is_set,
+                        info=worker_downloader.last_info,
                     )
                 self._log_add(f"OK  [{idx+1}/{total}] Xử lý xong: {name}", LOG_PROCESS)
                 _safe_remove(tmp_dl)
@@ -2004,38 +2154,55 @@ class App(ctk.CTk):
 
                 # 4. Lưu kết quả: upload Drive HOẶC move vào thư mục local
                 self._ui(lambda g=gidx: self._set_row_status(g, "uploading"))
+                stage = "DRIVE" if save_mode == "drive" else None
+                if split_upload:
+                    # Giữ 1 chỗ trong hàng đợi upload (chờ nếu đầy), rồi giao
+                    # file cho pool upload và trả luồng này về ngay.
+                    while not _upload_slots.acquire(timeout=0.2):
+                        if self._cancel_event.is_set():
+                            _safe_remove(tmp_out)
+                            return
+                    try:
+                        fut = upload_pool.submit(
+                            upload_one, idx, gidx, vid, item_id, p_name,
+                            name, tmp_out)
+                    except BaseException:
+                        _upload_slots.release()
+                        raise
+                    # Nhả chỗ cả khi future bị huỷ (không chạy finally), và
+                    # không nuốt lỗi lập trình thoát ra khỏi upload_one.
+                    def _upload_done(f):
+                        _upload_slots.release()
+                        if not f.cancelled() and f.exception() is not None:
+                            self._log_exception("Luồng upload dừng bất thường",
+                                                f.exception())
+                    fut.add_done_callback(_upload_done)
+                    handed_off = True
+                    return
                 if save_mode == "local":
                     # Đặt tên duy nhất trong lock để worker không giành tên nhau
                     with lock:
                         final_path = _reserve_local_path(
-                            dest_dir, f"{item_id}.mp4", reserved)
+                            dest_dir,
+                            f"{_safe_filename(item_id) or f'video_{idx}'}.mp4",
+                            reserved)
                     shutil.move(tmp_out, final_path)
                     ref = os.path.abspath(final_path)
                     self._log_add(f"OK  [{idx+1}/{total}] Lưu xong: {name}", LOG_UPLOAD)
                 else:
-                    def _upload_log(message, i=idx):
-                        self._log_msg(f"[{i+1}/{total}] {message}", LOG_UPLOAD)
-
                     with _drive_upload_sem:
                         ref = worker_uploader.upload_video(
                             tmp_out, filename=f"{item_id}.mp4", folder_id=folder_id,
-                            progress_cb=lambda p, g=gidx: self._ui(
-                                lambda: self._set_row_progress(g, p)),
+                            progress_cb=None,
                             should_stop=self._cancel_event.is_set,
-                            log=_upload_log,
+                            log=_upload_log_for(idx),
                         )
                     _safe_remove(tmp_out)
                     self._log_add(
                         f"OK  [{idx+1}/{total}] Upload xong: {name}", LOG_UPLOAD)
 
-                if self._cancel_event.is_set():
-                    return
-                with lock:
-                    # Key by dict identity → robust against duplicate item_id
-                    out_refs[id(vid)] = ref
-                    done += 1
-                self._ui(lambda g=gidx: self._set_row_status(g, "done"))
-                self._log_msg(f"OK  [{idx+1}/{total}] Xong: {name}", LOG_RESULT)
+                # Đã lưu/upload xong → luôn ghi nhận (xem upload_one).
+                _mark_done(gidx, vid, ref, idx, name)
 
             except Exception as exc:
                 _safe_remove(tmp_dl)
@@ -2045,37 +2212,32 @@ class App(ctk.CTk):
                 if self._cancel_event.is_set():
                     self._ui(lambda g=gidx: self._set_row_status(g, "pending"))
                     return
-                with lock:
-                    errors += 1
-                    out_refs[id(vid)] = "Lỗi"   # ghi vào CSV output cột Link Video
-                self._ui(lambda g=gidx: self._set_row_status(g, "error"))
-                exc_summary = " ".join([line.strip() for line in str(exc).splitlines() if line.strip()])
-                self._log_msg(f"X  [{idx+1}/{total}] Lỗi: {name} → {exc_summary}",
-                              LOG_ERROR)
+                _mark_error(gidx, vid, idx, item_id, p_name, exc, stage)
 
             finally:
-                with lock:
-                    completed += 1
-                    _d, _e, _c = done, errors, completed
-                pct = _c / total
-                self._ui(lambda p=pct, d=_d, e=_e, c=_c: [
-                    self._progress_bar.set(p),
-                    self._progress_pct.configure(text=f"{int(p*100)} %"),
-                    self._progress_lbl.configure(
-                        text=f"Xong {c}/{total}  OK {d}  X {e}"
-                    ),
-                ])
+                # Voice còn chạy/chưa dùng (tải lỗi, dừng...) → báo dừng và xoá
+                # mp3 khi nó kết thúc, không chặn luồng này chờ.
+                if voice_future is not None:
+                    voice_abort.set()
+                    voice_future.add_done_callback(
+                        lambda _f, p=out_mp3: _safe_remove(p))
+                # Dừng giữa chừng → trả dòng về "chờ" thay vì kẹt ở trạng
+                # thái đang tải/đang xử lý, để biết video nào cần chạy lại.
+                if (self._cancel_event.is_set() and not handed_off
+                        and id(vid) not in out_refs):
+                    self._ui(lambda g=gidx: self._set_row_status(g, "pending"))
+                _report_progress()
 
         # ── Run workers ───────────────────────────────────────────────────────
         # Bọc trong try/finally để LUÔN bật lại nút (kể cả khi Dừng hoặc lỗi),
         # nếu không nút 'XỬ LÝ VIDEO' sẽ kẹt disabled và không chạy lại được.
         try:
-            # Hàng đợi liên tục: nạp TẤT CẢ video vào 1 pool `workers` luồng;
-            # luồng nào xong là bốc video kế tiếp ngay (không chờ theo đợt nên
-            # luôn đủ `workers` luồng chạy). `delay` được áp trong _gate_start()
-            # như khoảng giãn cách KHỞI ĐỘNG giữa các video → trải đều request,
-            # không dồn cùng lúc.
-            with ThreadPoolExecutor(max_workers=workers) as executor:
+            # Hàng đợi liên tục: nạp TẤT CẢ video vào 1 pool `pool_size` luồng;
+            # luồng nào xong là bốc video kế tiếp ngay (không chờ theo đợt).
+            # Encode/upload bị giới hạn bằng semaphore ở trên. `delay` được áp
+            # trong _gate_start() như khoảng giãn cách KHỞI ĐỘNG giữa các video
+            # → trải đều request, không dồn cùng lúc.
+            with ThreadPoolExecutor(max_workers=pool_size) as executor:
                 self._batch_executor = executor
                 futures = [
                     executor.submit(process_one, b, gidx)
@@ -2091,18 +2253,39 @@ class App(ctk.CTk):
                     except Exception as exc:
                         # This is a final safety net for programming errors that
                         # escaped process_one; never silently lose a video.
-                        self._log_msg(f"X Worker dừng bất thường: {exc}", LOG_ERROR)
+                        self._log_exception("Worker dừng bất thường", exc)
+
+            # Chờ các video đã giao cho pool upload upload xong (hoặc tự thoát
+            # khi Dừng) trước khi ghi CSV / xoá thư mục tạm.
+            if upload_pool:
+                upload_pool.shutdown(wait=True)
 
             # ── Cleanup ───────────────────────────────────────────────────────
+            # Chờ các Voice AI còn dở (đã được báo dừng) thoát hẳn trước khi
+            # xoá thư mục tạm, tránh chúng ghi mp3 vào thư mục đã xoá.
+            if voice_pool:
+                voice_pool.shutdown(wait=True)
             _safe_rmdir(tmp_dir)
 
+            # Cập nhật tiến độ lần cuối sau khi mọi luồng đã xong.
+            _report_progress()
+
+            csv_saved = None
             if out_refs:
                 try:
-                    self._write_output_csv(settings["csv_out"], out_refs, batch_videos)
-                    self._log_msg(f"\n Đã lưu CSV: {settings['csv_out']}")
+                    csv_saved = self._write_output_csv(
+                        settings["csv_out"], out_refs, batch_videos)
+                    if csv_saved and csv_saved != settings["csv_out"]:
+                        self._log_msg(
+                            f"! File CSV đích đang được mở (Excel?) nên đã lưu "
+                            f"sang: {csv_saved}", LOG_ERROR)
+                    else:
+                        self._log_msg(f"\n Đã lưu CSV: {csv_saved}")
                 except Exception as exc:
-                    self._log_msg(f"X Lỗi lưu CSV: {exc}")
+                    self._log_exception(f"Lỗi lưu CSV: {settings['csv_out']}", exc)
+            csv_note = csv_saved or "(lỗi lưu CSV — xem log)"
 
+            self._stop_batch_clock()
             if self._cancel_event.is_set():
                 self._log_msg(
                     f"\n[Dung] Đã dừng.  {done}/{total} hoàn tất trước khi dừng"
@@ -2115,26 +2298,40 @@ class App(ctk.CTk):
                 )
                 if done:
                     if save_mode == "local":
+                        # after(0): hộp thoại modal không được chạy bên trong
+                        # vòng xả hàng đợi UI, nếu không log/nút bị treo tới
+                        # khi người dùng đóng hộp thoại.
                         self._ui(lambda d=done, t=total, dd=dest_dir,
-                                 cv=settings["csv_out"]:
-                                 self._finish_local(d, t, dd, cv))
+                                 cv=csv_note:
+                                 self.after(0, self._finish_local, d, t, dd, cv))
                     else:
-                        self._ui(lambda: messagebox.showinfo(
-                            "Hoàn thành!",
-                            f"OK  {done}/{total} video thành công\n"
-                            f"@  Folder: {settings['folder_name']}\n"
-                            f"  CSV: {settings['csv_out']}",
-                        ))
+                        self._ui(lambda d=done, cv=csv_note: self.after(
+                            0, lambda: messagebox.showinfo(
+                                "Hoàn thành!",
+                                f"OK  {d}/{total} video thành công\n"
+                                f"@  Folder: {settings['folder_name']}\n"
+                                f"  CSV: {cv}",
+                            )))
+        except Exception as exc:
+            self._log_exception("Lỗi chạy batch video", exc)
         finally:
+            if upload_pool:
+                upload_pool.shutdown(wait=True)
+            if voice_pool:
+                voice_pool.shutdown(wait=True)
             _safe_rmdir(tmp_dir)
+            self._stop_batch_clock()
             self._batch_futures = []
             self._batch_executor = None
+            # Reset trạng thái TRƯỚC khi bật lại nút: nếu không, người dùng có
+            # thể bấm chạy batch mới rồi luồng cũ mới xoá cờ Dừng / _processing
+            # của batch mới.
+            self._cancel_event.clear()
+            self._processing = False
             self._ui(lambda: [
                 self._btn_process.configure(state="normal"),
                 self._btn_stop.configure(state="disabled"),
             ])
-            self._cancel_event.clear()
-            self._processing = False
 
     def _finish_local(self, done: int, total: int, dest_dir: str, csv_out: str):
         """Thông báo hoàn thành (Local) và hỏi mở thư mục chứa video."""
@@ -2168,11 +2365,17 @@ class App(ctk.CTk):
         """
         videos = self._videos if videos is None else videos
         if not videos:
-            return
+            return None
+
+        # Hợp nhất cột của mọi dòng (giữ thứ tự xuất hiện) — không chỉ dòng đầu.
+        # Bỏ key None: csv.DictReader gom ô thừa (dòng nhiều dấu phẩy hơn
+        # header) vào key None, ghi ra sẽ làm hỏng cả file.
+        all_keys = dict.fromkeys(
+            k for vid in videos for k in vid.keys() if k is not None)
 
         # Tạo danh sách fieldnames thay cột video_url bằng "Link Video" và thêm "hagtag" ở bên phải
         fieldnames = []
-        for fn in videos[0].keys():
+        for fn in all_keys:
             if fn == "video_url":
                 if "Link Video" not in fieldnames:
                     fieldnames.append("Link Video")
@@ -2190,7 +2393,8 @@ class App(ctk.CTk):
         tmp_out = f"{out_path}.{threading.get_ident()}.tmp"
         try:
             with open(tmp_out, "w", newline="", encoding="utf-8-sig") as fh:
-                writer = csv.DictWriter(fh, fieldnames=fieldnames)
+                writer = csv.DictWriter(fh, fieldnames=fieldnames,
+                                        extrasaction="ignore")
                 writer.writeheader()
                 for vid in videos:
                     row = dict(vid)
@@ -2201,7 +2405,18 @@ class App(ctk.CTk):
                         row["Link Video"] = ""
                     row["hagtag"] = ""
                     writer.writerow(row)
-            os.replace(tmp_out, out_path)
+            # File đích đang mở trong Excel → Windows chặn ghi đè (WinError
+            # 5/32). Thử lại vài lần, rồi lưu sang file khác thay vì mất link.
+            for _ in range(5):
+                try:
+                    os.replace(tmp_out, out_path)
+                    return out_path
+                except PermissionError:
+                    time.sleep(1)
+            base, ext = os.path.splitext(out_path)
+            fallback = f"{base}_{time.strftime('%Y%m%d_%H%M%S')}{ext or '.csv'}"
+            os.replace(tmp_out, fallback)
+            return fallback
         finally:
             _safe_remove(tmp_out)
 
@@ -2214,6 +2429,65 @@ def _safe_remove(path: str):
             os.remove(path)
     except OSError:
         pass
+
+
+def _clean_rows(headers: list, rows) -> list[dict]:
+    """Ghép header + dòng thành dict; bỏ dòng trống (toàn ô rỗng/khoảng
+    trắng) và ô thừa không có tên cột."""
+    out = []
+    for r in rows:
+        values = ["" if v is None else str(v).strip() for v in r]
+        if not any(values):
+            continue
+        out.append(dict(zip(headers, values)))
+    return out
+
+
+def _read_table(path: str) -> list[dict]:
+    """Đọc CSV/Excel thành list dict, chịu được các file xuất từ Excel."""
+    ext = Path(path).suffix.lower()
+    if ext == ".xls":
+        raise ValueError("Không hỗ trợ file .xls (Excel 97-2003). "
+                         "Hãy mở bằng Excel và lưu lại dạng .xlsx hoặc .csv.")
+    if ext == ".xlsx":
+        from openpyxl import load_workbook
+        wb = load_workbook(path, read_only=True, data_only=True)
+        try:
+            rows = list(wb.active.iter_rows(values_only=True))
+        finally:
+            wb.close()   # read_only giữ file mở tới khi close → Excel không lưu được
+        if not rows:
+            raise ValueError("File Excel trống!")
+        headers = [str(h).strip() if h is not None else f"column_{i}"
+                   for i, h in enumerate(rows[0])]
+        return _clean_rows(headers, rows[1:])
+
+    # CSV: Excel trên Windows tiếng Việt hay lưu cp1258/cp1252 thay vì UTF-8.
+    for enc in ("utf-8-sig", "cp1258", "cp1252"):
+        try:
+            with open(path, encoding=enc, newline="") as fh:
+                rows = list(csv.reader(fh))
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        raise ValueError("Không đọc được bảng mã của file CSV — hãy lưu lại "
+                         "dạng 'CSV UTF-8' trong Excel.")
+    if not rows:
+        return []
+    headers = [h.strip() for h in rows[0]]
+    # zip() tự cắt ô thừa (dòng nhiều dấu phẩy hơn header) thay vì sinh key
+    # None như csv.DictReader — key None làm hỏng file CSV output.
+    return _clean_rows(headers, rows[1:])
+
+
+_UNSAFE_FILENAME_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def _safe_filename(name: str) -> str:
+    """Bỏ ký tự Windows cấm trong tên file (/, :, ?...) — tránh lỗi move,
+    ghi nhầm vào alternate data stream (abc:1) hoặc thoát khỏi thư mục đích."""
+    return _UNSAFE_FILENAME_RE.sub("_", name or "").strip(" .")[:150]
 
 
 def _safe_rmdir(path: str):
@@ -2335,10 +2609,25 @@ def main():
             if status["is_valid"]:
                 app = App(license_data=status["data"])
                 app.mainloop()
+                # Cửa sổ đã đóng nhưng luồng batch (daemon) có thể còn đang
+                # dọn dẹp + ghi CSV — chờ nó xong để không mất kết quả.
+                app.wait_batch_finished()
                 # App đóng vì bản quyền bị thu hồi lúc đang chạy → quay lại nhập key
                 if getattr(app, "_relaunch_license", False):
                     continue
                 return                       # người dùng đóng app bình thường → thoát
+            elif status.get("network_error"):
+                # Có key nhưng không liên lạc được server → hỏi thử lại,
+                # không bắt nhập lại key.
+                root = ctk.CTk()
+                root.withdraw()
+                retry = messagebox.askretrycancel(
+                    "Không kết nối được máy chủ bản quyền",
+                    "Không thể xác minh bản quyền do lỗi kết nối mạng.\n"
+                    "Hãy kiểm tra Internet rồi bấm Thử lại.", parent=root)
+                root.destroy()
+                if not retry:
+                    return
             else:
                 dlg = LicenseDialog()
                 dlg.mainloop()

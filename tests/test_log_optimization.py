@@ -81,9 +81,12 @@ class LogOptimizationTests(unittest.TestCase):
             ]
             retry = [text for text in normal if "Tải lần" in text]
 
-            self.assertEqual(50, len(errors))
+            # UI chỉ giữ MAX_UI_LOGS dòng mới nhất (tính cả lỗi); lỗi đầy đủ
+            # vẫn nằm trong app_error.log.
+            self.assertEqual([], errors)
             self.assertEqual(main.MAX_UI_LOGS, len(normal))
-            self.assertEqual(["[1/1] ! Tải lần 10/10"], retry)
+            self.assertEqual(1, len(retry))
+            self.assertTrue(retry[0].endswith("[1/1] ! Tải lần 10/10"))
 
             error_file = Path(tmp) / "app_error.log"
             persisted = error_file.read_text(encoding="utf-8")
@@ -95,12 +98,14 @@ class LogOptimizationTests(unittest.TestCase):
         app._log_add("[2/2] ! Tải lần 1/10", main.LOG_DOWNLOAD)
         app._log_add("[1/2] ! Tải lần 2/10", main.LOG_DOWNLOAD)
 
+        # Bỏ tiền tố giờ "[HH:MM:SS] " trước khi so sánh.
+        entries = [(cat, text[11:]) for cat, text in app._log_entries]
         self.assertEqual(
             [
                 (main.LOG_DOWNLOAD, "[1/2] ! Tải lần 2/10"),
                 (main.LOG_DOWNLOAD, "[2/2] ! Tải lần 1/10"),
             ],
-            app._log_entries,
+            entries,
         )
 
 
@@ -121,10 +126,56 @@ class DownloadRetryFormatTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "network detail that changes"):
                 downloader.download(output, output, retries=3, log=messages.append)
 
-        self.assertEqual(
-            ["! Tải lần 1/3", "! Tải lần 2/3", "! Tải lần 3/3"],
-            messages,
-        )
+        self.assertEqual(3, len(messages))
+        for attempt, message in enumerate(messages, 1):
+            self.assertTrue(message.startswith(f"! Tải lần {attempt}/3 lỗi: "))
+            # Thông báo thử lại là câu tiếng Việt ngắn, không lộ chi tiết thô.
+            self.assertNotIn("network detail", message)
+
+    def test_expired_tiktok_link_403_is_explained_and_not_retried(self):
+        import requests
+
+        calls = []
+
+        class _Forbidden:
+            def get(self, *_args, **_kwargs):
+                calls.append(1)
+                resp = requests.Response()
+                resp.status_code = 403
+                raise requests.HTTPError("403 Client Error", response=resp)
+
+        downloader = object.__new__(core.VideoDownloader)
+        downloader.session = _Forbidden()
+        # 0x6ad32e14 = 17/10/2026 15:13 — đã qua.
+        url = ("https://v16m.tiktokcdn-us.com/" + "a" * 32
+               + "/6ad32e14/video/tos/x/?a=1")
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(RuntimeError, "Link video đã hết hạn lúc"):
+                downloader.download(url, str(Path(tmp) / "v.mp4"))
+        self.assertEqual(1, len(calls))
+        self.assertEqual(0x6ad32e14, core.link_expiry(url))
+
+    def test_http_403_is_not_retried(self):
+        import requests
+
+        calls = []
+
+        class _Forbidden:
+            def get(self, *_args, **_kwargs):
+                calls.append(1)
+                resp = requests.Response()
+                resp.status_code = 403
+                raise requests.HTTPError("403 Client Error", response=resp)
+
+        downloader = object.__new__(core.VideoDownloader)
+        downloader.session = _Forbidden()
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "core.time.sleep", return_value=None
+        ):
+            with self.assertRaises(RuntimeError):
+                downloader.download("https://x/v.mp4", str(Path(tmp) / "v.mp4"),
+                                    retries=7)
+        self.assertEqual(1, len(calls))
 
 
 if __name__ == "__main__":

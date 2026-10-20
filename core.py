@@ -28,6 +28,8 @@ def _app_dir() -> Path:
 
 import requests
 
+from error_text import short_reason
+
 # Hide console window on Windows when spawning FFmpeg
 _WIN_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
@@ -46,26 +48,59 @@ FFMPEG  = _local_or_system("ffmpeg")
 FFPROBE = _local_or_system("ffprobe")
 
 
-def _has_valid_video_stream(path: str) -> bool:
+def _to_float(v):
+    if v in (None, "N/A", ""):
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def probe_video(path: str):
     """
-    True nếu *path* là video đọc được (có ít nhất 1 luồng video và ffprobe
-    parse được). Bắt mọi file hỏng: tải thiếu byte (mất moov atom), trang
-    HTML lỗi lưu nhầm .mp4, dữ liệu rác... ffprobe sẽ trả mã != 0 hoặc
-    không thấy luồng video.
+    Chạy ffprobe 1 lần, trả {duration, width, height} hoặc None nếu *path*
+    không phải video đọc được (không có luồng video / ffprobe lỗi). Bắt mọi
+    file hỏng: tải thiếu byte (mất moov atom), trang HTML lỗi lưu nhầm .mp4,
+    dữ liệu rác...
+
+    duration = 0.0 nếu không xác định được (một số nguồn stream báo "N/A");
+    caller phải tự xử lý trường hợp này.
     """
     cmd = [
         FFPROBE, "-v", "error",
         "-select_streams", "v:0",
-        "-show_entries", "stream=codec_type",
-        "-of", "csv=p=0",
+        "-show_entries",
+        "format=duration:stream=codec_type,width,height,duration",
+        "-of", "json",
         path,
     ]
     try:
+        # timeout: file hỏng có thể làm ffprobe treo → kẹt luồng cả batch.
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           creationflags=_WIN_FLAGS)
+                           encoding="utf-8", errors="replace",
+                           stdin=subprocess.DEVNULL,
+                           creationflags=_WIN_FLAGS, timeout=60)
+        if r.returncode != 0:
+            return None
+        data = json.loads(r.stdout or "{}")
     except Exception:   # noqa: BLE001
-        return False
-    return r.returncode == 0 and "video" in (r.stdout or "")
+        return None
+
+    streams = data.get("streams") or []
+    if not streams or streams[0].get("codec_type") != "video":
+        return None
+    s0 = streams[0]
+
+    # Prefer container duration, fall back to stream duration
+    duration = (_to_float(data.get("format", {}).get("duration"))
+                or _to_float(s0.get("duration"))
+                or 0.0)
+    return {
+        "duration": duration,
+        "width":    int(s0.get("width") or 0) or 1280,
+        "height":   int(s0.get("height") or 0),
+    }
 
 
 def _is_non_video_ctype(ctype: str) -> bool:
@@ -87,6 +122,22 @@ def _gdrive_file_id(url: str):
     """Tách file ID từ link Google Drive (mọi dạng /view, open?id=, uc?id=…)."""
     m = _GDRIVE_ID_RE.search(url or "")
     return (m.group(1) or m.group(2)) if m else None
+
+
+# Link TikTok CDN có mốc hết hạn dạng hex 8 ký tự ngay sau chữ ký 32 ký tự:
+#   https://v16m.tiktokcdn-us.com/<sig32>/<expiry_hex8>/video/tos/...
+# Quá mốc này CDN luôn trả 403 → không cần tải/thử lại.
+_TIKTOK_EXPIRY_RE = re.compile(
+    r'tiktokcdn[\w.-]*/[0-9a-f]{32}/([0-9a-f]{8})/', re.I)
+
+# HTTP status là lỗi vĩnh viễn (link hết hạn/bị xoá/bị chặn): không thử lại.
+_PERMANENT_HTTP_STATUS = (401, 403, 404, 410)
+
+
+def link_expiry(url: str):
+    """Mốc hết hạn (epoch giây) của link TikTok CDN, None nếu không có."""
+    m = _TIKTOK_EXPIRY_RE.search(url or "")
+    return int(m.group(1), 16) if m else None
 
 
 def _to_direct_download_url(url: str) -> str:
@@ -222,42 +273,15 @@ class VideoProcessor:
         duration is 0.0 if it can't be determined (some streamed sources
         report "N/A"); callers must handle the unknown-duration case.
         """
-        cmd = [
-            FFPROBE, "-v", "error",
-            "-select_streams", "v:0",
-            "-show_entries", "format=duration:stream=width,height,duration",
-            "-of", "json",
-            video_path,
-        ]
-        r = subprocess.run(cmd, capture_output=True, text=True,
-                           creationflags=_WIN_FLAGS)
-        if r.returncode != 0:
-            raise RuntimeError(f"ffprobe error: {r.stderr}")
-
-        data    = json.loads(r.stdout)
-        streams = data.get("streams") or [{}]
-        s0      = streams[0]
-
-        width  = int(s0.get("width") or 0) or 1280
-        height = int(s0.get("height") or 0)
-
-        # Prefer container duration, fall back to stream duration
-        def _to_float(v):
-            if v in (None, "N/A", ""):
-                return None
-            try:
-                return float(v)
-            except (TypeError, ValueError):
-                return None
-
-        duration = (_to_float(data.get("format", {}).get("duration"))
-                    or _to_float(s0.get("duration"))
-                    or 0.0)
-
-        return {"duration": duration, "width": width, "height": height}
+        info = probe_video(video_path)
+        if info is None:
+            raise RuntimeError(
+                f"ffprobe không đọc được luồng video: {video_path}")
+        return info
 
     def process_video(self, input_path: str, output_path: str,
-                      settings: dict, should_stop=None) -> str:
+                      settings: dict, should_stop=None,
+                      info: dict | None = None) -> str:
         """
         Build and run a single FFmpeg command that applies all edits.
 
@@ -274,6 +298,9 @@ class VideoProcessor:
             logo_motion  str    - "static" | "perimeter" | "bounce"
             logo_speed   str    - "slow" | "normal" | "fast" (motion only)
             logo_opacity str    - "opaque" | "medium" | "light"
+
+        info: kết quả probe_video() đã có sẵn (vd. từ bước tải về) → bỏ qua
+        lần ffprobe thứ 2. None → tự probe.
         """
         # Clamp negatives — a negative -ss/-t is invalid for ffmpeg
         trim_start   = max(0.0, float(settings.get("trim_start", 0)))
@@ -286,15 +313,21 @@ class VideoProcessor:
         logo_speed   = settings.get("logo_speed", "normal")
         logo_opacity = settings.get("logo_opacity", "opaque")
 
-        # ── Chất lượng encode (giữ nguyên chất lượng video gốc) ───────────────
-        # Khi buộc phải re-encode (có logo / có cắt), các tham số này quyết định
-        # mức suy giảm. Mặc định đặt ở ngưỡng "gần như không thấy mất mát":
-        #   crf 18   : visually lossless cho x264 (thấp hơn = đẹp hơn, file to hơn)
-        #   medium   : nén hiệu quả hơn 'fast' → bù lại dung lượng khi crf thấp
-        #   192k aac : audio rõ. Audio gốc không cắt vẫn được copy nguyên vẹn.
-        # Có thể override qua settings nếu muốn ưu tiên tốc độ/dung lượng.
-        video_crf     = str(settings.get("video_crf", 18))
-        video_preset  = str(settings.get("video_preset", "veryfast"))
+        # ── Chất lượng encode (ưu tiên tốc độ, chất lượng gần như không đổi) ──
+        # Khi buộc phải re-encode (có logo / có cắt / scale), các tham số này
+        # quyết định tốc độ và dung lượng:
+        #   ultrafast : bỏ phần phân tích nặng (subme/partitions/B-frame) →
+        #               encode nhanh hơn veryfast ~40% (đo 1080x1920).
+        #   cabac=1 + deblock=0,0 : bật lại 2 thứ ultrafast tắt nhưng gần như
+        #               không tốn tốc độ → file nhỏ hơn ultrafast thuần ~35%,
+        #               không bị vỡ khối. Profile thành Main (mọi nền tảng đọc được).
+        #   crf 20    : SSIM ~0.994, ngang veryfast crf 18 bằng mắt thường; file
+        #               to hơn veryfast crf 18 khoảng 1.8 lần.
+        #   192k aac  : audio rõ. Audio gốc không cắt vẫn được copy nguyên vẹn.
+        # Có thể override qua settings (video_x264_params="" để bỏ hẳn).
+        video_crf     = str(settings.get("video_crf", 20))
+        video_preset  = str(settings.get("video_preset", "ultrafast"))
+        video_x264_params = str(settings.get("video_x264_params", "cabac=1:deblock=0,0"))
         audio_bitrate = str(settings.get("audio_bitrate", "192k"))
 
         # ── Force 1080p dọc (1080×1920) ───────────────────────────────────────────
@@ -302,17 +335,23 @@ class VideoProcessor:
         # Dùng force_original_aspect_ratio=decrease để giữ tỷ lệ không bị méo,
         # sau đó pad viền đen nếu video gốc không đúng tỷ lệ 9:16.
         force_1080p   = bool(settings.get("force_1080p", False))
-        _SCALE_1080_VF = (
-            "scale=1080:1920:"
-            "force_original_aspect_ratio=decrease:"
-            "flags=bicubic,"
-            "pad=1080:1920:-1:-1:color=black"
-        )
 
-        info         = self.get_video_info(input_path)
+        if info is None:
+            info = self.get_video_info(input_path)
         duration     = info["duration"]          # 0.0 if unknown
-        video_width  = info["width"]
-        logo_px      = max(1, round(video_width * logo_pct / 100))
+        src_w        = info["width"]
+        src_h        = info["height"]
+
+        # Video gốc đã đúng 1080×1920 → scale/pad là no-op, bỏ hẳn để không
+        # buộc phải re-encode. Đúng tỷ lệ 9:16 (vd. 720×1280) → chỉ scale,
+        # bỏ pad (pad không thêm viền nào).
+        scale_vf = None
+        if force_1080p and (src_w, src_h) != (1080, 1920):
+            scale_vf = "scale=1080:1920:force_original_aspect_ratio=decrease:flags=bicubic"
+            if src_w * 1920 != src_h * 1080:
+                scale_vf += ",pad=1080:1920:-1:-1:color=black"
+
+        logo_px      = max(1, round(src_w * logo_pct / 100))
 
         has_logo       = bool(logo_path and os.path.exists(logo_path))
         has_trim       = trim_start > 0 or trim_end > 0
@@ -345,11 +384,11 @@ class VideoProcessor:
             # dài hơn video → bị cắt; nếu ngắn hơn → video kết thúc cùng audio.
             use_shortest = True
 
-        # Re-encode is REQUIRED whenever we trim, because -c:v copy can only
-        # cut at keyframes → trimming mid-GOP causes freeze/stutter. Logo and
-        # force_1080p scale also force a re-encode. Only pure remux (no trim,
-        # no logo, no scale) can copy video.
-        need_reencode_video = has_logo or has_trim or force_1080p
+        # Re-encode is REQUIRED when cutting the START, because -c:v copy can
+        # only start at a keyframe → seeking mid-GOP causes freeze/stutter.
+        # Cutting only the END (-t) needs no keyframe → video stays copied.
+        # Logo and a real 1080p scale also force a re-encode.
+        need_reencode_video = has_logo or trim_start > 0 or scale_vf is not None
 
         cmd = [FFMPEG, "-y"]
 
@@ -380,9 +419,9 @@ class VideoProcessor:
         # ── filters ─────────────────────────────────────────────────────────
 
         if logo_idx is not None:
-            # Video source node: thêm scale 1080p dọc vào đầu chain nếu force_1080p.
-            if force_1080p:
-                video_node = f"[0:v]{_SCALE_1080_VF}[scaled1080]"
+            # Video source node: thêm scale 1080p dọc vào đầu chain nếu cần.
+            if scale_vf:
+                video_node = f"[0:v]{scale_vf}[scaled1080]"
                 src = "[scaled1080]"
             else:
                 video_node = ""
@@ -412,10 +451,9 @@ class VideoProcessor:
             else:
                 fc = f"{logo_chain};{src}[logo]{overlay}[vout]"
             cmd += ["-filter_complex", fc, "-map", "[vout]"]
-        elif force_1080p:
+        elif scale_vf:
             # Không có logo nhưng cần scale: dùng -vf đơn giản hơn filter_complex.
-            cmd += ["-map", "0:v",
-                    "-vf", _SCALE_1080_VF]
+            cmd += ["-map", "0:v", "-vf", scale_vf]
         else:
             cmd += ["-map", "0:v"]
 
@@ -442,8 +480,11 @@ class VideoProcessor:
 
         # ── codecs ───────────────────────────────────────────────────────────
         if need_reencode_video:
-            cmd += ["-c:v", "libx264", "-preset", video_preset,
-                    "-crf", video_crf, "-pix_fmt", "yuv420p", "-threads", "0"]
+            cmd += ["-c:v", "libx264", "-preset", video_preset, "-crf", video_crf]
+            # Phải đứng SAU -preset mới ghi đè được thiết lập của preset.
+            if video_x264_params:
+                cmd += ["-x264-params", video_x264_params]
+            cmd += ["-pix_fmt", "yuv420p", "-threads", "0"]
         else:
             cmd += ["-c:v", "copy"]
 
@@ -451,11 +492,12 @@ class VideoProcessor:
             # New audio → always re-encode to aac
             cmd += ["-c:a", "aac", "-b:a", audio_bitrate]
         elif audio_path is None:
-            # Keep original audio. Re-encode to aac when we trimmed (seek aligns
-            # both streams, re-encode guarantees clean sync); copy otherwise.
-            # Khi copy mà không trim: thêm -avoid_negative_ts make_zero để tránh
-            # mất audio sync với một số codec stream (Opus, DTS) trong container MP4.
-            if has_trim:
+            # Keep original audio. Re-encode to aac when we cut the start (seek
+            # aligns both streams, re-encode guarantees clean sync); copy
+            # otherwise (cắt đuôi bằng -t vẫn copy được).
+            # Khi copy: thêm -avoid_negative_ts make_zero để tránh mất audio
+            # sync với một số codec stream (Opus, DTS) trong container MP4.
+            if trim_start > 0:
                 cmd += ["-c:a", "aac", "-b:a", audio_bitrate]
             else:
                 cmd += ["-c:a", "copy", "-avoid_negative_ts", "make_zero"]
@@ -467,8 +509,12 @@ class VideoProcessor:
         if should_stop and should_stop():
             raise RuntimeError("Đã dừng theo yêu cầu")
 
+        # encoding utf-8: FFmpeg ghi stderr UTF-8 (đường dẫn/metadata tiếng
+        # Việt); giải mã theo locale cp1252/cp1258 sẽ lỗi và mất stderr.
+        # stdin=DEVNULL: nhiều FFmpeg song song không được đọc terminal.
         process = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            encoding="utf-8", errors="replace", stdin=subprocess.DEVNULL,
             creationflags=_WIN_FLAGS,
         )
         with self._process_lock:
@@ -490,15 +536,14 @@ class VideoProcessor:
                         raise RuntimeError("Đã dừng theo yêu cầu")
                     if time.monotonic() >= deadline:
                         process.kill()
-                        process.communicate()
-                        raise RuntimeError("FFmpeg quá thời hạn 10 phút")
+                        stdout, stderr = process.communicate()
+                        raise RuntimeError(f"FFmpeg quá thời hạn 10 phút\nStderr:\n{stderr}")
         finally:
             with self._process_lock:
                 self._active_processes.discard(process)
 
         if process.returncode != 0:
-            # Return last 800 chars of stderr for diagnosis
-            raise RuntimeError(f"FFmpeg lỗi:\n{stderr[-800:]}")
+            raise RuntimeError(f"FFmpeg lỗi (exit code {process.returncode}):\n{stderr}")
 
         # Kiểm tra file output thực sự tồn tại và có dữ liệu hợp lệ.
         # Trên Windows khi nhiều FFmpeg chạy song song + I/O bão hòa,
@@ -506,12 +551,12 @@ class VideoProcessor:
         if not os.path.exists(output_path):
             raise RuntimeError(
                 f"FFmpeg báo thành công nhưng output không tồn tại: {output_path}\n"
-                f"Stderr: {stderr[-400:]}")
+                f"Stderr:\n{stderr}")
         out_size = os.path.getsize(output_path)
         if out_size < 2048:   # < 2KB: chắc chắn không phải video hợp lệ
             raise RuntimeError(
                 f"FFmpeg output quá nhỏ ({out_size} byte) — có thể bị cắt hoặc rỗng.\n"
-                f"Stderr: {stderr[-400:]}")
+                f"Stderr:\n{stderr}")
 
         return output_path
 
@@ -532,12 +577,19 @@ class VideoDownloader:
         from requests.adapters import HTTPAdapter
         from urllib3.util.retry import Retry
 
+        self.last_info = None
         self.session = requests.Session()
         # Retry tự động ngay ở tầng mạng/urllib3 khi gặp lỗi SSL handshake, connection reset, hoặc server lỗi
+        # Vòng thử lại chính nằm trong download() (7 lần); ở tầng urllib3 chỉ
+        # thử nhẹ. Retry lồng nhau 5×7 với timeout 60s từng khiến 1 link chết
+        # chiếm luồng hàng chục phút.
         retries = Retry(
-            total=5,
-            backoff_factor=1.5,
-            status_forcelist=[500, 502, 503, 504],
+            total=2,
+            connect=2,
+            read=1,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            respect_retry_after_header=True,
             raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retries, pool_connections=20, pool_maxsize=20)
@@ -556,6 +608,12 @@ class VideoDownloader:
         """
         # Link Google Drive dạng "xem" → link tải trực tiếp (giữ nguyên link khác).
         req_url = _to_direct_download_url(url)
+        # {duration, width, height} của file vừa tải (probe_video), None nếu lỗi.
+        self.last_info = None
+
+        # Không chặn trước theo đồng hồ máy (đồng hồ sai giờ sẽ chặn nhầm cả
+        # link còn hạn) — chỉ dùng mốc hết hạn để giải thích khi CDN trả 403.
+        expiry = link_expiry(req_url)
 
         last_err = None
         for attempt in range(1, retries + 1):
@@ -565,7 +623,7 @@ class VideoDownloader:
             try:
                 resp = self.session.get(
                     req_url, stream=True, headers=self.HEADERS,
-                    timeout=(60, 120), allow_redirects=True
+                    timeout=(20, 120), allow_redirects=True
                 )
                 resp.raise_for_status()
 
@@ -583,10 +641,10 @@ class VideoDownloader:
                             "URL không trả về video "
                             f"(Content-Type: {ctype or 'rỗng'})")
                     if log:
-                        log(f"   ↻ Trang HTML → dùng link gốc: ...{real[-46:]}")
+                        log(f"   ↻ Trang HTML → dùng link gốc: {real}")
                     resp = self.session.get(
                         real, stream=True, headers=self.HEADERS,
-                        timeout=(60, 120), allow_redirects=True
+                        timeout=(20, 120), allow_redirects=True
                     )
                     resp.raise_for_status()
                     ctype = (resp.headers.get("Content-Type") or "").lower()
@@ -622,7 +680,9 @@ class VideoDownloader:
 
                 # (4) Kiểm tra cuối bằng ffprobe: file phải thực sự đọc được.
                 # Bắt mọi loại hỏng còn lại (rác, codec lỗi, moov hỏng...).
-                if not _has_valid_video_stream(output_path):
+                # Giữ kết quả probe để process_video khỏi ffprobe lần nữa.
+                self.last_info = probe_video(output_path)
+                if self.last_info is None:
                     raise RuntimeError(
                         "File tải về không phải video hợp lệ "
                         "(ffprobe không đọc được — moov atom/dữ liệu hỏng)")
@@ -636,9 +696,15 @@ class VideoDownloader:
                 if should_stop and should_stop():
                     break
                 if log:
-                    # Keep this stable so the UI can update X/Y in-place.  The
-                    # final exception below still carries the complete reason.
-                    log(f"! Tải lần {attempt}/{retries}")
+                    log(f"! Tải lần {attempt}/{retries} lỗi: {short_reason(exc, 'DL')}")
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if status in _PERMANENT_HTTP_STATUS:
+                    if expiry is not None and expiry < time.time():
+                        last_err = RuntimeError(
+                            "Link video đã hết hạn lúc "
+                            f"{time.strftime('%H:%M %d/%m/%Y', time.localtime(expiry))}"
+                            f" — cần lấy link mới (HTTP {status})")
+                    break   # link hết hạn/bị chặn: thử lại cũng vô ích
                 if attempt < retries:
                     # Chờ cố định 2s giữa các lần thử (mặc định).
                     for _ in range(2):
@@ -659,6 +725,8 @@ class VideoDownloader:
         except OSError:
             pass
 
+        if should_stop and should_stop():
+            raise RuntimeError("Đã dừng theo yêu cầu")
         raise RuntimeError(
-            f"Tải video thất bại sau {retries} lần thử: {last_err}"
-        )
+            f"Tải video thất bại sau {attempt} lần thử: {last_err}"
+        ) from last_err

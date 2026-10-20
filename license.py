@@ -142,6 +142,12 @@ def check_license() -> dict:
                 "message": "Chưa kích hoạt bản quyền."}
 
     result = validate_key(saved)
+    if result.get("network_error"):
+        # Mất mạng/timeout KHÔNG có nghĩa key sai → giữ key, để người dùng
+        # thử lại khi có mạng thay vì phải nhập lại key.
+        return {"is_valid": False, "data": None, "network_error": True,
+                "message": result.get("message") or _NET_ERR}
+
     data = result.get("data")
     if result.get("status") == 1 and data and data.get("key"):
         save_key(saved, data.get("expire_date"))

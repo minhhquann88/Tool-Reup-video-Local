@@ -14,6 +14,8 @@ import time
 
 import requests
 
+from error_text import short_reason
+
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
@@ -109,13 +111,33 @@ def _sleep_or_stop(seconds, should_stop):
         time.sleep(1)
 
 
-def _validate_audio_file(path: str, min_duration: float = 3.0, min_bytes: int = 50 * 1024):
+# Lỗi HTTP vĩnh viễn (key sai, model sai, bị chặn, sai endpoint): thử lại vô ích.
+_PERMANENT_HTTP_RE = re.compile(r"HTTP (?:400|401|403|404)\b")
+# Lỗi tạm thời do quá tải / hết quota theo phút: cần chờ lâu dần.
+_SLOWDOWN_HTTP_RE = re.compile(r"HTTP (?:429|5\d\d)\b")
+
+
+def _is_permanent_error(exc: Exception) -> bool:
+    return bool(_PERMANENT_HTTP_RE.search(str(exc)))
+
+
+def _retry_wait(exc: Exception, backoff: float, attempt: int) -> float:
+    """429/5xx: chờ tăng dần (backoff·2^attempt, tối đa 60s) để quota theo
+    phút kịp hồi; lỗi khác giữ nguyên thời gian chờ cố định `backoff`."""
+    if _SLOWDOWN_HTTP_RE.search(str(exc)):
+        return min(60.0, backoff * (2 ** attempt))
+    return backoff
+
+
+# MP3 Google TTS ~32kbps ≈ 4KB/giây → 12KB ≈ 3 giây, khớp min_duration.
+# (Ngưỡng 50KB cũ ≈ 12.5s làm lời thoại ngắn luôn bị coi là lỗi.)
+def _validate_audio_file(path: str, min_duration: float = 3.0, min_bytes: int = 12 * 1024):
     """
     Kiểm tra file audio vừa nhận từ TTS API có hợp lệ không.
 
     Tiêu chí:
-      - File phải tồn tại và kích thước >= min_bytes (mặc định 50KB).
-        → Response lỗi/tiếng "pít" thường khoảng 5KB (< 50KB).
+      - File phải tồn tại và kích thước >= min_bytes (mặc định 12KB).
+        → Response lỗi/tiếng "pít" thường khoảng 5KB (< 12KB).
       - Duration >= min_duration giây (mặc định 3.0s) đo bằng ffprobe.
         → Lời thoại review 370 ký tự chuẩn dài khoảng 15-30s.
 
@@ -178,7 +200,7 @@ def generate_script(
         raise ValueError("Thiếu API key Gemini")
 
     prompt = replace_prompt_variables(prompt_template, row, language_name)
-    url = GEMINI_URL.format(model=model) + f"?key={api_key}"
+    url = GEMINI_URL.format(model=model)
     headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     body = {"contents": [{"parts": [{"text": prompt}]}]}
 
@@ -190,7 +212,7 @@ def generate_script(
             resp = requests.post(url, headers=headers, json=body, timeout=_API_TIMEOUT)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
-                raise RuntimeError(data["error"].get("message", "Gemini API error"))
+                raise RuntimeError(f"Gemini API HTTP {resp.status_code}:\n{resp.text}")
             text = (
                 data.get("candidates", [{}])[0]
                 .get("content", {})
@@ -208,13 +230,15 @@ def generate_script(
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             if log:
-                log(f"! Gemini lần {attempt}/{retries} lỗi: {exc}")
+                log(f"! Gemini lần {attempt}/{retries} lỗi: {short_reason(exc, 'AI')}")
+            if _is_permanent_error(exc):
+                break   # key/model sai, bị chặn: thử lại vô ích
             if attempt < retries:
-                # Chờ cố định `backoff` giây (mặc định 5s) rồi thử lại,
-                # không tăng dần để khỏi đợi lâu.
-                _sleep_or_stop(backoff, should_stop)
+                # Chờ cố định `backoff` giây; riêng 429/5xx chờ tăng dần
+                # (xem _retry_wait) để quota theo phút kịp hồi.
+                _sleep_or_stop(_retry_wait(exc, backoff, attempt), should_stop)
 
-    raise RuntimeError(f"Gemini thất bại sau {retries} lần: {last_err}")
+    raise RuntimeError(f"Gemini thất bại sau {retries} lần: {last_err}") from last_err
 
 
 def generate_script_openai(
@@ -261,7 +285,7 @@ def generate_script_openai(
                                  timeout=(15, 120))
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
-                raise RuntimeError(data["error"].get("message", "OpenAI API error"))
+                raise RuntimeError(f"OpenAI API HTTP {resp.status_code}:\n{resp.text}")
             text = (
                 data.get("choices", [{}])[0]
                 .get("message", {})
@@ -278,11 +302,13 @@ def generate_script_openai(
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             if log:
-                log(f"! ChatGPT lần {attempt}/{retries} lỗi: {exc}")
+                log(f"! ChatGPT lần {attempt}/{retries} lỗi: {short_reason(exc, 'AI')}")
+            if _is_permanent_error(exc):
+                break   # key/model sai, bị chặn: thử lại vô ích
             if attempt < retries:
-                _sleep_or_stop(backoff, should_stop)
+                _sleep_or_stop(_retry_wait(exc, backoff, attempt), should_stop)
 
-    raise RuntimeError(f"ChatGPT thất bại sau {retries} lần: {last_err}")
+    raise RuntimeError(f"ChatGPT thất bại sau {retries} lần: {last_err}") from last_err
 
 
 def synthesize_voice(
@@ -307,8 +333,9 @@ def synthesize_voice(
     if not text or not str(text).strip():
         raise ValueError("Thiếu text để tạo voice")
 
-    url = GOOGLE_TTS_URL + f"?key={api_key}"
-    headers = {"Content-Type": "application/json; charset=utf-8"}
+    url = GOOGLE_TTS_URL
+    headers = {"Content-Type": "application/json; charset=utf-8",
+               "x-goog-api-key": api_key}
     body = {
         "input": {"text": str(text)},
         "voice": {"languageCode": language_code, "name": voice_name},
@@ -323,7 +350,7 @@ def synthesize_voice(
             resp = requests.post(url, headers=headers, json=body, timeout=_API_TIMEOUT)
             data = resp.json()
             if isinstance(data, dict) and data.get("error"):
-                raise RuntimeError(data["error"].get("message", "Google TTS API error"))
+                raise RuntimeError(f"Google TTS API HTTP {resp.status_code}:\n{resp.text}")
             audio = data.get("audioContent")
             if not audio:
                 raise RuntimeError("Google TTS trả về audioContent rỗng")
@@ -341,12 +368,14 @@ def synthesize_voice(
             except OSError:
                 pass
             if log:
-                log(f"! Google TTS lần {attempt}/{retries} lỗi: {exc}")
+                log(f"! Google TTS lần {attempt}/{retries} lỗi: {short_reason(exc, 'VOICE')}")
+            if _is_permanent_error(exc):
+                break   # key/model sai, bị chặn: thử lại vô ích
             if attempt < retries:
                 # Chờ cố định `backoff` giây (mặc định 5s), không tăng dần.
-                _sleep_or_stop(backoff, should_stop)
+                _sleep_or_stop(_retry_wait(exc, backoff, attempt), should_stop)
 
-    raise RuntimeError(f"Google TTS thất bại sau {retries} lần: {last_err}")
+    raise RuntimeError(f"Google TTS thất bại sau {retries} lần: {last_err}") from last_err
 
 
 def synthesize_voice_autovoice(
@@ -385,9 +414,7 @@ def synthesize_voice_autovoice(
             if "application/json" in ctype:
                 data = resp.json()
                 if isinstance(data, dict) and data.get("error"):
-                    err = data["error"]
-                    msg = err.get("message", err) if isinstance(err, dict) else err
-                    raise RuntimeError(f"AutoVoice API error: {msg}")
+                    raise RuntimeError(f"AutoVoice API HTTP {resp.status_code}:\n{resp.text}")
                 audio_b64 = None
                 if isinstance(data, dict):
                     audio_b64 = (data.get("audioContent")
@@ -400,7 +427,7 @@ def synthesize_voice_autovoice(
                 if resp.status_code >= 400:
                     raise RuntimeError(
                         f"AutoVoice API HTTP {resp.status_code}: "
-                        f"{resp.text[:200]}")
+                        f"{resp.text}")
                 audio_bytes = resp.content
 
             if not audio_bytes:
@@ -417,11 +444,13 @@ def synthesize_voice_autovoice(
             except OSError:
                 pass
             if log:
-                log(f"! AutoVoice API lần {attempt}/{retries} lỗi: {exc}")
+                log(f"! AutoVoice API lần {attempt}/{retries} lỗi: {short_reason(exc, 'VOICE')}")
+            if _is_permanent_error(exc):
+                break   # key/model sai, bị chặn: thử lại vô ích
             if attempt < retries:
-                _sleep_or_stop(backoff, should_stop)
+                _sleep_or_stop(_retry_wait(exc, backoff, attempt), should_stop)
 
-    raise RuntimeError(f"AutoVoice API thất bại sau {retries} lần: {last_err}")
+    raise RuntimeError(f"AutoVoice API thất bại sau {retries} lần: {last_err}") from last_err
 
 
 def synthesize_voice_videoai(
@@ -460,9 +489,7 @@ def synthesize_voice_videoai(
             if "application/json" in ctype:
                 data = resp.json()
                 if isinstance(data, dict) and data.get("error"):
-                    err = data["error"]
-                    msg = err.get("message", err) if isinstance(err, dict) else err
-                    raise RuntimeError(f"Voice API error: {msg}")
+                    raise RuntimeError(f"Voice API HTTP {resp.status_code}:\n{resp.text}")
                 audio_b64 = None
                 if isinstance(data, dict):
                     audio_b64 = (data.get("audioContent")
@@ -475,7 +502,7 @@ def synthesize_voice_videoai(
                 if resp.status_code >= 400:
                     raise RuntimeError(
                         f"Voice API HTTP {resp.status_code}: "
-                        f"{resp.text[:200]}")
+                        f"{resp.text}")
                 audio_bytes = resp.content
 
             if not audio_bytes:
@@ -492,11 +519,13 @@ def synthesize_voice_videoai(
             except OSError:
                 pass
             if log:
-                log(f"! Voice API lần {attempt}/{retries} lỗi: {exc}")
+                log(f"! Voice API lần {attempt}/{retries} lỗi: {short_reason(exc, 'VOICE')}")
+            if _is_permanent_error(exc):
+                break   # key/model sai, bị chặn: thử lại vô ích
             if attempt < retries:
-                _sleep_or_stop(backoff, should_stop)
+                _sleep_or_stop(_retry_wait(exc, backoff, attempt), should_stop)
 
-    raise RuntimeError(f"Voice API thất bại sau {retries} lần: {last_err}")
+    raise RuntimeError(f"Voice API thất bại sau {retries} lần: {last_err}") from last_err
 
 
 def make_voice(
@@ -561,8 +590,7 @@ def make_voice(
     if on_script:
         on_script(script)
     elif log:
-        preview = script if len(script) <= 120 else script[:117] + "..."
-        log(f" Lời thoại: {preview}")
+        log(f" Lời thoại: {script}")
     if provider == "autovoice":
         synthesize_voice_autovoice(
             script,

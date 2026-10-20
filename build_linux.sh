@@ -9,9 +9,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-DEFAULT_APP=$(python3 -c "import main, license; base = 'RenderVideoReupPro' if getattr(license, 'APP_ID', '') == 'tool_reup_video_pro' else 'RenderVideoReup'; print(f'{base}_{main.APP_VERSION}')" 2>/dev/null || echo "RenderVideoReup_v1.0.0")
+DEFAULT_APP=$(python3 -c "import main, license; base = 'RenderVideoReupPro' if getattr(license, 'APP_ID', '') == 'tool_reup_video_pro' else 'RenderVideoReup'; print(f'{base}_{main.APP_VERSION}')" 2>/dev/null || echo "RenderVideoReup_v1.0.1")
 APP="${APP:-$DEFAULT_APP}"
-VERSION=$(python3 -c "import main; print(main.APP_VERSION)" 2>/dev/null || echo "v1.0.0")
+VERSION=$(python3 -c "import main; print(main.APP_VERSION)" 2>/dev/null || echo "v1.0.1")
 case "$APP" in
     *"$VERSION"*) ;;
     *) APP="${APP}_${VERSION}" ;;
@@ -119,7 +119,7 @@ mkdir -p "$DIST_DIR" "dist"
 # PyInstaller collects the build host's libXft transitively through _tkinter.
 # Replace it with the known-good version built above and fail closed if the
 # bundle would still ship the vulnerable 2.3.4 library.
-PYI_LIB_DIR="dist/$APP"
+PYI_LIB_DIR="$DIST_DIR/$APP"
 if [ -d "$PYI_LIB_DIR/_internal" ]; then
     PYI_LIB_DIR="$PYI_LIB_DIR/_internal"
 fi

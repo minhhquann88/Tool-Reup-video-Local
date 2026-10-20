@@ -11,3 +11,914 @@
 [2026-08-08 14:43:02] X  [184/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
 [2026-08-08 14:43:50] X  [193/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
 [2026-08-08 14:45:11] X  [206/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-17 16:44:53] X  [5/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-17 16:45:35] [2/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:45:36] [3/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:45:41] [6/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:46:23] [2/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:46:24] [3/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:46:28] [6/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:47:10] [2/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:47:16] [6/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:47:58] [2/10064] ! ChatGPT lần 4/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:48:03] [6/10064] ! ChatGPT lần 4/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:48:27] [10/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:48:31] [11/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:48:45] [2/10064] ! ChatGPT lần 5/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:48:51] [6/10064] ! ChatGPT lần 5/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:49:18] [11/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:49:33] [2/10064] ! ChatGPT lần 6/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:50:06] [11/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:50:21] [2/10064] ! ChatGPT lần 7/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:50:34] [13/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:50:50] [14/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:50:53] [11/10064] ! ChatGPT lần 4/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:51:08] [2/10064] ! ChatGPT lần 8/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:51:22] [13/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:51:36] [15/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:51:38] [14/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:51:56] [2/10064] ! ChatGPT lần 9/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:52:43] [2/10064] ! ChatGPT lần 10/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:52:43] X  [2/10064] Lỗi: 162-[WPGG] BỘ TENCEL THUN LẠNH QUẦN LỬNG CHO BÉ TỪ → ChatGPT thất bại sau 10 lần: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:53:26] [17/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:53:32] [18/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:53:40] [19/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:53:41] [20/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:54:11] [21/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:54:14] [17/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:54:19] [18/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:54:59] [21/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:55:01] [17/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:55:07] [18/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:55:49] [17/10064] ! ChatGPT lần 4/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:56:30] [22/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:56:32] [23/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:56:36] [17/10064] ! ChatGPT lần 5/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:57:11] [25/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:57:17] [22/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:57:19] [23/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:57:24] [17/10064] ! ChatGPT lần 6/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:57:42] [26/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:57:59] [25/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:58:05] [22/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:58:07] [23/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:58:11] [17/10064] ! ChatGPT lần 7/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:58:30] [26/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:58:46] [25/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 16:58:59] [17/10064] ! ChatGPT lần 8/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:06:34] X  [5/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-17 17:07:23] [6/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:08:11] [6/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:08:40] [9/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:08:41] [10/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:09:29] [10/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:09:32] [12/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:09:55] [13/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:10:16] [10/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:10:43] [13/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:11:37] [16/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:11:44] [18/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:12:31] [18/10064] ! ChatGPT lần 2/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:13:19] [18/10064] ! ChatGPT lần 3/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:16:45] [27/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:16:48] [28/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:17:36] [31/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:17:49] X  [34/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-17 17:18:00] [33/10064] ! ChatGPT lần 1/10 lỗi: HTTPSConnectionPool(host='api.openai.com', port=443): Read timed out. (read timeout=45)
+[2026-08-17 17:28:28] X  [5/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-17 17:34:10] X  [34/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-17 17:35:33] X  [33/10064] Lỗi: cây quýt thái siêu quả siêu ngọt - cây ghép nhanh  → The read operation timed out
+[2026-08-17 17:35:56] X  [36/10064] Lỗi: Miếng dán chống trầy xước cho đàn guitar acoustic  → The read operation timed out
+[2026-08-17 17:43:53] X  [53/10064] Lỗi: Túi Đựng Hồ Sơ Tài Liệu A4 Có Khóa Dùng Cho Văn Ph → The read operation timed out
+[2026-08-17 17:44:52] X  [55/10064] Lỗi: Ghế sofa nỉ cao cấp chống thấm nước kết hợp khung  → The read operation timed out
+[2026-08-17 17:46:01] X  [65/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-17 17:46:56] X  [71/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:30:55] X  [5/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:33:43] X  [34/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:36:50] X  [65/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:37:21] X  [71/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:37:50] X  [77/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:40:44] X  [108/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:41:39] X  [119/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:42:10] X  [126/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:45:19] X  [158/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:48:28] X  [184/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:48:29] X  [183/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:49:22] X  [193/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:50:39] X  [206/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:53:46] X  [241/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:54:39] X  [251/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:55:32] X  [261/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 08:56:06] X  [267/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 09:03:13] X  [5/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 09:06:17] X  [34/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 09:09:27] X  [65/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 09:10:00] X  [71/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 09:10:28] X  [77/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 09:13:20] X  [108/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 09:14:21] X  [119/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-08-18 09:14:58] X  [126/10064] Lỗi: (dữ liệu product_name rỗng) → Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV
+[2026-10-17 11:29:29] X  [3/442] Lỗi: SEOULIFE | Áo len dệt kim Polo cổ khóa kéo họa tiế → FFmpeg lỗi: .0%  0.0%    skip:28.0% [libx264 @ 0000018eff97c180] mb B  I16..4:  1.2%  1.6%  0.1%  B16..8: 13.3%  5.1%  0.5%  direct: 5.3%  skip:73.0%  L0:42.7% L1:44.9% BI:12.4% [libx264 @ 0000018eff97c180] 8x8 transform intra:49.3% inter:30.0% [libx264 @ 0000018eff97c180] coded y,uvDC,uvAC intra: 47.3% 55.2% 15.9% inter: 5.9% 8.6% 0.1% [libx264 @ 0000018eff97c180] i16 v,h,dc,p: 51% 29% 12%  8% [libx264 @ 0000018eff97c180] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 33% 22% 17%  4%  4%  5%  4%  5%  5% [libx264 @ 0000018eff97c180] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 31% 25% 13%  5%  5%  5%  5%  5%  5% [libx264 @ 0000018eff97c180] i8c dc,h,v,p: 49% 22% 23%  6% [libx264 @ 0000018eff97c180] Weighted P-Frames: Y:7.6% UV:7.6% [libx264 @ 0000018eff97c180] kb/s:4037.65 [aac @ 0000018efd942f80] Qavg: 671.854 Conversion failed!
+[2026-10-17 11:29:29] X  [5/442] Lỗi: DELIZ PREMIUM - Áo cardigan len lông thỏ dệt kim x → FFmpeg lỗi: 0%  0.0%    skip:16.6% [libx264 @ 000001bdafee46c0] mb B  I16..4:  2.4%  1.2%  0.1%  B16..8: 18.3%  7.4%  0.7%  direct: 6.1%  skip:63.7%  L0:38.0% L1:48.3% BI:13.7% [libx264 @ 000001bdafee46c0] 8x8 transform intra:41.0% inter:26.1% [libx264 @ 000001bdafee46c0] coded y,uvDC,uvAC intra: 36.0% 42.2% 10.8% inter: 7.1% 8.2% 0.1% [libx264 @ 000001bdafee46c0] i16 v,h,dc,p: 61% 21% 11%  8% [libx264 @ 000001bdafee46c0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 41% 19% 20%  3%  3%  4%  3%  4%  3% [libx264 @ 000001bdafee46c0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 37% 17% 16%  5%  5%  6%  4%  5%  3% [libx264 @ 000001bdafee46c0] i8c dc,h,v,p: 55% 15% 26%  4% [libx264 @ 000001bdafee46c0] Weighted P-Frames: Y:0.0% UV:0.0% [libx264 @ 000001bdafee46c0] kb/s:4818.58 [aac @ 000001bdafed7600] Qavg: 1843.631 Conversion failed!
+[2026-10-17 11:29:29] X  [1/442] Lỗi: D95 - Set váy dáng ngắn mix áo xuông cánh dơi thiế → FFmpeg lỗi: 0.0%  0.0%    skip:18.4% [libx264 @ 0000013f8494ff80] mb B  I16..4:  3.1%  1.9%  0.2%  B16..8: 17.2%  7.0%  0.6%  direct: 5.2%  skip:64.9%  L0:39.8% L1:47.8% BI:12.5% [libx264 @ 0000013f8494ff80] 8x8 transform intra:44.0% inter:31.2% [libx264 @ 0000013f8494ff80] coded y,uvDC,uvAC intra: 36.0% 40.0% 8.1% inter: 5.8% 7.5% 0.1% [libx264 @ 0000013f8494ff80] i16 v,h,dc,p: 74% 10%  7%  8% [libx264 @ 0000013f8494ff80] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 55% 12% 15%  3%  3%  4%  2%  5%  2% [libx264 @ 0000013f8494ff80] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 38% 16% 14%  5%  6%  7%  5%  6%  3% [libx264 @ 0000013f8494ff80] i8c dc,h,v,p: 53% 12% 30%  5% [libx264 @ 0000013f8494ff80] Weighted P-Frames: Y:4.4% UV:0.0% [libx264 @ 0000013f8494ff80] kb/s:4307.41 [aac @ 0000013f8497ae00] Qavg: 645.682 Conversion failed!
+[2026-10-17 11:29:29] X  [4/442] Lỗi: LYNA - D96 - Set váy lụa dáng dài mix áo thiết kế → FFmpeg lỗi: .0%  0.0%    skip:16.1% [libx264 @ 00000175ba2fb540] mb B  I16..4:  2.9%  3.0%  0.3%  B16..8: 17.7%  7.0%  0.7%  direct: 6.2%  skip:62.2%  L0:38.6% L1:46.1% BI:15.2% [libx264 @ 00000175ba2fb540] 8x8 transform intra:48.9% inter:33.4% [libx264 @ 00000175ba2fb540] coded y,uvDC,uvAC intra: 41.1% 41.6% 8.3% inter: 8.0% 8.3% 0.1% [libx264 @ 00000175ba2fb540] i16 v,h,dc,p: 68% 15%  8%  9% [libx264 @ 00000175ba2fb540] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 49% 15% 15%  3%  3%  5%  3%  5%  3% [libx264 @ 00000175ba2fb540] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 39% 18% 13%  4%  6%  6%  5%  6%  4% [libx264 @ 00000175ba2fb540] i8c dc,h,v,p: 51% 14% 30%  5% [libx264 @ 00000175ba2fb540] Weighted P-Frames: Y:0.0% UV:0.0% [libx264 @ 00000175ba2fb540] kb/s:5206.98 [aac @ 00000175bc067740] Qavg: 1136.361 Conversion failed!
+[2026-10-17 11:29:29] X  [2/442] Lỗi: D94 - Set váy dập ly mix áo vest blaze thiết kế -  → FFmpeg lỗi: 0.0%  0.0%    skip:14.6% [libx264 @ 00000235a95a58c0] mb B  I16..4:  3.0%  1.4%  0.1%  B16..8: 20.3%  8.1%  0.6%  direct: 6.3%  skip:60.2%  L0:41.4% L1:45.0% BI:13.6% [libx264 @ 00000235a95a58c0] 8x8 transform intra:39.9% inter:28.7% [libx264 @ 00000235a95a58c0] coded y,uvDC,uvAC intra: 35.5% 40.9% 9.8% inter: 7.5% 8.8% 0.0% [libx264 @ 00000235a95a58c0] i16 v,h,dc,p: 68% 15%  9%  8% [libx264 @ 00000235a95a58c0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 48% 14% 19%  3%  3%  4%  2%  4%  3% [libx264 @ 00000235a95a58c0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 38% 17% 16%  5%  5%  6%  4%  5%  4% [libx264 @ 00000235a95a58c0] i8c dc,h,v,p: 56% 13% 27%  4% [libx264 @ 00000235a95a58c0] Weighted P-Frames: Y:0.0% UV:0.0% [libx264 @ 00000235a95a58c0] kb/s:4869.04 [aac @ 00000235ab715e80] Qavg: 627.387 Conversion failed!
+[2026-10-17 15:13:45] [29/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:13:49] [29/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:13:53] [29/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:13:54] [30/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:13:56] [29/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:13:58] [30/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:14:01] [29/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:14:02] [30/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:14:05] [29/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:14:06] [30/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:14:08] [29/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:14:08] X [29/442] Lỗi video (item_id=1737442421627455310): [HÀNG CÓ SẴN] V46 Set (áo và quần) áo peplum khoá trước phối quần ống loe nhẹ - Set đồ nữ sang chảnh
+[2026-10-17 15:14:09] Traceback (most recent call last):
+[2026-10-17 15:14:09]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:09]     resp.raise_for_status()
+[2026-10-17 15:14:09]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:09]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:09] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:14:09] 
+[2026-10-17 15:14:09] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:09] 
+[2026-10-17 15:14:09] Traceback (most recent call last):
+[2026-10-17 15:14:09]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:09]     worker_downloader.download(
+[2026-10-17 15:14:09]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:09]     raise RuntimeError(
+[2026-10-17 15:14:09] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/663ea22009046df83cf25f80095d5a92/6ad32e3c/video/tos/alisg/tos-alisg-pve-0037c001/oQAUEoA7vBCoQ2EKFBiaEk6giAsNBguVE3BIY/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=955&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi_QkxQjKJyq.YAG0P3-I&mime_type=video_mp4&rc=ZmU3Zmk0OjVlNTg4N2U8OUBpM2dkZHA5cmhqZTMzODczNEBhLTNfNGFhNWMxYi0yNjReYSNxZC1mMmRrMC1hLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021301F2483C7F2BE30C0A157B&btag=e000c8000
+[2026-10-17 15:14:09] [30/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:14:10] [31/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:14] [30/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:14:15] [31/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:18] [30/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:14:18] X [30/442] Lỗi video (item_id=1737098507497932205): [SHE VIVID] Váy Dệt Kim Nữ Dáng Chữ A Phối Viền SHEMODA CONTRAST KNIT DRESS Thanh Lịch Sang Trọng Cổ Điển
+[2026-10-17 15:14:18] Traceback (most recent call last):
+[2026-10-17 15:14:18]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:18]     resp.raise_for_status()
+[2026-10-17 15:14:18]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:18]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:18] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:14:18] 
+[2026-10-17 15:14:18] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:18] 
+[2026-10-17 15:14:18] Traceback (most recent call last):
+[2026-10-17 15:14:18]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:18]     worker_downloader.download(
+[2026-10-17 15:14:18]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:18]     raise RuntimeError(
+[2026-10-17 15:14:18] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/69b3c4afe53fb89598011de27dec2be0/6ad32e2b/video/tos/alisg/tos-alisg-pve-0037c001/oUIACiAXQ1Ufn9YXp1yYADuAQ9ICEC6uBGwDiw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=816&ft=kLx3-yt4ZZo0PDm3uz3aQ9vSU~j6JE.C~&mime_type=video_mp4&rc=OjU6NGc1NDc5ZGc6N2Q5ZUBpajZ1d3c5cmRmZTMzODczNEAuMTEvYDItNWExNTFiMjVfYSMuaGFfMmRjLy1hLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021302702E08CAF7638C0A451D&btag=e000c8000
+[2026-10-17 15:14:18] [33/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:18] [34/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:18] [31/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:21] [34/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:22] [31/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:22] [33/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:25] [34/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:25] [31/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:25] [33/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:28] [34/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:29] [31/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:29] [33/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:32] [34/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:32] [31/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:32] X [31/442] Lỗi video (item_id=1736853827941467914): ZAMYSHOP - Váy thiết kế cổ nơ hoa, phần cổ nơ thỏ cài hoa trà, nẹp khuy dọc lạ mắt
+[2026-10-17 15:14:32] Traceback (most recent call last):
+[2026-10-17 15:14:32]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:32]     resp.raise_for_status()
+[2026-10-17 15:14:32]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:33]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:33] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:33] 
+[2026-10-17 15:14:33] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:33] 
+[2026-10-17 15:14:33] Traceback (most recent call last):
+[2026-10-17 15:14:33]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:33]     worker_downloader.download(
+[2026-10-17 15:14:33]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:33]     raise RuntimeError(
+[2026-10-17 15:14:33] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/6e9b6686e91a8b6a146e27ab44dabf16/6ad32e45/video/tos/alisg/tos-alisg-pve-0037/o4E9XWMiPnYYtFArkUQlIvByA2WiYADtYGisa/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=952&ft=74~WHDDwNkkVQQdGuIOnsd2ZtPZqYl.yW8LjhWLrK&mime_type=video_mp4&rc=ODwzPGZlOGhnODQzMzY5Z0BpM2l5M3c5cmd3ZTMzODgzNEBiLTIuLjJjXjMxLi01L2AtYSNfMnBlMmQ0ZS9hLS1kLy1zcw%3D%3D&vvpl=1&l=20261017021303DBE6193845CAE4092AF5&btag=e00088000
+[2026-10-17 15:14:33] [33/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:33] [36/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:34] [37/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:35] [34/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:35] [33/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:36] [36/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:37] [37/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:38] [34/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:38] X [34/442] Lỗi video (item_id=1733659028760659298): Váy dài nữ NATTI DESIGNS   thiết kế choàng vai liền váy chất liệu Chéo Nhật cao cấp  NV14
+[2026-10-17 15:14:38] Traceback (most recent call last):
+[2026-10-17 15:14:38]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:38]     resp.raise_for_status()
+[2026-10-17 15:14:38]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:38]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:38] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:38] 
+[2026-10-17 15:14:38] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:38] 
+[2026-10-17 15:14:38] Traceback (most recent call last):
+[2026-10-17 15:14:38]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:38]     worker_downloader.download(
+[2026-10-17 15:14:38]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:38]     raise RuntimeError(
+[2026-10-17 15:14:38] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/51333804d52b944fea7d675fb38bb7a0/6ad32e34/video/tos/alisg/tos-alisg-pve-0037c001/o0ZWSqeleAFVAqGrRTPfGKRAoLGHpfXRXQIgGo/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1100&ft=74~WHDDwNkkVQQdGuIOnsdIZtPZqYlyw9G2jhWLrK&mime_type=video_mp4&rc=OWU0OTQ5NGgzZmZmaTQ1OEBpM3A7ZG85cm9uZDMzODczNEBfL15jXmAvXmAxMGI1NjNfYSNhX2llMmRjZXNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021307AE1480E1B469D50A6E3C&btag=e000c8000
+[2026-10-17 15:14:39] [33/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:39] X [33/442] Lỗi video (item_id=1737555115606246829): [SHE FREEDOM] Áo Dệt Kim Nữ Tay Ngắn Cổ Bẻ Kẻ Ngang SHEMODA WAFFLE STRIPE CARDIGAN Thanh Lịch Chỉn Chu Trang Nhã Nhặn
+[2026-10-17 15:14:39] Traceback (most recent call last):
+[2026-10-17 15:14:39]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:39]     resp.raise_for_status()
+[2026-10-17 15:14:39]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:39]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:39] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:39] 
+[2026-10-17 15:14:39] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:39] 
+[2026-10-17 15:14:39] Traceback (most recent call last):
+[2026-10-17 15:14:39]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:39]     worker_downloader.download(
+[2026-10-17 15:14:39]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:39]     raise RuntimeError(
+[2026-10-17 15:14:39] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d98b25bb6498d5ef8192fbd0c60e776e/6ad32e4c/video/tos/alisg/tos-alisg-pve-0037c001/oA7HBDfDcIvyRAqEeZKlTwLGABgAHEVEFQGcEg/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=832&ft=nF.Th0sq17TvjSDXYSxRjMAZM6~Or2-RpsnzXtG&mime_type=video_mp4&rc=aTY3ZGRpODczNGVnaGVnPEBpamVmNHE5cnE5ZTMzODczNEAyMmMwNWBjNmIxYl4zY2I0YSNmLWxzMmQ0Xi1hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213043952747C9F5ADF09E2CA&btag=e000d0000
+[2026-10-17 15:14:39] [39/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:40] [36/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:40] [40/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:14:41] [37/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:42] [39/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:43] [36/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:43] [40/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:14:44] [37/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:45] [39/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:46] [41/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/ca2c20af6af2d939feef1582fbf21ade/6ad32e36/video/tos/alisg/tos-alisg-pve-0037c001/oYGagfr0DBVqFhpEX5EAInQmvBcIvuVgheRvDA/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=943&ft=74~WHDDwNyvVQQdGntpisdWZtPZqYlI-Ao4~hWLrK&mime_type=video_mp4&rc=NmZmPDtmN2dmODw1OWc0PEBpam9seGo5cm87ZDMzODczNEBgLzNgXi4uXl4xYGIvNl9gYSNvaWZvMmRzLnJhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213149B4B2B1C65189C097EB9&btag=e000f8000
+[2026-10-17 15:14:46] [36/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:46] [40/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:14:47] [37/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:48] [39/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:49] [41/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/ca2c20af6af2d939feef1582fbf21ade/6ad32e36/video/tos/alisg/tos-alisg-pve-0037c001/oYGagfr0DBVqFhpEX5EAInQmvBcIvuVgheRvDA/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=943&ft=74~WHDDwNyvVQQdGntpisdWZtPZqYlI-Ao4~hWLrK&mime_type=video_mp4&rc=NmZmPDtmN2dmODw1OWc0PEBpam9seGo5cm87ZDMzODczNEBgLzNgXi4uXl4xYGIvNl9gYSNvaWZvMmRzLnJhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213149B4B2B1C65189C097EB9&btag=e000f8000
+[2026-10-17 15:14:49] [36/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:49] [40/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:14:50] [37/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:51] [39/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:52] [41/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/ca2c20af6af2d939feef1582fbf21ade/6ad32e36/video/tos/alisg/tos-alisg-pve-0037c001/oYGagfr0DBVqFhpEX5EAInQmvBcIvuVgheRvDA/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=943&ft=74~WHDDwNyvVQQdGntpisdWZtPZqYlI-Ao4~hWLrK&mime_type=video_mp4&rc=NmZmPDtmN2dmODw1OWc0PEBpam9seGo5cm87ZDMzODczNEBgLzNgXi4uXl4xYGIvNl9gYSNvaWZvMmRzLnJhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213149B4B2B1C65189C097EB9&btag=e000f8000
+[2026-10-17 15:14:52] [36/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:52] X [36/442] Lỗi video (item_id=1732408721392305845): Set Pijama Tiểu Thư Họa Tiết Thêu Kèm Bịt Mắt Vải Lụa Latin Cao Cấp - Đồ bộ Lụa Mơ LM165
+[2026-10-17 15:14:52] Traceback (most recent call last):
+[2026-10-17 15:14:52]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:53]     resp.raise_for_status()
+[2026-10-17 15:14:53]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:53]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:53] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:53] 
+[2026-10-17 15:14:53] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:53] 
+[2026-10-17 15:14:53] Traceback (most recent call last):
+[2026-10-17 15:14:53]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:53]     worker_downloader.download(
+[2026-10-17 15:14:53]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:53]     raise RuntimeError(
+[2026-10-17 15:14:53] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/89c8eba5699986088b4e8af07cfa5b1a/6ad32e37/video/tos/alisg/tos-alisg-pve-0037c001/oELraMbVeAKgMijgIgWelN9LgseeIUoTigeAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1406&ft=kLx3-yt4ZZo0PD-3uz3aQ9XdDcC6JE.C~&mime_type=video_mp4&rc=NGZnOjU5O2YzOjY0O2Y3OkBpajs7NHI5cnZpZDMzODczNEBeNi4yLzYuXzIxLzZjNWFfYSNrZGExMmRjXnNhLS1kMWBzcw%3D%3D&vvpl=1&l=2026101702130826C1EDDD365DF60A7F64&btag=e000c8000
+[2026-10-17 15:14:53] [40/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:14:53] [37/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:53] X [37/442] Lỗi video (item_id=1737557052573386157): [SHE FREEDOM] Váy Dáng Dài Phối Màu Cổ Đứng Thắt Đai SHEMODA DUETONE BELTED DRESS Thanh Lịch Chỉn Chu
+[2026-10-17 15:14:53] Traceback (most recent call last):
+[2026-10-17 15:14:53]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:53]     resp.raise_for_status()
+[2026-10-17 15:14:53]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:53]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:53] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:53] 
+[2026-10-17 15:14:53] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:53] 
+[2026-10-17 15:14:53] Traceback (most recent call last):
+[2026-10-17 15:14:53]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:53]     worker_downloader.download(
+[2026-10-17 15:14:53]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:53]     raise RuntimeError(
+[2026-10-17 15:14:53] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a2553f5170a7c2d80cb6a00624ed14f3/6ad32e4e/video/tos/alisg/tos-alisg-pve-0037c001/oAQE8FqjjBLvBBDXIfad2cggEec4SvpZiVhARR/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=847&ft=nF.Th0sq1lTvjSDXYSxRZMAZM6~O1fOpZ1nzXtG&mime_type=video_mp4&rc=O2dpO2c5Omc4N2dkMzs2PEBpanE2eW45cnA2ZDMzODczNEA2LjMyYjYvNS8xMTQ1YzAuYSNoLy1sMmRjZHNhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021309DD30B7749C3CB90B36B8&btag=e000c8000
+[2026-10-17 15:14:54] [43/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d86c23b7423c676aabf5cb0f2617ad47/6ad32e3f/video/tos/alisg/tos-alisg-pve-0037c001/okRBJFBSgXFfd6ussqlfAsc3UoQEIJUHD6RAEg/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1119&ft=ha56B22xjQM9wwCLVsprU5~OmPrNPopiMRk5~YBMEeF&mime_type=video_mp4&rc=PDs8OTw3PDxkNjQ5aDM2NkBpMzNoNXc5cmt0ZDMzODczNEBjY2BeL2NhNmExNTQxL2FeYSNfaHBfMmRjMXFhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213150460F30754B3610A7737&btag=e000c8000
+[2026-10-17 15:14:54] [39/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:55] [41/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/ca2c20af6af2d939feef1582fbf21ade/6ad32e36/video/tos/alisg/tos-alisg-pve-0037c001/oYGagfr0DBVqFhpEX5EAInQmvBcIvuVgheRvDA/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=943&ft=74~WHDDwNyvVQQdGntpisdWZtPZqYlI-Ao4~hWLrK&mime_type=video_mp4&rc=NmZmPDtmN2dmODw1OWc0PEBpam9seGo5cm87ZDMzODczNEBgLzNgXi4uXl4xYGIvNl9gYSNvaWZvMmRzLnJhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213149B4B2B1C65189C097EB9&btag=e000f8000
+[2026-10-17 15:14:56] [40/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:14:57] [43/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d86c23b7423c676aabf5cb0f2617ad47/6ad32e3f/video/tos/alisg/tos-alisg-pve-0037c001/okRBJFBSgXFfd6ussqlfAsc3UoQEIJUHD6RAEg/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1119&ft=ha56B22xjQM9wwCLVsprU5~OmPrNPopiMRk5~YBMEeF&mime_type=video_mp4&rc=PDs8OTw3PDxkNjQ5aDM2NkBpMzNoNXc5cmt0ZDMzODczNEBjY2BeL2NhNmExNTQxL2FeYSNfaHBfMmRjMXFhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213150460F30754B3610A7737&btag=e000c8000
+[2026-10-17 15:14:58] [39/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:58] X [39/442] Lỗi video (item_id=1737098507497932205): [SHE VIVID] Váy Dệt Kim Nữ Dáng Chữ A Phối Viền SHEMODA CONTRAST KNIT DRESS Thanh Lịch Sang Trọng Cổ Điển
+[2026-10-17 15:14:58] Traceback (most recent call last):
+[2026-10-17 15:14:58]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:58]     resp.raise_for_status()
+[2026-10-17 15:14:58]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:58]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:58] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:58] 
+[2026-10-17 15:14:58] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:58] 
+[2026-10-17 15:14:58] Traceback (most recent call last):
+[2026-10-17 15:14:58]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:58]     worker_downloader.download(
+[2026-10-17 15:14:58]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:58]     raise RuntimeError(
+[2026-10-17 15:14:58] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8a84e48a78a1d5809ce536d454f7d6e4/6ad32e45/video/tos/alisg/tos-alisg-pve-0037c001/ocL1wKFq9Aw5G73gI2wfdGfFwU7eIDfHR7iAQG/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=886&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pi6QkxQjKJSjrYAG0P3-I&mime_type=video_mp4&rc=ZGk7OzRlaWk0OjZmZTU1N0Bpand5aXc5cmh5ZDMzODczNEAyYjU0MjQtNS8xY2EtYTUtYSNsbS5rMmRzcXJhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021310F4D40C7C20DC630B09E4&btag=e000c8000
+[2026-10-17 15:14:58] [44/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/555c8e68746030fbcf3464b049a7fa9e/6ad32e59/video/tos/alisg/tos-alisg-pve-0037c001/o0aIwEYJAAelGzCfGLefXqGF7F74DIRGGnkXQ7/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=766&ft=nF.Th0sq1lXvjSDXYSxR2MAZM6~OM3ORpsnzXtG&mime_type=video_mp4&rc=NDc2aWU2Nzw8OmhmNTU5PEBpank7aWo5cmxvZDMzODczNEBjYzVjLS1hXjAxNTMvLTExYSMuM3JqMmRzc3FhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021317C1E12EFE7B89CA0A8D41&btag=e000d0000
+[2026-10-17 15:14:59] [40/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:14:59] X [40/442] Lỗi video (item_id=1732349036358174357): 【VNOOK】Áo Dệt Kim, Dáng Rộng Vừa Vặn, Thời Trang Và Thường Ngày, Dành Cho Nữ, Áo Bất Đối Xứng Mùa Thu Mới
+[2026-10-17 15:14:59] Traceback (most recent call last):
+[2026-10-17 15:14:59]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:14:59]     resp.raise_for_status()
+[2026-10-17 15:14:59]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:14:59]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:14:59] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:14:59] 
+[2026-10-17 15:14:59] The above exception was the direct cause of the following exception:
+[2026-10-17 15:14:59] 
+[2026-10-17 15:14:59] Traceback (most recent call last):
+[2026-10-17 15:14:59]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:14:59]     worker_downloader.download(
+[2026-10-17 15:14:59]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:14:59]     raise RuntimeError(
+[2026-10-17 15:14:59] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/7a741c80709080829925911c2abd41ec/6ad32e56/video/tos/alisg/tos-alisg-pve-0037c001/oIxYEV9ERUFf4Ze6tggb4IjvQAYqX6DhmasBFB/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1405&ft=gKfIn82Won2r12NvpzCWzIxRuOOrHq_45SY&mime_type=video_mp4&rc=Mzc0NGlkN2U1ZDY6OGhnaUBpamZpM3c5cnB1ZDMzODczNEAzLzJjNjBhNV4xLzRgMTEzYSNibGkzMmRrYHJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021312793FFC7F92B2CC099B44&btag=e000d0000
+[2026-10-17 15:15:01] [43/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d86c23b7423c676aabf5cb0f2617ad47/6ad32e3f/video/tos/alisg/tos-alisg-pve-0037c001/okRBJFBSgXFfd6ussqlfAsc3UoQEIJUHD6RAEg/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1119&ft=ha56B22xjQM9wwCLVsprU5~OmPrNPopiMRk5~YBMEeF&mime_type=video_mp4&rc=PDs8OTw3PDxkNjQ5aDM2NkBpMzNoNXc5cmt0ZDMzODczNEBjY2BeL2NhNmExNTQxL2FeYSNfaHBfMmRjMXFhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213150460F30754B3610A7737&btag=e000c8000
+[2026-10-17 15:15:01] [44/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/555c8e68746030fbcf3464b049a7fa9e/6ad32e59/video/tos/alisg/tos-alisg-pve-0037c001/o0aIwEYJAAelGzCfGLefXqGF7F74DIRGGnkXQ7/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=766&ft=nF.Th0sq1lXvjSDXYSxR2MAZM6~OM3ORpsnzXtG&mime_type=video_mp4&rc=NDc2aWU2Nzw8OmhmNTU5PEBpank7aWo5cmxvZDMzODczNEBjYzVjLS1hXjAxNTMvLTExYSMuM3JqMmRzc3FhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021317C1E12EFE7B89CA0A8D41&btag=e000d0000
+[2026-10-17 15:15:05] [43/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/d86c23b7423c676aabf5cb0f2617ad47/6ad32e3f/video/tos/alisg/tos-alisg-pve-0037c001/okRBJFBSgXFfd6ussqlfAsc3UoQEIJUHD6RAEg/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=1119&ft=ha56B22xjQM9wwCLVsprU5~OmPrNPopiMRk5~YBMEeF&mime_type=video_mp4&rc=PDs8OTw3PDxkNjQ5aDM2NkBpMzNoNXc5cmt0ZDMzODczNEBjY2BeL2NhNmExNTQxL2FeYSNfaHBfMmRjMXFhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170213150460F30754B3610A7737&btag=e000c8000
+[2026-10-17 15:15:53] [4/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:15:53] [3/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:15:53] [5/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:15:55] [1/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:15:56] [2/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:15:56] [4/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:15:57] [5/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:15:57] [3/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:15:58] [1/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:15:59] [2/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:15:59] [4/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:16:00] [5/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:16:00] [3/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:16:01] [1/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:16:02] [2/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:16:03] [4/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:16:03] [5/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:16:03] [3/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:16:04] [1/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:16:05] [2/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:16:06] [4/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:16:06] [5/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:15] [1/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:15] [4/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:15] [3/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:15] [2/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:15] [5/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:18] [2/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:18] [1/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:18] [3/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:18] [4/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:18] [5/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:22] [2/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:22] [3/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:22] [4/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:22] [1/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:22] [5/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:25] [3/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:25] [2/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:25] [4/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:25] [1/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:25] [5/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:29] [4/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:29] [2/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:29] [1/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:29] [3/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:29] [5/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:32] [4/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:32] [1/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:32] [2/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:32] [3/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:32] [5/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:35] [2/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:35] X [2/442] Lỗi video (item_id=1737503811892053173): D94 - Set váy dập ly mix áo vest blaze thiết kế - LYNA
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:36]     resp.raise_for_status()
+[2026-10-17 15:17:36]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:36]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:36] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:36] 
+[2026-10-17 15:17:36] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:36] 
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:36]     worker_downloader.download(
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:36]     raise RuntimeError(
+[2026-10-17 15:17:36] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/9bc2cf84a4b722b28a28896c388aa4dd/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/o8QReLqfKFJjGcGJIeZuBwgAIvUkGfbhllLAGZ/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=828&ft=4bUg3MX_8Zmo0OjRIa4jVwD_LlWrKsd.&mime_type=video_mp4&rc=OGkzOWhkOjQ0N2Y4O2VpO0BpamtzdnA5cnY4ZDMzODczNEAyNjBgYi42X2ExYDViMS5eYSNlMmVzMmQ0L3NhLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212148441480E2BFB7E0A061C&btag=e000c8000
+[2026-10-17 15:17:36] [4/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:36] [5/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:36] X [4/442] Lỗi video (item_id=1737124272185836725): LYNA - D96 - Set váy lụa dáng dài mix áo thiết kế
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:36]     resp.raise_for_status()
+[2026-10-17 15:17:36]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:36]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:36] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:36] 
+[2026-10-17 15:17:36] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:36] 
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:36]     worker_downloader.download(
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:36]     raise RuntimeError(
+[2026-10-17 15:17:36] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/fc73ce048bd60592ddb8fc9d7f4962de/6ad32e03/video/tos/alisg/tos-alisg-pve-0037c001/oU3YD1V9Bm4iaiREGEYAU9IMREHBBqSAt3QDv/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=942&ft=74~WHDDwNxkVQQdGuIOnsdHZtPZqYlHGRd2jhWLrK&mime_type=video_mp4&rc=NGg8ZDkzNmQ1ZGQ8Z2Y4ZUBpM2xreXE5cjdzZTMzODczNEAwYF9iLjEyNTExYDMzMF40YSNwLzZuMmRrZDVhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021217AAE993DDE87ACD0998F9&btag=e00088000
+[2026-10-17 15:17:36] X [5/442] Lỗi video (item_id=1732387357921675017): DELIZ PREMIUM - Áo cardigan len lông thỏ dệt kim xanh than tiểu thư basic màu thu đông CD850
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:36]     resp.raise_for_status()
+[2026-10-17 15:17:36]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:36]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:36] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:36] 
+[2026-10-17 15:17:36] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:36] 
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:36]     worker_downloader.download(
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:36]     raise RuntimeError(
+[2026-10-17 15:17:36] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/c7bfda964a68582e518be50b3e6bdb4f/6ad32e0b/video/tos/alisg/tos-alisg-pve-0037c001/oAjeUFDzREBX6ECSZOEIlmBAOQrgtrEZzqf2WD/?a=1233&bti=OTg7QGo5QHM6OjZALTAzYCMvcCMxNDNg&&bt=890&ft=BIcq8VY1wqhRft9EOr_hFJ4_A0pi4QkxQjKJA1dCH.0P3-I&mime_type=video_mp4&rc=N2c1NzU2aDdnaGk2OTtnOkBpM3A5PG85cjc2ZTMzODczNEBgNDMwMC00NmMxNWFeMV9hYSNval9zMmRrZzRhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212227E07F1500985950A7112&btag=e000c8000
+[2026-10-17 15:17:36] [1/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:36] X [1/442] Lỗi video (item_id=1737701950520526005): D95 - Set váy dáng ngắn mix áo xuông cánh dơi thiết kế - LYNA
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:36]     resp.raise_for_status()
+[2026-10-17 15:17:36]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:36]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:36] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:36] 
+[2026-10-17 15:17:36] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:36] 
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:36]     worker_downloader.download(
+[2026-10-17 15:17:36]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:36]     raise RuntimeError(
+[2026-10-17 15:17:36] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/dec711c2add3550b2d0692eabaf7f740/6ad32e01/video/tos/alisg/tos-alisg-pve-0037c001/o8IO8qiRpFcDdAGe1VEAWFEGf6DQyeQClfSbAw/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=737&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piBKkxQjKJWv8YAG0P3-I&mime_type=video_mp4&rc=NGc5ODZoNTg1NGg2NWVoO0BpM2xwaXQ5cnBoZDMzODczNEBiNmE0MC0xXzQxYzMxNS02YSM2MmZtMmRzY3JhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021213CB929306EB708D08D9F9&btag=e000c8000
+[2026-10-17 15:17:36] [3/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:36] X [3/442] Lỗi video (item_id=1734748484898555309): SEOULIFE | Áo len dệt kim Polo cổ khóa kéo họa tiết kẻ sọc phong cách Hàn Quốc tối giản thu đông cardigan 2026. Dễ phối đồ đi làm, đi học, hẹn hò. Tôn dáng, tôn da. Màu trắng kem, xanh navy, nâu cà phê và xám.
+[2026-10-17 15:17:36] Traceback (most recent call last):
+[2026-10-17 15:17:37]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:37]     resp.raise_for_status()
+[2026-10-17 15:17:37]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:37]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:37] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:37] 
+[2026-10-17 15:17:37] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:37] 
+[2026-10-17 15:17:37] Traceback (most recent call last):
+[2026-10-17 15:17:37]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:37]     worker_downloader.download(
+[2026-10-17 15:17:37]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:37]     raise RuntimeError(
+[2026-10-17 15:17:37] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/3b2ea0d41de7304dade1aeae210c4630/6ad32e0d/video/tos/alisg/tos-alisg-pve-0037c001/osHEifMRJgkRDeHIgZkEASBUrBaFQO8EqL1HB7/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=633&ft=4KUcAMX_8Zmo0VaRIa4jVpAB.NWrKsd.&mime_type=video_mp4&rc=aTs6OTg6OThpOTM3NDo8NUBpajhscmw5cm5mPDMzODczNEAtYGMwYC02XzYxX18yMC80YSNsNmUuMmRrbmhhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021216498216F2550EF70B44F5&btag=e000c8000
+[2026-10-17 15:17:37] [7/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:37] [8/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:37] [9/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:37] [10/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:40] [7/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:40] [8/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:40] [9/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:40] [10/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:44] [7/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:44] [8/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:44] [9/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:44] [10/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:46] [11/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:17:47] [8/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:47] [7/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:47] [9/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:47] [10/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:49] [11/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:17:50] [8/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:50] [9/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:50] [10/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:50] [7/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:52] [11/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:17:54] [8/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:54] [7/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:54] [9/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:54] [10/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:55] [11/442] ! Tải lần 4/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:17:57] [8/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:57] X [8/442] Lỗi video (item_id=1737125946997179573): D92 - LYNA - Váy Ren Thiết Kế Dáng Ngắn - LYNA DAILY
+[2026-10-17 15:17:57] Traceback (most recent call last):
+[2026-10-17 15:17:57]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:57]     resp.raise_for_status()
+[2026-10-17 15:17:57]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:57]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:57] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:57] 
+[2026-10-17 15:17:57] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:57] 
+[2026-10-17 15:17:57] Traceback (most recent call last):
+[2026-10-17 15:17:57]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:57]     worker_downloader.download(
+[2026-10-17 15:17:57]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:57]     raise RuntimeError(
+[2026-10-17 15:17:57] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f4547a6c182947b492783cfe775a563/6ad32e32/video/tos/alisg/tos-alisg-pve-0037c001/ogjLJCkEf6RigIEQMBFqASPDgSUqTBUcf0yEVr/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1244&ft=74~WHDDwNxkVQQdGuIOnsdUZtPZqYlxfTG4~hWLrK&mime_type=video_mp4&rc=NDg6NjQ1N2Q2ZzpoMzgzZkBpams3cW85cjVuZTMzODczNEBhNi9eXzE2XjUxLjQxLy8wYSNoaV5kMmRjZjJhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021232ABD4441EB238BA0B1E5B&btag=e000d0000
+[2026-10-17 15:17:57] [9/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:57] X [9/442] Lỗi video (item_id=1737503811892053173): D94 - Set váy dập ly mix áo vest blaze thiết kế - LYNA
+[2026-10-17 15:17:57] Traceback (most recent call last):
+[2026-10-17 15:17:57]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:57]     resp.raise_for_status()
+[2026-10-17 15:17:57]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:57]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:57] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:57] 
+[2026-10-17 15:17:57] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:57] 
+[2026-10-17 15:17:57] Traceback (most recent call last):
+[2026-10-17 15:17:57]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:57]     worker_downloader.download(
+[2026-10-17 15:17:57]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:57]     raise RuntimeError(
+[2026-10-17 15:17:57] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/a1cb5c2adbb1e2f50589a2ca19bc5984/6ad32e2c/video/tos/alisg/tos-alisg-pve-0037c001/oYOqQUEDzrfBbzWgdqjUEHCIbLFoNRAybRBe5g/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=824&ft=74~WHDDwNj6VQQdGntpisdOZtPZqYlFBMd1~hWLrK&mime_type=video_mp4&rc=ODZlZjY5NWk2Zmg3MzQ1NkBpajZwc3M5cjc2ZTMzODczNEBgYi1hXy42NjQxMzBfLzMtYSNkb2luMmRjaTJhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123472C637F0A584970B5F2D&btag=e000c8000
+[2026-10-17 15:17:57] [10/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:57] X [10/442] Lỗi video (item_id=1732174391520756959): Quần denim Thổ Nhĩ Kỳ nữ lưng cao ống rộng màu xanh cổ điển, không co giãn, phong cách lười nhác thời trang
+[2026-10-17 15:17:57] Traceback (most recent call last):
+[2026-10-17 15:17:57]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:58]     resp.raise_for_status()
+[2026-10-17 15:17:58]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:58]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:58] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:58] 
+[2026-10-17 15:17:58] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:58] 
+[2026-10-17 15:17:58] Traceback (most recent call last):
+[2026-10-17 15:17:58]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:58]     worker_downloader.download(
+[2026-10-17 15:17:58]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:58]     raise RuntimeError(
+[2026-10-17 15:17:58] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/74fe87e67533b392c1679710c6a18b5e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/o0vf8Dk5IAodVKgIkDeENVpIiQOjAnFSVTC30f/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=909&ft=kLx3-yt4ZZo0PDL3uz3aQ9WWkKA6JE.C~&mime_type=video_mp4&rc=MzU1aTo8ZTdoOTs6Nzw5M0BpMzg3aGw5cnF5ZTMzODczNEA2LjVhNDU2NTQxNF8tYGA2YSNhaXEyMmRjaDFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212350B6A69317E6C4C0A71BC&btag=e000c8000
+[2026-10-17 15:17:58] [7/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:58] X [7/442] Lỗi video (item_id=1736849068915460092): GUNO-Bộ Quấn Áo Nam Nữ Polo Dáng Suông Thêu Logo Ngựa SP5 | 26BG200a/26BB230
+[2026-10-17 15:17:58] Traceback (most recent call last):
+[2026-10-17 15:17:58]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:17:58]     resp.raise_for_status()
+[2026-10-17 15:17:58]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:17:58]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:17:58] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:58] 
+[2026-10-17 15:17:58] The above exception was the direct cause of the following exception:
+[2026-10-17 15:17:58] 
+[2026-10-17 15:17:58] Traceback (most recent call last):
+[2026-10-17 15:17:58]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:17:58]     worker_downloader.download(
+[2026-10-17 15:17:58]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:17:58]     raise RuntimeError(
+[2026-10-17 15:17:58] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v19.tiktokcdn-us.com/17134cb402bcbc9e6b9080f1eac8cd4e/6ad32e19/video/tos/alisg/tos-alisg-pve-0037c001/ooF9fJIEIGArBNMemyLQMBXahFff1RAOGFxGQ6/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=4bUg3MX_8Zmo0raRIa4jVwXtYdWrKsd.&mime_type=video_mp4&rc=aDRpZTo4aDQ0NmlkM2hmaEBpanl4dHg5cnJmZTMzODczNEAyNC01Y2AwXzUxL18vMjE1YSNkbmFlMmQ0YzNhLS1kMTFzcw%3D%3D&vvpl=1&l=20261017021223C8A348C194AB810A6DFE&btag=e000c8000
+[2026-10-17 15:17:58] [12/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/1bd1208763860b4742e8023ae33c1d62/6ad32e18/video/tos/alisg/tos-alisg-pve-0037c001/oIAeIFF20yoIBYOHDQDAEfjvj2VAkCHIExEwf0/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1151&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pioQkxQjKJxGXMs.0P3-I&mime_type=video_mp4&rc=ZmU7NzppZ2g6ZTVlaTplaEBpanI0cHE5cmxyZTMzODczNEAyLmNeNV4uX2AxNWMxYmM0YSMvcF9xMmQ0czBhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123765D325C76F4ECC099CEB&btag=e000c8000
+[2026-10-17 15:17:58] [13/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f02d97542bfbb9827b69052ec8188a6/6ad32e17/video/tos/alisg/tos-alisg-pve-0037c001/ogmD67GYLH37j3OvqjRSACgInljQI4geAVtffI/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=980&ft=kLx3-yt4ZZo0PDx3uz3aQ98yDKA6JE.C~&mime_type=video_mp4&rc=PDg3ZDs0ZDhpOWQ1OjU3aEBpanU6eXM5cnFwZTMzODczNEAtNV9hNS0xNS0xNWIyLjU2YSNoLXJgMmRjcjBhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021239554E94FEB95EBE0932AB&btag=e000c8000
+[2026-10-17 15:17:58] [14/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/33199eaa75370249ff0dbff08d9664da/6ad32e2a/video/tos/alisg/tos-alisg-pve-0037c001/oUVBYEaGAnMbmE91A2iB8sQWItQbVZwEEPioI/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=808&ft=74~WHDDwNj6VQQdGntpisdqZtPZqYlKns51~hWLrK&mime_type=video_mp4&rc=PDM3MzQ8Ojs2NDQ4Ozs2M0Bpamo1bXc5cjs4ZTMzODczNEBgXi8vLjYtNWMxNDEzXjUuYSNnbjNuMmQ0YDBhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212417F61BD1BC4FA0D0A0CDB&btag=e000c8000
+[2026-10-17 15:17:58] [11/442] ! Tải lần 5/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:18:01] [12/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/1bd1208763860b4742e8023ae33c1d62/6ad32e18/video/tos/alisg/tos-alisg-pve-0037c001/oIAeIFF20yoIBYOHDQDAEfjvj2VAkCHIExEwf0/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1151&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pioQkxQjKJxGXMs.0P3-I&mime_type=video_mp4&rc=ZmU7NzppZ2g6ZTVlaTplaEBpanI0cHE5cmxyZTMzODczNEAyLmNeNV4uX2AxNWMxYmM0YSMvcF9xMmQ0czBhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123765D325C76F4ECC099CEB&btag=e000c8000
+[2026-10-17 15:18:02] [13/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f02d97542bfbb9827b69052ec8188a6/6ad32e17/video/tos/alisg/tos-alisg-pve-0037c001/ogmD67GYLH37j3OvqjRSACgInljQI4geAVtffI/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=980&ft=kLx3-yt4ZZo0PDx3uz3aQ98yDKA6JE.C~&mime_type=video_mp4&rc=PDg3ZDs0ZDhpOWQ1OjU3aEBpanU6eXM5cnFwZTMzODczNEAtNV9hNS0xNS0xNWIyLjU2YSNoLXJgMmRjcjBhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021239554E94FEB95EBE0932AB&btag=e000c8000
+[2026-10-17 15:18:02] [14/442] ! Tải lần 2/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/33199eaa75370249ff0dbff08d9664da/6ad32e2a/video/tos/alisg/tos-alisg-pve-0037c001/oUVBYEaGAnMbmE91A2iB8sQWItQbVZwEEPioI/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=808&ft=74~WHDDwNj6VQQdGntpisdqZtPZqYlKns51~hWLrK&mime_type=video_mp4&rc=PDM3MzQ8Ojs2NDQ4Ozs2M0Bpamo1bXc5cjs4ZTMzODczNEBgXi8vLjYtNWMxNDEzXjUuYSNnbjNuMmQ0YDBhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212417F61BD1BC4FA0D0A0CDB&btag=e000c8000
+[2026-10-17 15:18:02] [11/442] ! Tải lần 6/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:18:05] [12/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/1bd1208763860b4742e8023ae33c1d62/6ad32e18/video/tos/alisg/tos-alisg-pve-0037c001/oIAeIFF20yoIBYOHDQDAEfjvj2VAkCHIExEwf0/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=1151&ft=BIcq8VY1wyqRft9EOr_hFJ4_A0pioQkxQjKJxGXMs.0P3-I&mime_type=video_mp4&rc=ZmU7NzppZ2g6ZTVlaTplaEBpanI0cHE5cmxyZTMzODczNEAyLmNeNV4uX2AxNWMxYmM0YSMvcF9xMmQ0czBhLS1kMTFzcw%3D%3D&vvpl=1&l=2026101702123765D325C76F4ECC099CEB&btag=e000c8000
+[2026-10-17 15:18:05] [13/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/8f02d97542bfbb9827b69052ec8188a6/6ad32e17/video/tos/alisg/tos-alisg-pve-0037c001/ogmD67GYLH37j3OvqjRSACgInljQI4geAVtffI/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=980&ft=kLx3-yt4ZZo0PDx3uz3aQ98yDKA6JE.C~&mime_type=video_mp4&rc=PDg3ZDs0ZDhpOWQ1OjU3aEBpanU6eXM5cnFwZTMzODczNEAtNV9hNS0xNS0xNWIyLjU2YSNoLXJgMmRjcjBhLS1kMWBzcw%3D%3D&vvpl=1&l=20261017021239554E94FEB95EBE0932AB&btag=e000c8000
+[2026-10-17 15:18:05] [14/442] ! Tải lần 3/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/33199eaa75370249ff0dbff08d9664da/6ad32e2a/video/tos/alisg/tos-alisg-pve-0037c001/oUVBYEaGAnMbmE91A2iB8sQWItQbVZwEEPioI/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=808&ft=74~WHDDwNj6VQQdGntpisdqZtPZqYlKns51~hWLrK&mime_type=video_mp4&rc=PDM3MzQ8Ojs2NDQ4Ozs2M0Bpamo1bXc5cjs4ZTMzODczNEBgXi8vLjYtNWMxNDEzXjUuYSNnbjNuMmQ0YDBhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212417F61BD1BC4FA0D0A0CDB&btag=e000c8000
+[2026-10-17 15:18:05] [11/442] ! Tải lần 7/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:18:05] X [11/442] Lỗi video (item_id=1737875437245400527): [NEW] Đầm Váy Nữ Dài VERY AURA Dự Tiệc Trễ Vai Dài Tay Sang Trọng Xếp Ly Thanh Lịch VVT010DD0926
+[2026-10-17 15:18:05] Traceback (most recent call last):
+[2026-10-17 15:18:05]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 593, in download
+[2026-10-17 15:18:05]     resp.raise_for_status()
+[2026-10-17 15:18:05]   File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+[2026-10-17 15:18:05]     raise HTTPError(http_error_msg, response=self)
+[2026-10-17 15:18:05] requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:18:05] 
+[2026-10-17 15:18:05] The above exception was the direct cause of the following exception:
+[2026-10-17 15:18:05] 
+[2026-10-17 15:18:05] Traceback (most recent call last):
+[2026-10-17 15:18:05]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2049, in process_one
+[2026-10-17 15:18:05]     worker_downloader.download(
+[2026-10-17 15:18:05]   File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\core.py", line 685, in download
+[2026-10-17 15:18:05]     raise RuntimeError(
+[2026-10-17 15:18:05] RuntimeError: Tải video thất bại sau 7 lần thử: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/62f3501c425b31d7ceef18bf2680508c/6ad32e43/video/tos/alisg/tos-alisg-pve-0037c001/o8VF5EBqImRUTjJ4WfveIELJqVBuWDJ5yQEgAB/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=927&ft=B7c_4VY1wyqRft9EOr_hFJ4_A0piOQkxQjKJV972s.0P3-I&mime_type=video_mp4&rc=aTg0aGVoZjdkZDk2OWg0NEBpam85OHE5cnhlZTMzODczNEAzMjQwLmNeX18xYjYtX140YSNwaGVzMmQ0ZTFhLS1kMTFzcw%3D%3D&vvpl=1&l=202610170212361DDD8805E7F0E60A2241&btag=e000d0000
+[2026-10-17 15:18:06] [16/442] ! Tải lần 1/7 lỗi: HTTPError: 403 Client Error: Forbidden for url: https://v16m.tiktokcdn-us.com/db89e5943f256fc0094b0ade65776ee0/6ad32e14/video/tos/alisg/tos-alisg-pve-0037c001/o4exhNds6VMfgAIwT7lLJIjGCeMciRjXY44AAD/?a=1233&bti=OUBzOTg7QGo6OjZAL3AjLTAzYCMxNDNg&&bt=957&ft=74~WHDDwNxkVQQdGuIOnsd4ZtPZqYlJC2LI~hWLrK&mime_type=video_mp4&rc=MzM6aDczZmlmZGY2ZDNpM0Bpam11N3g5cjl3ZTMzODczNEBeNTE1NWMvXl8xLWJfYDBeYSNfZm0uMmQ0My9hLS1kMWBzcw%3D%3D&vvpl=1&l=202610170212424CF6AF0F20E8F1091A98&btag=e000f8000
+[2026-10-18 14:00:03] X [2/3] Lỗi video (item_id=id1): P1
+   • Lỗi: Đã dừng theo yêu cầu người dùng [STOP]
+   • Cách xử lý: Không cần xử lý.
+   • Chi tiết cho dev: RuntimeError: Đã dừng theo yêu cầu
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2060, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2069, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+[2026-10-18 14:00:03] X Worker dừng bất thường
+   • Lỗi: Đã dừng theo yêu cầu người dùng [STOP]
+   • Cách xử lý: Không cần xử lý.
+   • Chi tiết cho dev: RuntimeError: Đã dừng theo yêu cầu
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2060, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2069, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2189, in _run_batch
+    future.result()
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2160, in process_one
+    _mark_error(gidx, vid, idx, item_id, p_name, exc)
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1895, in _mark_error
+    self._log_exception(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1305, in _log_exception
+    self._log_msg(summary, LOG_ERROR, persist=False)
+TypeError: BatchPipelineTests._make_app.<locals>.<lambda>() got an unexpected keyword argument 'persist'
+[2026-10-18 14:00:04] X Lỗi chạy batch video
+   • Lỗi: Đã dừng theo yêu cầu người dùng [STOP]
+   • Cách xử lý: Không cần xử lý.
+   • Chi tiết cho dev: RuntimeError: Đã dừng theo yêu cầu
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2060, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2069, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2189, in _run_batch
+    future.result()
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2160, in process_one
+    _mark_error(gidx, vid, idx, item_id, p_name, exc)
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1895, in _mark_error
+    self._log_exception(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1305, in _log_exception
+    self._log_msg(summary, LOG_ERROR, persist=False)
+TypeError: BatchPipelineTests._make_app.<locals>.<lambda>() got an unexpected keyword argument 'persist'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2196, in _run_batch
+    self._log_exception("Worker dừng bất thường", exc)
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1305, in _log_exception
+    self._log_msg(summary, LOG_ERROR, persist=False)
+TypeError: BatchPipelineTests._make_app.<locals>.<lambda>() got an unexpected keyword argument 'persist'
+[2026-10-18 14:00:17] X [2/3] Lỗi video (item_id=id1): P1
+   • Lỗi: Đã dừng theo yêu cầu người dùng [STOP]
+   • Cách xử lý: Không cần xử lý.
+   • Chi tiết cho dev: RuntimeError: Đã dừng theo yêu cầu
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2060, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2069, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+[2026-10-18 14:00:17] X Worker dừng bất thường
+   • Lỗi: Đã dừng theo yêu cầu người dùng [STOP]
+   • Cách xử lý: Không cần xử lý.
+   • Chi tiết cho dev: RuntimeError: Đã dừng theo yêu cầu
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2060, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2069, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2189, in _run_batch
+    future.result()
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2160, in process_one
+    _mark_error(gidx, vid, idx, item_id, p_name, exc)
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1895, in _mark_error
+    self._log_exception(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1305, in _log_exception
+    self._log_msg(summary, LOG_ERROR, persist=False)
+TypeError: BatchPipelineTests._make_app.<locals>.<lambda>() got an unexpected keyword argument 'persist'
+[2026-10-18 14:00:17] X Lỗi chạy batch video
+   • Lỗi: Đã dừng theo yêu cầu người dùng [STOP]
+   • Cách xử lý: Không cần xử lý.
+   • Chi tiết cho dev: RuntimeError: Đã dừng theo yêu cầu
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2060, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2069, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2189, in _run_batch
+    future.result()
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2160, in process_one
+    _mark_error(gidx, vid, idx, item_id, p_name, exc)
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1895, in _mark_error
+    self._log_exception(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1305, in _log_exception
+    self._log_msg(summary, LOG_ERROR, persist=False)
+TypeError: BatchPipelineTests._make_app.<locals>.<lambda>() got an unexpected keyword argument 'persist'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2196, in _run_batch
+    self._log_exception("Worker dừng bất thường", exc)
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 1305, in _log_exception
+    self._log_msg(summary, LOG_ERROR, persist=False)
+TypeError: BatchPipelineTests._make_app.<locals>.<lambda>() got an unexpected keyword argument 'persist'
+[2026-10-18 14:01:02] --- Chi tiết kỹ thuật [STOP] [2/3] Lỗi video (item_id=id1): P1 ---
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2062, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2071, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+[2026-10-18 14:01:15] --- Chi tiết kỹ thuật [STOP] [2/3] Lỗi video (item_id=id1): P1 ---
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2062, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2071, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+[2026-10-18 14:01:40] --- Chi tiết kỹ thuật [STOP] [2/3] Lỗi video (item_id=id1): P1 ---
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2062, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2071, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập
+[2026-10-18 14:02:19] --- Chi tiết kỹ thuật [UNKNOWN-APP] [2/3] Lỗi video (item_id=id1): P1 ---
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2062, in process_one
+    worker_downloader.download(
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 85, in download
+    raise RuntimeError("Đã dừng theo yêu cầu")
+RuntimeError: Đã dừng theo yêu cầu
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\main.py", line 2071, in process_one
+    raise voice_future.exception()   # lỗi gốc là voice
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MQ\Desktop\Byscom\Tool-Reup-video-Local\tests\test_batch_pipeline.py", line 109, in fake_voice
+    raise RuntimeError("TTS lỗi giả lập")
+RuntimeError: TTS lỗi giả lập

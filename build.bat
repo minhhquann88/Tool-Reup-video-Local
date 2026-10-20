@@ -31,7 +31,7 @@ pip install pyinstaller -q
 
 :: Get APP_NAME & APP_VERSION dynamically from python
 for /f "tokens=*" %%a in ('python -c "import main, license; base = 'RenderVideoReupPro' if getattr(license, 'APP_ID', '') == 'tool_reup_video_pro' else 'RenderVideoReup'; print(f'{base}_{main.APP_VERSION}')"') do set APP_NAME=%%a
-if "%APP_NAME%"=="" set APP_NAME=RenderVideoReup_v1.0.0
+if "%APP_NAME%"=="" set APP_NAME=RenderVideoReup_v1.0.1
 
 :: Build
 echo.
