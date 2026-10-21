@@ -85,10 +85,20 @@ def _extract_tarxz(raw: bytes) -> None:
                 print(f"  ✅ {fname}  ({len(data)//1024:,} KB)")
 
 
+def _is_real_binary(path: Path) -> bool:
+    """False nếu file thiếu hoặc chỉ là pointer Git LFS (repo clone chưa "git lfs pull")."""
+    try:
+        with path.open("rb") as f:
+            head = f.read(64)
+    except OSError:
+        return False
+    return not head.startswith(b"version https://git-lfs") and path.stat().st_size > 1_000_000
+
+
 def setup() -> bool:
     BIN_DIR.mkdir(exist_ok=True)
 
-    missing = {n for n in NEEDED if not (BIN_DIR / n).exists()}
+    missing = {n for n in NEEDED if not _is_real_binary(BIN_DIR / n)}
     if not missing:
         print("✅ FFmpeg đã có sẵn trong bin/ – bỏ qua tải.")
         return True
@@ -109,7 +119,7 @@ def setup() -> bool:
         else:
             _extract_tarxz(raw)
 
-        still_missing = {n for n in NEEDED if not (BIN_DIR / n).exists()}
+        still_missing = {n for n in NEEDED if not _is_real_binary(BIN_DIR / n)}
         if still_missing:
             print(f"\n❌ Vẫn thiếu: {still_missing}")
             return False

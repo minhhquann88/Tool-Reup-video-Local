@@ -13,7 +13,7 @@
 #   PACKAGE=tar bash build_appimage_docker.sh                      # ra .tar.gz (bản thư mục, KHÔNG AppImage)
 #   BASE_IMAGE=ubuntu:20.04 PYVER=3.11 bash build_appimage_docker.sh   # đỡ máy cũ hơn (glibc 2.31)
 #
-# Kết quả: dist/VideoReupTool.AppImage  (hoặc dist/VideoReupTool-linux.tar.gz nếu PACKAGE=tar)
+# Kết quả: dist/<APP>.AppImage  (hoặc dist/<APP>-linux.tar.gz nếu PACKAGE=tar)
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -66,16 +66,17 @@ docker run --rm \
             export PYTHON="python3"
         fi
 
-        # Build sạch (nếu không xoá được do bị Windows lock thì bỏ qua, vì trong container ta dùng /tmp)
-        rm -rf .venv build 2>/dev/null || true
+        # build_linux.sh tự dùng /tmp/venv, /tmp/build trong container → không cần
+        # (và không được) xoá .venv/build của máy host.
         bash build_linux.sh
 
         # Docker chạy bằng root → trả quyền sở hữu file output về user host
-        chown -R "$HOST_UID:$HOST_GID" .venv build dist bin 2>/dev/null || true
+        chown -R "$HOST_UID:$HOST_GID" build dist bin 2>/dev/null || true
     '
 
 echo
 echo "========================================================"
-echo " XONG: dist/VideoReupTool.AppImage"
+echo " XONG:"
+ls -1 dist/*.AppImage dist/*-linux.tar.gz 2>/dev/null | sed 's/^/   /' || true
 echo " (build trên $BASE_IMAGE → chạy trên glibc >= bản này)"
 echo "========================================================"

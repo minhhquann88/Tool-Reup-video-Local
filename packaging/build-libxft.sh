@@ -7,11 +7,17 @@ set -euo pipefail
 PREFIX="${1:?usage: build-libxft.sh PREFIX WORK_DIR}"
 WORK_DIR="${2:?usage: build-libxft.sh PREFIX WORK_DIR}"
 VERSION="${XFT_VERSION:-2.3.8}"
+# configure bắt buộc --prefix tuyệt đối → chuẩn hóa cả hai đường dẫn.
+mkdir -p "$PREFIX" "$WORK_DIR"
+PREFIX="$(cd "$PREFIX" && pwd)"
+WORK_DIR="$(cd "$WORK_DIR" && pwd)"
 ARCHIVE="$WORK_DIR/libXft-$VERSION.tar.xz"
 SOURCE_DIR="$WORK_DIR/libXft-$VERSION"
 OUTPUT="$PREFIX/lib/libXft.so.2"
+# libtool cài libXft.so.2 → libXft.so.<VERSION>: tên file thật là bằng chứng phiên bản.
+REAL_LIB="$PREFIX/lib/libXft.so.$VERSION"
 
-if [ -f "$OUTPUT" ] && strings "$OUTPUT" 2>/dev/null | grep -F "$VERSION" >/dev/null; then
+if [ -f "$OUTPUT" ] && [ -f "$REAL_LIB" ]; then
     echo "[*] libXft $VERSION đã có: $OUTPUT"
     exit 0
 fi
@@ -28,7 +34,6 @@ if ! pkg-config --exists fontconfig freetype2 xrender; then
     exit 1
 fi
 
-mkdir -p "$WORK_DIR"
 if [ ! -f "$ARCHIVE" ]; then
     echo "[*] Tải libXft $VERSION từ X.Org..."
     curl -fL --retry 3 -o "$ARCHIVE" \
@@ -46,7 +51,7 @@ echo "[*] Build libXft $VERSION..."
     make install
 )
 
-if [ ! -f "$OUTPUT" ] || ! strings "$OUTPUT" | grep -F "$VERSION" >/dev/null; then
+if [ ! -f "$OUTPUT" ] || [ ! -f "$REAL_LIB" ]; then
     echo "[ERROR] Không xác minh được libXft $VERSION sau khi build." >&2
     exit 1
 fi

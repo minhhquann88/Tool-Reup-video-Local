@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Lấy mã nguồn
         uses: actions/checkout@v4
+        with:
+          lfs: true        # bin/ffmpeg, bin/ffprobe nằm trên Git LFS
 
       - name: Cài gói hệ thống (Python + Tkinter)
         run: |
@@ -43,7 +45,8 @@ jobs:
         run: |
           INTERNAL_DIR="$(find dist -type d -name _internal | head -n 1)"
           test -n "$INTERNAL_DIR"
-          strings "$INTERNAL_DIR/libXft.so.2" | grep -F "2.3.8"
+          LD_LIBRARY_PATH="$INTERNAL_DIR" FONTCONFIG_FILE="$INTERNAL_DIR/linux-fontconfig.conf" \
+            .venv/bin/python3 tests/check_bundled_xft.py
           xvfb-run -a env \
             LD_LIBRARY_PATH="$INTERNAL_DIR" \
             FONTCONFIG_FILE="$INTERNAL_DIR/linux-fontconfig.conf" \

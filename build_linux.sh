@@ -9,9 +9,21 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-DEFAULT_APP=$(python3 -c "import main, license; base = 'RenderVideoReupPro' if getattr(license, 'APP_ID', '') == 'tool_reup_video_pro' else 'RenderVideoReup'; print(f'{base}_{main.APP_VERSION}')" 2>/dev/null || echo "RenderVideoReup_v1.0.1")
-APP="${APP:-$DEFAULT_APP}"
-VERSION=$(python3 -c "import main; print(main.APP_VERSION)" 2>/dev/null || echo "v1.0.1")
+# Đọc APP_VERSION / APP_ID bằng regex — KHÔNG "import main" vì lúc này chưa cài
+# thư viện (customtkinter...) → import lỗi → rơi về tên bản không-Pro.
+read_const() {   # read_const <file> <NAME>
+    python3 -c "import re, sys; m = re.search(r'^' + sys.argv[2] + r'\s*=\s*[\"\x27]([^\"\x27]+)', open(sys.argv[1], encoding='utf-8').read(), re.M); print(m.group(1) if m else '')" "$1" "$2"
+}
+VERSION="$(read_const main.py APP_VERSION)"
+VERSION="${VERSION:-v1.0.1}"
+if [ "$(read_const license.py APP_ID)" = "tool_reup_video_pro" ]; then
+    APP_BASE="RenderVideoReupPro"
+    APP_TITLE="Render Video Reup Pro $VERSION"
+else
+    APP_BASE="RenderVideoReup"
+    APP_TITLE="Render Video Reup $VERSION"
+fi
+APP="${APP:-${APP_BASE}_${VERSION}}"
 case "$APP" in
     *"$VERSION"*) ;;
     *) APP="${APP}_${VERSION}" ;;
@@ -84,14 +96,16 @@ echo "[1/4] Cài thư viện (dùng pip CỦA venv, không đụng Python hệ t
 
 # Build trên Ubuntu 22.04 để giữ glibc 2.35, nhưng không bundle libXft 2.3.4
 # của distro vì bản đó vẫn có thể abort ở RenderAddGlyphs. Tự build bản đã vá.
-XFT_PREFIX="$BUILD_DIR/libxft-$XFT_VERSION-install"
-bash packaging/build-libxft.sh "$XFT_PREFIX" "$BUILD_DIR/libxft-source"
+# configure của libXft bắt buộc --prefix là đường dẫn TUYỆT ĐỐI.
+mkdir -p "$BUILD_DIR"
+BUILD_DIR_ABS="$(cd "$BUILD_DIR" && pwd)"
+XFT_PREFIX="$BUILD_DIR_ABS/libxft-$XFT_VERSION-install"
+bash packaging/build-libxft.sh "$XFT_PREFIX" "$BUILD_DIR_ABS/libxft-source"
 
 # ── FFmpeg Linux trong bin/ (để bundle kèm) ───────────────────────────────────
-if [ ! -x "bin/ffmpeg" ]; then
-    echo "[*] Chưa có bin/ffmpeg (Linux) - tải qua setup_ffmpeg.py..."
-    "$VENV_PY" setup_ffmpeg.py || { echo "[ERROR] Không tải được FFmpeg."; exit 1; }
-fi
+# setup_ffmpeg.py tự nhận ra file pointer Git LFS (chưa "git lfs pull") và tải lại.
+"$VENV_PY" setup_ffmpeg.py || { echo "[ERROR] Không tải được FFmpeg."; exit 1; }
+chmod +x bin/ffmpeg bin/ffprobe
 
 # ── PyInstaller (onedir) ──────────────────────────────────────────────────────
 echo
@@ -103,7 +117,8 @@ mkdir -p "$DIST_DIR" "dist"
     --distpath "$DIST_DIR" \
     --name "$APP" \
     --add-data "client_secret.json:." \
-    --add-data "bin:bin" \
+    --add-data "bin/ffmpeg:bin" \
+    --add-data "bin/ffprobe:bin" \
     --add-data "linux-fontconfig.conf:." \
     --collect-all customtkinter \
     --hidden-import "PIL._tkinter_finder" \
@@ -125,7 +140,11 @@ if [ -d "$PYI_LIB_DIR/_internal" ]; then
 fi
 cp packaging/linux-fontconfig-bundled.conf "$PYI_LIB_DIR/linux-fontconfig.conf"
 cp -Lf "$XFT_PREFIX/lib/libXft.so.2" "$PYI_LIB_DIR/libXft.so.2"
-if ! strings "$PYI_LIB_DIR/libXft.so.2" | grep -F "$XFT_VERSION" >/dev/null; then
+# Kiểm tra bằng XftGetVersion() (vd 2.3.8 → 20308) thay vì grep chuỗi trong .so
+XFT_EXPECTED=$(echo "$XFT_VERSION" | awk -F. '{ printf "%d", $1*10000 + $2*100 + $3 }')
+XFT_ACTUAL=$("$VENV_PY" -c "import ctypes, sys; print(ctypes.CDLL(sys.argv[1]).XftGetVersion())" "$PYI_LIB_DIR/libXft.so.2" 2>/dev/null || echo "?")
+if [ "$XFT_ACTUAL" != "$XFT_EXPECTED" ]; then
+    echo "[ERROR] XftGetVersion=$XFT_ACTUAL, cần $XFT_EXPECTED."
     echo "[ERROR] Gói build không chứa libXft $XFT_VERSION; dừng để tránh phát hành bản còn lỗi RenderAddGlyphs."
     exit 1
 fi
@@ -192,7 +211,6 @@ mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp video.png "$APPDIR/usr/share/icons/hicolor/256x256/apps/$APP.png"
 
 # .desktop (Icon/Exec phải khớp tên $APP)
-APP_TITLE=$(python3 -c "import main; print(main.APP_TITLE)" 2>/dev/null || echo "Render Video Reup")
 cat > "$APPDIR/$APP.desktop" <<EOF
 [Desktop Entry]
 Type=Application
