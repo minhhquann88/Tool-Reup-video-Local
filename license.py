@@ -21,7 +21,7 @@ import edition
 
 API_URL = "https://key.byscom.vn/api/validate-key"
 APP_ID  = edition.APP_ID             # Pro/thường — khai báo trong edition.py
-APP_VERSION = "1.0.7"               # SemVer gửi lên API; GUI thêm tiền tố v
+APP_VERSION = "1.0.8"              # SemVer gửi lên API; GUI thêm tiền tố v
 
 _TIMEOUT = 15                        # giây — lỗi/timeout coi như không hợp lệ (chặt)
 _NET_ERR = "Không thể kết nối máy chủ bản quyền."
