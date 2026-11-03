@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import patch
 
 import drive
+import edition
 import main
 
 
@@ -40,6 +41,7 @@ class BatchPipelineTests(unittest.TestCase):
         self.voice_fail_for = set()
         self.logs = []
         self.seen_settings = []          # settings mỗi lần encode
+        self.profile = edition.PROFILES["pro"]
 
     def _make_app(self):
         test = self
@@ -101,6 +103,7 @@ class BatchPipelineTests(unittest.TestCase):
             def upload_video(self, path, **k):
                 with test.upload:
                     time.sleep(0.03)
+                test.events.append(("up_end", None, time.monotonic()))
                 return f"https://drive/{os.path.basename(path)}"
 
         def fake_voice(row, out_path, should_stop=None, **k):
@@ -116,7 +119,7 @@ class BatchPipelineTests(unittest.TestCase):
         return [
             patch.object(main, "VideoDownloader", FakeDownloader),
             patch.object(main, "make_voice", fake_voice),
-            patch.object(main, "IS_PRO", True),
+            patch.object(main, "PROFILE", self.profile),
             patch.object(drive, "DriveUploader", FakeUploader),
         ]
 
@@ -219,6 +222,38 @@ class BatchPipelineTests(unittest.TestCase):
         # Uploads overlap encoding instead of blocking the processing threads.
         self.assertEqual(2, self.encode.peak)
         self.assertGreater(self.upload.peak, 1)
+
+    # ── Bản thường: cùng dây chuyền, giới hạn theo edition.py ──────────────
+    def _standard(self, delay=0.0):
+        # Giãn cách thật là 30 giây; test thu nhỏ để chạy nhanh.
+        self.profile = dict(edition.PROFILES["khach"], default_delay=delay)
+
+    def _starts(self, kind):
+        return sorted(t for k, _i, t in self.events if k == kind)
+
+    def test_standard_edition_processes_one_video_at_a_time(self):
+        self._standard()
+        self._run(6, workers=5)          # settings cố vượt giới hạn
+        self.assertEqual(1, self.encode.peak)
+        self.assertEqual(1, self.download.peak)
+        self.assertEqual(6, len(os.listdir(os.path.join(self.tmp, "out"))))
+
+    def test_standard_edition_uploads_before_next_video(self):
+        self._standard()
+        self._run(4, workers=3, save_mode="drive")
+        self.assertEqual(1, self.upload.peak)
+        self.assertEqual(1, self.encode.peak)
+        downloads, uploads = self._starts("dl_start"), self._starts("up_end")
+        self.assertEqual(4, len(uploads))
+        for up_end, next_dl in zip(uploads, downloads[1:]):
+            self.assertGreaterEqual(next_dl, up_end)
+
+    def test_standard_edition_enforces_minimum_delay(self):
+        self._standard(delay=0.2)
+        self._run(3, workers=1)          # settings delay = 0 vẫn bị nâng lên
+        downloads = self._starts("dl_start")
+        for a, b in zip(downloads, downloads[1:]):
+            self.assertGreaterEqual(b - a, 0.19)
 
     def test_voice_runs_in_parallel_with_download(self):
         self._run(1, workers=1, voice=True)

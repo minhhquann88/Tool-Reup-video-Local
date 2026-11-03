@@ -21,16 +21,43 @@ import sys
 DEFAULT_EDITION = "pro"
 ENV_VAR = "REUP_EDITION"
 
+# Giới hạn luồng: 2 bản chạy CÙNG một dây chuyền (App._run_batch), chỉ khác số.
+#   user_can_set_workers : hiện ô "Số video cùng lúc" / "Giãn cách" cho người dùng
+#   max_workers          : trần số FFmpeg encode chạy đồng thời
+#   default_workers      : số encode khi người dùng không chỉnh (hoặc không được chỉnh)
+#   default_delay        : giãn cách KHỞI ĐỘNG giữa 2 video (giây); bản không cho
+#                          chỉnh thì đây là mức tối thiểu bắt buộc
+#   prefetch             : số video Tải/Voice chạy trước khi tới lượt encode
+#   upload_concurrency   : số upload/cấp quyền Drive chạy đồng thời
+#   split_upload_pool    : upload ở pool riêng (luồng xử lý đi làm video kế ngay)
+#                          hay upload xong mới nhận video kế
+#   single_instance      : chỉ cho mở 1 cửa sổ (tránh lách giới hạn bằng nhiều cửa sổ)
 PROFILES = {
     "pro": {
         "app_id": "tool_reup_video_pro",      # đã đăng ký trong bảng apps
         "base_name": "RenderVideoReupPro",    # tên file build + thư mục dữ liệu
         "title": "Render Video Reup Pro",
+        "user_can_set_workers": True,
+        "max_workers": 8,
+        "default_workers": 2,
+        "default_delay": 0.0,
+        "prefetch": 2,
+        "upload_concurrency": 5,
+        "split_upload_pool": True,
+        "single_instance": False,
     },
     "khach": {
         "app_id": "tool_reup_video",
         "base_name": "RenderVideoReup",
         "title": "Render Video Reup",
+        "user_can_set_workers": False,
+        "max_workers": 1,
+        "default_workers": 1,
+        "default_delay": 30.0,
+        "prefetch": 0,
+        "upload_concurrency": 1,
+        "split_upload_pool": False,
+        "single_instance": True,
     },
 }
 
@@ -70,7 +97,6 @@ def edition_for_app_id(app_id: str) -> str | None:
 
 EDITION = _resolve()
 PROFILE = PROFILES[EDITION]
-IS_PRO = EDITION == "pro"
 APP_ID = PROFILE["app_id"]
 BASE_NAME = PROFILE["base_name"]
 TITLE = PROFILE["title"]

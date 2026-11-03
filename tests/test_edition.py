@@ -65,16 +65,34 @@ def test_stamp_wins_over_env_and_frozen(tmp_path):
 def test_every_module_follows_the_selected_edition(tmp_path, name):
     code = ("import json, app_paths, license, single_instance, main; "
             "print(json.dumps([license.APP_ID, app_paths.get_data_dir().name, "
-            "single_instance._LOCK_NAME, main.APP_TITLE, main.IS_PRO]))")
+            "single_instance._LOCK_NAME, main.APP_TITLE, main.PROFILE]))")
     result = _run(code, tmp_path, REUP_EDITION=name)
     assert result.returncode == 0, result.stderr
-    app_id, data_dir, lock, title, is_pro = json.loads(result.stdout.strip().splitlines()[-1])
+    app_id, data_dir, lock, title, main_profile = json.loads(result.stdout.strip().splitlines()[-1])
     profile = edition.PROFILES[name]
     assert app_id == profile["app_id"]
     assert data_dir == profile["base_name"]
     assert lock == profile["base_name"] + "_SingleInstance"
     assert title.startswith(profile["title"] + " v")
-    assert is_pro is (name == "pro")
+    assert main_profile == profile
+
+
+def test_standard_edition_limits():
+    # Bản thường: 1 video/lần, giãn 30 giây, không tải trước, upload xong mới
+    # sang video kế, không cho chỉnh và không mở được 2 cửa sổ.
+    khach = edition.PROFILES["khach"]
+    assert (khach["max_workers"], khach["default_workers"]) == (1, 1)
+    assert khach["default_delay"] == 30.0
+    assert khach["prefetch"] == 0
+    assert khach["upload_concurrency"] == 1
+    assert not khach["split_upload_pool"]
+    assert not khach["user_can_set_workers"]
+    assert khach["single_instance"]
+
+
+def test_profiles_share_the_same_keys():
+    keys = [set(p) for p in edition.PROFILES.values()]
+    assert all(k == keys[0] for k in keys)
 
 
 def _source_package(tmp_path, version, stamp=None):

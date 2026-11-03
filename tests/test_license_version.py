@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+import edition
 import license as license_mod
 import main
 import app_paths
@@ -306,7 +307,7 @@ def test_update_dialog_cannot_close_after_user_starts_update(force):
 def test_startup_passes_version_response_to_app():
     info = _update(force=True)
     status = {"is_valid": True, "data": {"key": "KEY"}, "update": info}
-    with patch.object(main, "IS_PRO", True), \
+    with patch.object(main, "PROFILE", edition.PROFILES["pro"]), \
             patch.object(license_mod, "check_license", return_value=status), \
             patch.object(main, "App") as app_class:
         app_class.return_value._relaunch_license = False

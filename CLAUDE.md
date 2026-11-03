@@ -39,21 +39,20 @@ CI (`.github/workflows/build-linux.yml`) builds the AppImage on ubuntu-22.04 on 
 - **`tts.py`**: generates a voiceover script from a CSV row with Gemini or OpenAI (`replace_prompt_variables` fills `{column}` placeholders), then synthesizes it with one of several TTS providers (Google TTS, autovoice.vn, videoai). The result is validated with `_validate_audio_file`.
 - **`drive.py`**: `DriveUploader` handles OAuth desktop flow with bundled `client_secret.json` and per-user `token.json`, folder creation, uploads and network retries. Drive clients are **not thread-safe**, so each worker thread keeps its own instance in thread-local storage.
 - **`app_paths.py`**: fixed per-user paths shared by source and frozen builds, legacy auth migration, cross-process file locking, atomic writes, revision checks and logout tombstones. Tests isolate profile paths and legacy lookup; never migrate real credentials in a test.
-- **`edition.py`**: the single place that defines the two editions, Pro (`tool_reup_video_pro`) and standard/khách (`tool_reup_video`): `app_id`, file/data-dir base name and title. Both editions are built from `main`; never compare `app_id` strings elsewhere. A build stamps the edition into a gitignored `_edition_stamp.py`, and frozen builds read only that. Source runs default to Pro, and `REUP_EDITION=khach` selects the standard edition (run the test suite under both).
-- **`license.py`**: checks the key against `key.byscom.vn`. The API always returns HTTP 200, so read `status` in the JSON body. `APP_ID` comes from `edition.py`; `IS_PRO` changes behavior across the app (see below). The app rechecks the license periodically, and the interval can be overridden with the `LICENSE_RECHECK_SECONDS`, `LICENSE_RETRY_SECONDS` and `LICENSE_MAX_RETRIES` environment variables.
+- **`edition.py`**: the single place that defines the two editions, Pro (`tool_reup_video_pro`) and standard/khách (`tool_reup_video`): `app_id`, file/data-dir base name, title and the thread limits of every pipeline stage (`main.PROFILE`). Both editions run the same pipeline code and differ only in these numbers. Both editions are built from `main`; never compare `app_id` strings elsewhere. A build stamps the edition into a gitignored `_edition_stamp.py`, and frozen builds read only that. Source runs default to Pro, and `REUP_EDITION=khach` selects the standard edition (run the test suite under both).
+- **`license.py`**: checks the key against `key.byscom.vn`. The API always returns HTTP 200, so read `status` in the JSON body. `APP_ID` comes from `edition.py`. The app rechecks the license periodically, and the interval can be overridden with the `LICENSE_RECHECK_SECONDS`, `LICENSE_RETRY_SECONDS` and `LICENSE_MAX_RETRIES` environment variables.
 - **`updater.py`**: independent updater process with its own Tk progress window. It downloads and stages releases, waits for the parent app to save/exit, transactionally replaces program files, then waits for the new GUI's version handshake before closing. Windows onefile helpers copy just the EXE and reset PyInstaller's runtime environment; onedir helpers copy their runtime too. User data stays untouched. See `docs/KIEM_TRA_PHIEN_BAN.md` for release formats and local HTTP simulation tests.
 - **`build_windows.py`**, **`packaging/windows-onefile.spec`**: isolated Windows build with pinned direct dependencies, resource validation and an actual frozen EXE self-test (`packaging_smoke.py`). See `docs/BUILD_WINDOWS.md`.
 - **`error_text.py`**: `explain(exc, stage)` and `short_reason()` turn exceptions into short Vietnamese messages with an error code (for example `NET-DRIVE`). Full tracebacks go to `app_error.log`.
-- **`single_instance.py`**: uses a kernel mutex on Windows and an abstract socket on Linux. It is enforced only in the non-Pro build.
+- **`single_instance.py`**: uses a kernel mutex on Windows and an abstract socket on Linux. It is enforced only when the edition's `single_instance` is set (standard edition), so extra windows cannot bypass its thread limits.
 
 ### Batch pipeline (`App._run_batch`)
 
-The pipeline runs in stages on a thread pool:
-- `workers` (set by the user) caps concurrent FFmpeg encodes through `_ffmpeg_sem`.
-- The pool has extra threads (`_PREFETCH`) so downloads and voice generation run ahead of encoding.
-- In Pro + Drive mode, uploads run on a separate `upload_pool`. `_upload_slots` provides backpressure by capping how many encoded files can wait on disk.
-- The non-Pro build runs with `pool_size = workers` and one upload at a time.
-- `delay` staggers video start times through `_gate_start`.
+The pipeline runs in stages on a thread pool. Every number below comes from `edition.PROFILE`; Pro values first, standard edition in brackets:
+- `workers` caps concurrent FFmpeg encodes through `_ffmpeg_sem` (user-set up to 8, default 2 [fixed 1]).
+- `pool_size = workers + _PREFETCH`; the `_PREFETCH` extra threads let downloads and voice generation run ahead of encoding (2 [0]).
+- With `split_upload_pool` + Drive, uploads run on a separate `upload_pool` (5 [no split: upload inline, 1 at a time]). `_upload_slots` provides backpressure by capping how many encoded files can wait on disk.
+- `delay` staggers video start times through `_gate_start` (user-set, default 0 [at least 30 s, enforced in `_run_batch` too]).
 - Results are keyed by `id(video_dict)` in `out_refs`, so duplicate `item_id`s still work.
 
 Stop requests go through `self._cancel_event`, and every long operation accepts a `should_stop` callable. A video that has already uploaded is always recorded, even after Stop.

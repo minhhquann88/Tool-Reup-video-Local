@@ -65,7 +65,7 @@ if sys.platform != "win32":
         pass
 
 APP_VERSION = f"v{license_mod.APP_VERSION}"
-IS_PRO = edition.IS_PRO
+PROFILE = edition.PROFILE           # giới hạn luồng + định danh theo bản Pro/thường
 APP_TITLE = f"{edition.TITLE} {APP_VERSION}"
 _UI_FONT = "Segoe UI" if sys.platform == "win32" else "DejaVu Sans"
 _UI_MONO_FONT = "Consolas" if sys.platform == "win32" else "DejaVu Sans Mono"
@@ -455,11 +455,13 @@ class App(ctk.CTk):
                                        label_text="*  Cài đặt xử lý")
         pane.grid(row=1, column=0, sticky="nsew", padx=(8, 4), pady=8)
 
-        # ── Concurrency (Chỉ có ở bản Pro) ──
-        if IS_PRO:
+        # ── Concurrency (bản thường: cố định trong edition.py, không hiện) ──
+        if PROFILE["user_can_set_workers"]:
             self._section(pane, "  Xử lý đồng thời")
-            self._workers = self._labeled_entry(pane, "Số video cùng lúc:", "2")
-            self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):", "0")
+            self._workers = self._labeled_entry(pane, "Số video cùng lúc:",
+                                                str(PROFILE["default_workers"]))
+            self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):",
+                                                f"{PROFILE['default_delay']:g}")
         else:
             self._workers = None
             self._delay   = None
@@ -1994,12 +1996,13 @@ class App(ctk.CTk):
             trim_start = float(self._trim_start.get() or "0")
             trim_end   = float(self._trim_end.get() or "0")
             logo_size  = int(self._logo_size.get() or "15")
-            if IS_PRO and self._workers and self._delay:
-                workers = max(1, min(8, int(self._workers.get() or "2")))
-                delay   = max(0.0, float(self._delay.get() or "0"))
+            if PROFILE["user_can_set_workers"] and self._workers and self._delay:
+                workers = int(self._workers.get() or PROFILE["default_workers"])
+                delay   = max(0.0, float(self._delay.get() or PROFILE["default_delay"]))
             else:
-                workers = 1
-                delay   = 60.0
+                workers = PROFILE["default_workers"]
+                delay   = PROFILE["default_delay"]
+            workers = max(1, min(PROFILE["max_workers"], workers))
         except ValueError:
             messagebox.showerror("Lỗi", "Giây cắt và % logo phải là số!")
             return
@@ -2170,8 +2173,12 @@ class App(ctk.CTk):
         done        = 0
         errors      = 0
 
-        workers     = max(1, int(settings.get("workers", 1)))
+        # Giới hạn của bản (edition.py) áp ở đây nữa → không vượt được dù
+        # settings truyền vào là gì.
+        workers     = max(1, min(PROFILE["max_workers"], int(settings.get("workers", 1))))
         delay       = max(0.0, float(settings.get("delay", 0)))
+        if not PROFILE["user_can_set_workers"]:
+            delay = max(delay, PROFILE["default_delay"])
         # Giãn cách KHỞI ĐỘNG: 2 video liên tiếp cách nhau >= `delay` giây khi
         # bắt đầu (tránh dồn request). next_start = mốc monotonic sớm nhất cho
         # video kế; bảo vệ bằng start_lock riêng để không tranh chấp với `lock`.
@@ -2230,29 +2237,24 @@ class App(ctk.CTk):
         # Upload chạy SAU mà không giữ chỗ của encode → encode luôn có việc,
         # không phải chờ mạng. Mỗi luồng = 1 video đang dở → số file tạm trên
         # đĩa tối đa = pool_size.
+        # Số luồng mỗi khâu lấy từ edition.py (Pro: nhanh; thường: giới hạn).
         _ffmpeg_sem = threading.Semaphore(workers)
-        # Pro allows five concurrent upload/permission stages.
-        upload_n = (5 if IS_PRO else 1) if save_mode == "drive" else 0
+        upload_n = PROFILE["upload_concurrency"] if save_mode == "drive" else 0
         _drive_upload_sem = threading.Semaphore(upload_n) if upload_n else None
-        _PREFETCH = 2
-        # Pro + Drive: upload chạy ở pool RIÊNG. Luồng xử lý encode xong chỉ
-        # đẩy file vào hàng đợi rồi đi làm video kế → không giữ chỗ của khâu
+        _PREFETCH = PROFILE["prefetch"]
+        # Upload ở pool RIÊNG (Pro + Drive): luồng xử lý encode xong chỉ đẩy
+        # file vào hàng đợi rồi đi làm video kế → không giữ chỗ của khâu
         # Tải/Encode khi mạng upload chậm. _upload_slots giới hạn số video đã
         # encode đang chờ/đang upload (file tạm trên đĩa); đầy thì luồng xử lý
-        # chờ ở đó (backpressure) như hành vi cũ.
-        split_upload = IS_PRO and save_mode == "drive"
+        # chờ ở đó (backpressure). Không tách (bản thường): upload xong luồng
+        # mới nhận video kế.
+        split_upload = PROFILE["split_upload_pool"] and save_mode == "drive"
         upload_pool = (ThreadPoolExecutor(max_workers=upload_n,
                                           thread_name_prefix="upload")
                        if split_upload else None)
         _upload_slots = (threading.Semaphore(upload_n + workers)
                          if split_upload else None)
-        # Bản thường: giữ đúng 1 video/lần như cũ (không chạy chồng).
-        if not IS_PRO:
-            pool_size = workers
-        elif split_upload:
-            pool_size = workers + _PREFETCH
-        else:
-            pool_size = workers + _PREFETCH + upload_n
+        pool_size = workers + _PREFETCH
         # Voice AI chạy song song với tải video (chỉ cần dữ liệu CSV).
         voice_pool = (ThreadPoolExecutor(max_workers=pool_size,
                                          thread_name_prefix="voice")
@@ -3014,7 +3016,7 @@ def main():
         updater.run_worker(Path(sys.argv[2]))
         return
     # Bản KHÁCH: chỉ cho mở 1 instance. Bản PRO: cho mở nhiều instance/tab thoải mái
-    if not IS_PRO and not single_instance.acquire():
+    if PROFILE["single_instance"] and not single_instance.acquire():
         try:
             root = ctk.CTk()
             _apply_linux_x11_fix(root)
@@ -3071,7 +3073,7 @@ def main():
                     return
                 # Đã kích hoạt → lặp lại, check_license() lần sau sẽ pass
     finally:
-        if not IS_PRO:
+        if PROFILE["single_instance"]:
             single_instance.release()
 
 
