@@ -197,6 +197,14 @@ class BatchPipelineTests(unittest.TestCase):
         out_dir = os.path.join(self.tmp, "out")
         self.assertEqual(12, len(os.listdir(out_dir)))
 
+    def test_prefetch_grows_with_many_encodes(self):
+        # 6 encode → 4 video chuẩn bị trước (trần max_prefetch) → 10 luồng xử lý.
+        self._run(20, workers=6)
+        self.assertLessEqual(self.encode.peak, 6)
+        self.assertGreater(self.download.peak, 8)
+        self.assertLessEqual(self.downloader_inits, 10)
+        self.assertEqual(20, len(os.listdir(os.path.join(self.tmp, "out"))))
+
     def test_clients_are_reused_per_thread(self):
         self._run(12, workers=2, save_mode="drive")
         # Processing pool = 2 encode + 2 prefetch; separate upload pool = 5

@@ -171,3 +171,21 @@ def test_build_keeps_older_outputs_and_replaces_only_same_name(tmp_path):
 ])
 def test_edition_for_filename(filename, expected):
     assert edition.edition_for_filename(filename) == expected
+
+
+@pytest.mark.parametrize("cpus,expected", [(1, 2), (4, 2), (8, 2), (12, 3), (16, 4), (24, 6), (72, 6)])
+def test_pro_default_workers_follow_cpu(cpus, expected):
+    # Không bao giờ thấp hơn mặc định cũ (2) → máy yếu không chậm đi.
+    assert edition.default_workers_for(edition.PROFILES["pro"], cpus) == expected
+
+
+def test_standard_default_workers_ignore_cpu():
+    assert edition.default_workers_for(edition.PROFILES["khach"], 72) == 1
+
+
+@pytest.mark.parametrize("name,workers,expected", [
+    ("pro", 1, 2), ("pro", 2, 2), ("pro", 3, 3), ("pro", 6, 4), ("pro", 8, 4),
+    ("khach", 1, 1),
+])
+def test_prefetch_scales_with_encodes(name, workers, expected):
+    assert edition.prefetch_for(edition.PROFILES[name], workers) == expected

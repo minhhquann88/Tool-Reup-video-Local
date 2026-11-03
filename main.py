@@ -458,8 +458,9 @@ class App(ctk.CTk):
         # ── Concurrency (bản thường: cố định trong edition.py, không hiện) ──
         if PROFILE["user_can_set_workers"]:
             self._section(pane, "  Xử lý đồng thời")
+            # Mặc định theo CPU máy này (Pro); người dùng vẫn sửa được.
             self._workers = self._labeled_entry(pane, "Số video cùng lúc:",
-                                                str(PROFILE["default_workers"]))
+                                                str(edition.default_workers_for(PROFILE)))
         else:
             self._workers = None
         # Giãn cách giữa 2 video không cho chỉnh ở bản nào: lấy từ edition.py.
@@ -1995,9 +1996,9 @@ class App(ctk.CTk):
             trim_end   = float(self._trim_end.get() or "0")
             logo_size  = int(self._logo_size.get() or "15")
             if PROFILE["user_can_set_workers"] and self._workers:
-                workers = int(self._workers.get() or PROFILE["default_workers"])
+                workers = int(self._workers.get() or edition.default_workers_for(PROFILE))
             else:
-                workers = PROFILE["default_workers"]
+                workers = edition.default_workers_for(PROFILE)
             workers = max(1, min(PROFILE["max_workers"], workers))
             delay   = PROFILE["default_delay"]
         except ValueError:
@@ -2236,7 +2237,7 @@ class App(ctk.CTk):
         _ffmpeg_sem = threading.Semaphore(workers)
         upload_n = PROFILE["upload_concurrency"] if save_mode == "drive" else 0
         _drive_upload_sem = threading.Semaphore(upload_n) if upload_n else None
-        _PREFETCH = PROFILE["prefetch"]
+        _PREFETCH = edition.prefetch_for(PROFILE, workers)   # tăng theo số encode
         # Upload ở pool RIÊNG (Pro + Drive): luồng xử lý encode xong chỉ đẩy
         # file vào hàng đợi rồi đi làm video kế → không giữ chỗ của khâu
         # Tải/Encode khi mạng upload chậm. _upload_slots giới hạn số video đã

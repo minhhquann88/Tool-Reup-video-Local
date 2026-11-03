@@ -58,8 +58,8 @@ CI (`.github/workflows/build-windows.yml`, `build-linux.yml`) builds both editio
 ### Batch pipeline (`App._run_batch`)
 
 The pipeline runs in stages on a thread pool. Every number below comes from `edition.PROFILE`; Pro values first, standard edition in brackets:
-- `workers` caps concurrent FFmpeg encodes through `_ffmpeg_sem` (user-set up to 8, default 2 [fixed 1]).
-- `pool_size = workers + _PREFETCH`; the `_PREFETCH` extra threads let downloads and voice generation run ahead of encoding (2 [1]).
+- `workers` caps concurrent FFmpeg encodes through `_ffmpeg_sem` (user-set up to 8; default `edition.default_workers_for`: CPU threads ÷ 4, clamped 2–6 [fixed 1]).
+- `pool_size = workers + _PREFETCH`; the `_PREFETCH` extra threads let downloads and voice generation run ahead of encoding (`edition.prefetch_for`: number of encodes clamped 2–4 [1]).
 - With `split_upload_pool` + Drive, uploads run on a separate `upload_pool` (5 [1]). `_upload_slots` provides backpressure by capping how many encoded files can wait on disk.
 - `delay` staggers video start times through `_gate_start` (`default_delay`, not shown in the UI of either edition and enforced as a minimum in `_run_batch`: 0 [0]).
 - Results are keyed by `id(video_dict)` in `out_refs`, so duplicate `item_id`s still work.

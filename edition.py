@@ -26,10 +26,13 @@ STAMP_FILE = "_edition_stamp.py"
 # Giới hạn luồng: 2 bản chạy CÙNG một dây chuyền (App._run_batch), chỉ khác số.
 #   user_can_set_workers : hiện ô "Số video cùng lúc" cho người dùng
 #   max_workers          : trần số FFmpeg encode chạy đồng thời
-#   default_workers      : số encode khi người dùng không chỉnh (hoặc không được chỉnh)
+#   default_workers      : số encode khi người dùng không chỉnh (hoặc không được chỉnh);
+#                          có auto_workers thì đây là mức TỐI THIỂU
+#   auto_workers         : mặc định tự tính theo số luồng CPU (xem default_workers_for)
 #   default_delay        : giãn cách KHỞI ĐỘNG giữa 2 video (giây), mức tối thiểu
 #                          bắt buộc; không hiện trên giao diện ở bản nào
-#   prefetch             : số video Tải/Voice chạy trước khi tới lượt encode
+#   prefetch / max_prefetch : số video Tải/Voice chạy trước khi tới lượt encode =
+#                          số encode, kẹp trong [prefetch, max_prefetch] (xem prefetch_for)
 #   upload_concurrency   : số upload/cấp quyền Drive chạy đồng thời
 #   split_upload_pool    : upload ở pool riêng (luồng xử lý đi làm video kế ngay)
 #                          hay upload xong mới nhận video kế
@@ -42,8 +45,10 @@ PROFILES = {
         "user_can_set_workers": True,
         "max_workers": 8,
         "default_workers": 2,
+        "auto_workers": True,
         "default_delay": 0.0,
         "prefetch": 2,
+        "max_prefetch": 4,                    # trần: hạn chế lượt gọi AI/TTS cùng lúc
         "upload_concurrency": 5,
         "split_upload_pool": True,
         "single_instance": False,
@@ -55,13 +60,31 @@ PROFILES = {
         "user_can_set_workers": False,
         "max_workers": 1,
         "default_workers": 1,
+        "auto_workers": False,
         "default_delay": 0.0,
         "prefetch": 1,                        # tải/voice sẵn 1 video trong lúc encode
+        "max_prefetch": 1,
         "upload_concurrency": 1,
         "split_upload_pool": True,            # upload nền, mỗi lần 1 file
         "single_instance": True,
     },
 }
+
+
+def default_workers_for(profile: dict, cpu_count: int | None = None) -> int:
+    """Số video encode cùng lúc mặc định. auto_workers: ~1 encode / 4 luồng CPU
+    (FFmpeg ultrafast mỗi tiến trình dùng tốt vài lõi), không dưới default_workers,
+    không quá 6 và max_workers."""
+    floor = profile["default_workers"]
+    if not profile["auto_workers"]:
+        return floor
+    cpus = cpu_count if cpu_count is not None else (os.cpu_count() or 1)
+    return max(floor, min(cpus // 4, 6, profile["max_workers"]))
+
+
+def prefetch_for(profile: dict, workers: int) -> int:
+    """Số video chuẩn bị trước: theo kịp số encode khi đặt nhiều video cùng lúc."""
+    return max(profile["prefetch"], min(workers, profile["max_prefetch"]))
 
 
 def _checked(name, source: str) -> str:
