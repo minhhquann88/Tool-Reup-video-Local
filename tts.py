@@ -187,8 +187,8 @@ def generate_script(
     model="gemini-3.1-flash-lite",
     language_name="Tiếng Việt",
     max_chars=600,
-    retries=7,
-    backoff=2,
+    retries=5,
+    backoff=1,
     log=None,
     should_stop=None,
 ):
@@ -249,8 +249,8 @@ def generate_script_openai(
     model="gpt-5-nano",
     language_name="Tiếng Việt",
     max_chars=600,
-    retries=7,
-    backoff=2,
+    retries=5,
+    backoff=1,
     log=None,
     should_stop=None,
 ):
@@ -319,8 +319,8 @@ def synthesize_voice(
     voice_name="vi-VN-Standard-C",
     language_code="vi-VN",
     speaking_rate=1.2,
-    retries=7,
-    backoff=2,
+    retries=5,
+    backoff=1,
     log=None,
     should_stop=None,
 ):
@@ -372,7 +372,7 @@ def synthesize_voice(
             if _is_permanent_error(exc):
                 break   # key/model sai, bị chặn: thử lại vô ích
             if attempt < retries:
-                # Chờ cố định `backoff` giây (mặc định 5s), không tăng dần.
+                # Chờ cố định `backoff` giây (mặc định 1s), không tăng dần.
                 _sleep_or_stop(_retry_wait(exc, backoff, attempt), should_stop)
 
     raise RuntimeError(f"Google TTS thất bại sau {retries} lần: {last_err}") from last_err
@@ -385,8 +385,8 @@ def synthesize_voice_autovoice(
     api_key,
     voice_name=DEFAULT_AUTOVOICE_VOICE,
     speed=1.0,
-    retries=7,
-    backoff=2,
+    retries=5,
+    backoff=1,
     log=None,
     should_stop=None,
 ):
@@ -460,8 +460,8 @@ def synthesize_voice_videoai(
     api_key,
     voice_name=DEFAULT_VIDEOAI_VOICE,
     speed=1.0,
-    retries=7,
-    backoff=2,
+    retries=5,
+    backoff=1,
     log=None,
     should_stop=None,
 ):
@@ -544,9 +544,9 @@ def make_voice(
     language_name="Tiếng Việt",
     speaking_rate=1.2,
     max_chars=600,
-    retries=7,
-    tts_retries=7,
-    tts_backoff=2,
+    retries=5,
+    tts_retries=5,
+    tts_backoff=1,
     log=None,
     on_script=None,
     should_stop=None,

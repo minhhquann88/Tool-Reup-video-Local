@@ -1,5 +1,9 @@
 # Video Reup Tool — Hướng dẫn cài đặt Google Cloud
 
+**Build Windows một file EXE:** chạy `build.bat`. File phân phối ở
+`dist/RenderVideoReupPro_v<phiên_bản>.exe`, đã nhúng Python, FFmpeg và thư viện.
+Xem [hướng dẫn build và kiểm tra Windows](docs/BUILD_WINDOWS.md).
+
 ## 1. Tạo Project
 
 1. Truy cập [console.cloud.google.com](https://console.cloud.google.com)
@@ -57,9 +61,11 @@ Sau khi publish, mục **OAuth user cap** hiển thị giới hạn **100 users*
 | Môi trường                 | Vị trí đặt `client_secret.json`      |
 | -------------------------- | ------------------------------------ |
 | Chạy từ source (`run.bat`) | Cùng thư mục với `main.py`           |
-| Chạy từ file `.exe`        | Cùng thư mục với `VideoReupTool.exe` |
+| Chạy từ file `.exe` mới    | Đã nhúng trong EXE khi build, không cần gửi kèm |
 
-> `token.json` sẽ tự tạo ra sau lần đăng nhập đầu tiên — không cần tạo thủ công.
+> `token.json` và `license.json` được lưu trong `%LOCALAPPDATA%\RenderVideoReupPro\`
+> trên Windows (bản thường dùng `RenderVideoReup`). Không cần đặt cạnh EXE.
+> Lần đầu chạy bản mới cạnh hai file cũ, app tự chuyển dữ liệu sang vị trí cố định.
 
 ---
 

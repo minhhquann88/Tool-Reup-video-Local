@@ -9,6 +9,7 @@ from __future__ import annotations   # cho phép 'X | None' chạy trên Python 
 import csv
 import os
 import queue
+import random
 import re
 import shutil
 import subprocess
@@ -50,6 +51,8 @@ import customtkinter as ctk
 
 import license as license_mod
 import single_instance
+import updater
+from urllib.parse import urlparse
 
 # CTk normally draws rounded corners/checkmarks with a private OTF glyph font.
 # On X11 that creates an avoidable RenderAddGlyphs path, so use polygons instead.
@@ -60,7 +63,7 @@ if sys.platform != "win32":
     except Exception:
         pass
 
-APP_VERSION = "v1.0.1"
+APP_VERSION = f"v{license_mod.APP_VERSION}"
 IS_PRO = (getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro")
 APP_TITLE = (
     f"Render Video Reup Pro {APP_VERSION}"
@@ -170,7 +173,7 @@ def _apply_linux_x11_fix(tk_root) -> None:
 
 # ── Cấu hình kiểm tra license định kỳ (ép thời gian ngắn lại khi test) ────────
 _RECHECK_SECONDS = int(os.environ.get("LICENSE_RECHECK_SECONDS", 30 * 60))  # 30'
-_RETRY_SECONDS   = int(os.environ.get("LICENSE_RETRY_SECONDS",   60))       # 1'
+_RETRY_SECONDS   = int(os.environ.get("LICENSE_RETRY_SECONDS",  300))       # 5'
 _MAX_RETRIES     = int(os.environ.get("LICENSE_MAX_RETRIES",     3))        # 3 lần
 
 
@@ -213,8 +216,8 @@ LOG_CATS        = (LOG_DOWNLOAD, LOG_TEXT, LOG_VOICE, LOG_PROCESS, LOG_UPLOAD, L
 LOG_FILTER_ALL  = "Tất cả"
 LOG_FILTER_OPTS = (LOG_FILTER_ALL,) + LOG_CATS
 
-# Keep only the latest 100 UI log lines, including errors.
-MAX_UI_LOGS = 100
+# Keep the latest 1,000 non-error UI log lines and all errors.
+MAX_UI_LOGS = 1000
 _ERROR_LOG_LOCK = threading.Lock()
 _RETRY_LOG_RE = re.compile(
     r"^(?P<prefix>.*?(?:tải\s+lần|thử\s+lại)\s+)"
@@ -270,8 +273,10 @@ class VideoRow(ctk.CTkFrame):
 
 class App(ctk.CTk):
 
-    def __init__(self, license_data: dict | None = None):
+    def __init__(self, license_data: dict | None = None,
+                 update_info: dict | None = None):
         super().__init__()
+        self.withdraw()  # Chỉ hiện app sau khi xử lý yêu cầu cập nhật bắt buộc.
         _apply_linux_x11_fix(self)
         # Belt-and-suspenders: vô hiệu hoá vòng kiểm tra DPI định kỳ ở instance level
         # (bổ sung cho class-level patch trong _apply_linux_x11_fix)
@@ -281,6 +286,12 @@ class App(ctk.CTk):
             except Exception:
                 pass
         self._license_data = license_data or {}
+        self._update_required = False
+        self._updater_active = False
+        self._updater_process = None
+        self._updater_job = None
+        self._update_dialog = None
+        self._notified_versions = set()
         self.title(APP_TITLE)
         self.geometry("1220x820")
         self.minsize(960, 640)
@@ -310,7 +321,9 @@ class App(ctk.CTk):
 
         self._creds_path   = StringVar(value="")
         self._audio_path   = StringVar(value="")
+        self._audio_paths: list[str] = []   # nhiều audio → random cho từng video
         self._logo_path    = StringVar(value="")
+        self._logo_paths: list[str] = []    # nhiều logo → random cho từng video
         self._csv_out_path = StringVar(value="")
         self._local_dir    = StringVar(value="")
 
@@ -319,7 +332,6 @@ class App(ctk.CTk):
 
         self._build_ui()
         self._ui_drain_job = self.after(25, self._drain_ui_queue)
-        self._check_ffmpeg()
 
         # ── Trạng thái kiểm tra license định kỳ ──
         self._recheck_job      = None    # id job after() để có thể hủy
@@ -333,10 +345,20 @@ class App(ctk.CTk):
 
         self._batch_thread = None
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._handle_update_response(update_info, at_startup=True)
+        self.after(100, lambda: updater.acknowledge_startup(license_mod.APP_VERSION))
+        if not self._update_required:
+            # CTk trên Windows: mainloop() lần đầu tự withdraw để đổi màu
+            # titlebar và KHÔNG hiện lại nếu withdraw() đã gọi trước đó →
+            # deiconify ngay ở đây sẽ bị mất, phải hẹn sau khi mainloop chạy.
+            self.after(0, self.deiconify)
+            self._check_ffmpeg()
 
     def _on_close(self):
         """Đóng cửa sổ: hỏi lại nếu batch đang chạy (kết quả đã xong vẫn
         được ghi CSV vì main() chờ luồng batch dọn dẹp trước khi thoát)."""
+        if self._updater_active:
+            return
         if self._processing and not messagebox.askyesno(
                 "Đang xử lý",
                 "Batch đang chạy. Đóng ứng dụng sẽ dừng xử lý.\n"
@@ -384,7 +406,8 @@ class App(ctk.CTk):
         _write_crash(tb)
         if hasattr(self, "_log"):
             self._log_msg(f"X Lỗi giao diện:\n{tb}", LOG_ERROR)
-        sys.stderr.write(tb)
+        if sys.stderr is not None:
+            sys.stderr.write(tb)
         try:
             messagebox.showerror(
                 "Lỗi", f"{getattr(exc, '__name__', exc)}: {val}\n\n"
@@ -444,29 +467,49 @@ class App(ctk.CTk):
             self._workers = None
             self._delay   = None
 
+        # ── Dữ liệu sản phẩm ──
+        self._section(pane, "  Dữ liệu sản phẩm")
+        self._allow_no_product_name_var = BooleanVar(value=True)
+        self._allow_no_product_name_switch = ctk.CTkSwitch(
+            pane, text="Render không có tên sản phẩm",
+            variable=self._allow_no_product_name_var,
+        )
+        self._allow_no_product_name_switch.pack(anchor="w", pady=(2, 2))
+        ctk.CTkLabel(
+            pane, text="Bỏ kiểm tra product_name khi bật.\nVoice AI cần tên sản phẩm nên sẽ tắt tùy chọn này.",
+            text_color="gray", font=(_UI_FONT, 10), wraplength=230,
+            justify="left",
+        ).pack(anchor="w", pady=(0, 4))
+
         # ── Trim ──
         self._section(pane, "  Cắt video")
         self._trim_start = self._labeled_entry(pane, "Cắt đầu (giây):", "0")
         self._trim_end   = self._labeled_entry(pane, "Cắt đuôi (giây):", "0")
 
         # ── Audio ──
-        self._section(pane, "  Thay Voice")
+        self._section(pane, "  Thêm nhạc")
 
-        self._audio_label = ctk.CTkLabel(pane, text="Chưa chọn file audio",
-                                          text_color="gray", font=(_UI_FONT, 11),
+        self._audio_label = ctk.CTkLabel(pane, text="", text_color="gray",
+                                          font=(_UI_FONT, 11),
                                           wraplength=230, justify="left")
-        self._audio_label.pack(anchor="w", pady=(0, 4))
+        self._audio_label.pack(anchor="w", pady=(0, 2))
+
+        # Khung danh sách audio đã thêm (mỗi dòng có nút xoá riêng)
+        self._audio_list = ctk.CTkFrame(pane, border_width=1,
+                                        border_color="#555", corner_radius=6)
+        self._audio_list.pack(fill="x", pady=(0, 4))
 
         row = ctk.CTkFrame(pane, fg_color="transparent")
         row.pack(fill="x", pady=2)
         self._btn_pick_audio = ctk.CTkButton(
-            row, text=" Chọn Audio", height=30, command=self._pick_audio)
+            row, text="+ Thêm nhạc", height=30, command=self._pick_audio)
         self._btn_pick_audio.pack(side="left", fill="x", expand=True,
                                   padx=(0, 2))
         self._btn_clear_audio = ctk.CTkButton(
-            row, text="X", width=30, height=30, fg_color="#555",
+            row, text="Xoá hết", width=60, height=30, fg_color="#555",
             command=self._clear_audio)
         self._btn_clear_audio.pack(side="right")
+        self._refresh_audio_label()
 
         self._mute_var = BooleanVar(value=False)
         self._mute_chk = ctk.CTkCheckBox(pane, text="Tắt tiếng (mute)",
@@ -592,18 +635,25 @@ class App(ctk.CTk):
         # ── Logo ──
         self._section(pane, "  Logo / Watermark")
 
-        self._logo_label = ctk.CTkLabel(pane, text="Chưa chọn file logo",
-                                         text_color="gray", font=(_UI_FONT, 11),
+        self._logo_label = ctk.CTkLabel(pane, text="", text_color="gray",
+                                         font=(_UI_FONT, 11),
                                          wraplength=230, justify="left")
-        self._logo_label.pack(anchor="w", pady=(0, 4))
+        self._logo_label.pack(anchor="w", pady=(0, 2))
+
+        # Khung danh sách logo đã thêm (mỗi dòng có nút xoá riêng)
+        self._logo_list = ctk.CTkFrame(pane, border_width=1,
+                                       border_color="#555", corner_radius=6)
+        self._logo_list.pack(fill="x", pady=(0, 4))
 
         row2 = ctk.CTkFrame(pane, fg_color="transparent")
         row2.pack(fill="x", pady=2)
-        ctk.CTkButton(row2, text=" Chọn Logo", height=30,
+        ctk.CTkButton(row2, text="+ Thêm logo", height=30,
                       command=self._pick_logo).pack(side="left", fill="x",
                                                      expand=True, padx=(0, 2))
-        ctk.CTkButton(row2, text="X", width=30, height=30, fg_color="#555",
+        ctk.CTkButton(row2, text="Xoá hết", width=60, height=30,
+                      fg_color="#555",
                       command=self._clear_logo).pack(side="right")
+        self._refresh_logo_label()
 
         pos_row = ctk.CTkFrame(pane, fg_color="transparent")
         pos_row.pack(fill="x", pady=(8, 2))
@@ -951,15 +1001,18 @@ class App(ctk.CTk):
         return e
 
     def _toggle_voiceai(self):
-        """Hiện/ẩn khối Voice AI và vô hiệu hoá audio cũ khi bật."""
+        """Hiện/ẩn Voice AI; khi bật phải có tên sản phẩm và dùng audio AI."""
         on = self._voiceai_var.get()
         if on:
+            self._allow_no_product_name_var.set(False)
             self._voiceai_box.pack(fill="x", before=self._voiceai_anchor)
         else:
+            self._allow_no_product_name_var.set(True)
             self._voiceai_box.pack_forget()
         # Voice AI ưu tiên tuyệt đối: khoá 'Chọn Audio' / 'Tắt tiếng' (không fallback)
         state = "disabled" if on else "normal"
-        for w in (self._btn_pick_audio, self._btn_clear_audio, self._mute_chk):
+        for w in (self._btn_pick_audio, self._btn_clear_audio, self._mute_chk,
+                  self._allow_no_product_name_switch):
             try:
                 w.configure(state=state)
             except Exception:
@@ -1043,6 +1096,8 @@ class App(ctk.CTk):
     def _schedule_recheck(self):
         """Chạy trên luồng UI. Bắn 1 thread nền gọi API (không làm đơ UI)."""
         self._recheck_job = None
+        if self._license_locked or self._update_required or self._updater_active:
+            return
         threading.Thread(target=self._run_recheck_bg, daemon=True).start()
 
     def _run_recheck_bg(self):
@@ -1050,33 +1105,43 @@ class App(ctk.CTk):
         Chạy trên LUỒNG NỀN — tuyệt đối không chạm widget Tkinter ở đây
         (kể cả winfo_exists). Chỉ gọi API rồi đẩy kết quả về luồng UI.
         """
-        status = license_mod.recheck_license()       # block ~15s, an toàn vì ở nền
-        self._ui(lambda: self._on_recheck_result(status))
+        result = license_mod.recheck_license()       # block ~15s, an toàn vì ở nền
+        self._ui(lambda: self._on_recheck_result(result))
 
-    def _on_recheck_result(self, status: str):
+    def _on_recheck_result(self, result: dict):
         """Chạy trên luồng UI chính — xử lý 3 kịch bản."""
-        if not self.winfo_exists():                  # app đã đóng giữa chừng
+        if (not self.winfo_exists() or self._license_locked or self._update_required
+                or self._updater_active):
             return
 
+        status = result["status"]
         if status == license_mod.RECHECK_VALID:
             # KB1: vẫn hợp lệ → reset retry, hẹn chu kỳ 30' tiếp theo
             self._recheck_retries = 0
+            self._license_data = result.get("data") or self._license_data
+            self._handle_update_response(result.get("update"))
+            if self._update_required:
+                return
             self._recheck_job = self.after(_RECHECK_SECONDS * 1000,
                                            self._schedule_recheck)
 
+        elif status == license_mod.RECHECK_CHANGED:
+            # A response for an older key must not lock or overwrite a new one.
+            self._recheck_job = self.after(1000, self._schedule_recheck)
+
+        elif status == license_mod.RECHECK_STORAGE:
+            self._log_msg(result.get("message") or "Không đọc/ghi được dữ liệu bản quyền", LOG_ERROR)
+            self._recheck_job = self.after(_RETRY_SECONDS * 1000, self._schedule_recheck)
+
         elif status == license_mod.RECHECK_NETERR:
-            # KB3: lỗi mạng → retry tối đa _MAX_RETRIES lần, mỗi lần cách 1'
+            # Lỗi mạng không đồng nghĩa key sai: retry 5', hết lượt về 30'.
             self._recheck_retries += 1
-            # Đang chạy batch thì không khoá giữa chừng chỉ vì mạng chập
-            # chờn (sẽ huỷ cả batch dài) — tiếp tục thử lại mỗi phút.
-            if self._recheck_retries <= _MAX_RETRIES or self._processing:
-                self._recheck_job = self.after(_RETRY_SECONDS * 1000,
-                                               self._schedule_recheck)
+            if self._recheck_retries <= _MAX_RETRIES:
+                delay = _RETRY_SECONDS
             else:
-                # Hết lượt retry mà vẫn mất mạng → coi như không có bản quyền
-                self._lock_ui_license(
-                    "Không thể xác minh bản quyền (mất kết nối mạng).\n"
-                    "Vui lòng kiểm tra mạng và mở lại ứng dụng.")
+                self._recheck_retries = 0
+                delay = _RECHECK_SECONDS
+            self._recheck_job = self.after(delay * 1000, self._schedule_recheck)
 
         else:  # RECHECK_INVALID — recheck_license() đã clear_key()
             # KB2: key hết hạn/bị thu hồi
@@ -1084,11 +1149,212 @@ class App(ctk.CTk):
                 "Bản quyền của bạn đã hết hạn hoặc bị thu hồi.\n"
                 "Vui lòng kích hoạt lại key hợp lệ.")
 
+    def _handle_update_response(self, info: dict | None, *, at_startup: bool = False):
+        """Chỉ ép cập nhật lúc mở app; recheck không ngắt phiên đang sử dụng."""
+        if not isinstance(info, dict) or not info.get("has_update"):
+            return
+        if self._update_required or self._license_locked or self._updater_active:
+            return
+        force = bool(info.get("force_update"))
+        if force and not at_startup:
+            # Server vẫn xác thực key định kỳ, nhưng bản mới bắt buộc chỉ chặn
+            # ở lần mở app sau. Không dừng render, ẩn app hoặc hủy timer ở đây.
+            return
+        latest = str(info.get("latest_version") or "?")
+        if not force and latest in self._notified_versions:
+            return
+        if self._update_dialog is not None:
+            self._update_dialog.destroy()
+            self._update_dialog = None
+        if force:
+            self._update_required = True
+            if self._recheck_job is not None:
+                self.after_cancel(self._recheck_job)
+                self._recheck_job = None
+            self._cancel_event.set()
+            self._processor.cancel_active()
+            for future in list(self._batch_futures):
+                future.cancel()
+            self._login_cancel_flag.set()
+            self._btn_process.configure(state="disabled")
+            self.withdraw()
+
+        self._show_update_dialog(info, force)
+        self._notified_versions.add(latest)
+
+    def _show_update_dialog(self, info: dict, force: bool):
+        dlg = ctk.CTkToplevel(self)
+        self._update_dialog = dlg
+        dlg.withdraw()
+        dlg.title("Yêu cầu cập nhật bắt buộc" if force else "Cập nhật phiên bản")
+        dlg.geometry("520x440")
+        dlg.resizable(False, False)
+
+        def close_dialog():
+            # Chỉ khóa nút đóng SAU khi người dùng bấm cập nhật (_begin_in_app_update).
+            if self._updater_active:
+                return
+            self._update_dialog = None
+            dlg.destroy()
+            if force:
+                # Bản bắt buộc mà không cập nhật thì không dùng tiếp được → thoát app.
+                self.destroy()
+
+        if force:
+            dlg.transient("")  # Cửa sổ độc lập, vẫn hiện khi app chính bị ẩn.
+        else:
+            dlg.transient(self)
+        dlg.protocol("WM_DELETE_WINDOW", close_dialog)
+
+        ctk.CTkLabel(
+            dlg, text="Cần cập nhật để tiếp tục sử dụng" if force else "Đã có phiên bản mới",
+            font=(_UI_FONT, 20, "bold"),
+        ).pack(pady=(22, 8))
+        current = license_mod.APP_VERSION
+        latest = str(info.get("latest_version") or "?")
+        ctk.CTkLabel(dlg, text=_clean_ui_text(f"v{current}  →  v{latest}", 100),
+                     font=(_UI_FONT, 14, "bold")).pack(pady=(0, 12))
+        changes = ctk.CTkTextbox(dlg, height=180, wrap="word")
+        changes.pack(fill="both", expand=True, padx=24, pady=(0, 12))
+        text = _clean_ui_text(str(info.get("changelog") or "Chưa có ghi chú thay đổi."), 10000)
+        # Chia nhỏ để tránh request RenderAddGlyphs quá lớn trên X11.
+        for offset in range(0, len(text), 200):
+            changes.insert("end", text[offset:offset + 200])
+        changes.configure(state="disabled")
+        url = str(info.get("download_url") or "").strip()
+        try:
+            parsed_url = urlparse(url)
+            valid_url = parsed_url.scheme in ("https", "http") and bool(parsed_url.netloc)
+        except ValueError:
+            valid_url = False
+        ctk.CTkButton(
+            dlg, text="Cập nhật bắt buộc ngay" if force else "Cập nhật ngay trong ứng dụng",
+            height=38, state="normal" if valid_url else "disabled",
+            command=lambda: self._begin_in_app_update(info),
+        ).pack(fill="x", padx=24, pady=(0, 8))
+        if not valid_url:
+            ctk.CTkLabel(dlg, text="Chưa có liên kết tải hợp lệ. Vui lòng liên hệ hỗ trợ.",
+                         wraplength=460).pack(pady=(0, 8))
+        if force:
+            ctk.CTkButton(dlg, text="Thoát ứng dụng", height=32, fg_color="#555",
+                          command=close_dialog).pack(fill="x", padx=24, pady=(0, 8))
+            ctk.CTkLabel(dlg, text="Phiên bản hiện tại đã ngưng hỗ trợ.",
+                         text_color="gray").pack(pady=(0, 14))
+        else:
+            ctk.CTkButton(dlg, text="Bỏ qua lần này", height=32, fg_color="#555",
+                           command=close_dialog).pack(fill="x", padx=24, pady=(0, 16))
+        dlg.deiconify()
+        if force:
+            dlg.wait_visibility()
+            dlg.grab_set()
+        dlg.lift()
+        dlg.focus_force()
+
+    def _begin_in_app_update(self, info: dict):
+        if self._updater_active:
+            return
+        self._updater_active = True
+        if self._recheck_job is not None:
+            self.after_cancel(self._recheck_job)
+            self._recheck_job = None
+        self._cancel_event.set()
+        self._processor.cancel_active()
+        for future in list(self._batch_futures):
+            future.cancel()
+        self._login_cancel_flag.set()
+        self._btn_process.configure(state="disabled")
+        dlg = self._update_dialog
+        # Đã bấm cập nhật → khóa nút đóng. Không đổi transient ở đây: Windows
+        # unmap/map lại cửa sổ gây nháy; dialog bị hủy trước khi app chính ẩn.
+        dlg.protocol("WM_DELETE_WINDOW", lambda: None)
+        for child in dlg.winfo_children():
+            child.destroy()
+        ctk.CTkLabel(dlg, text="Đang chuẩn bị cập nhật", font=(_UI_FONT, 20, "bold")).pack(pady=(35, 20))
+        self._update_progress_text = ctk.CTkLabel(
+            dlg, text="Đang dừng tác vụ và lưu kết quả…", wraplength=460)
+        self._update_progress_text.pack(padx=24, pady=12)
+        self._update_progress_bar = ctk.CTkProgressBar(dlg, mode="indeterminate")
+        self._update_progress_bar.pack(fill="x", padx=24, pady=16)
+        self._update_progress_bar.start()
+        ctk.CTkLabel(
+            dlg, text="Cửa sổ tiến trình sẽ luôn hiển thị trong lúc cài đặt.\n"
+                      "Ứng dụng chính sẽ đóng và tự mở lại khi cập nhật xong.",
+            wraplength=460, text_color="gray",
+        ).pack(padx=24, pady=12)
+
+        def prepare():
+            last_report = [0.0]
+
+            def progress(message, ratio):
+                now = time.monotonic()
+                if now - last_report[0] < 0.1:
+                    return
+                last_report[0] = now
+                self._ui(lambda m=message, r=ratio: self._show_update_preparation(m, r))
+
+            try:
+                job = updater.create_job(info)
+                process = updater.launch_helper(job, progress)
+                self._ui(lambda: self._monitor_updater(job, process, info))
+            except Exception as exc:
+                self._ui(lambda e=str(exc): self._restore_update_prompt(info, e))
+
+        threading.Thread(target=prepare, daemon=True).start()
+
+    def _show_update_preparation(self, message: str, ratio):
+        if not self._updater_active:
+            return
+        self._update_progress_text.configure(text=message)
+        if ratio is not None:
+            self._update_progress_bar.stop()
+            self._update_progress_bar.configure(mode="determinate")
+            self._update_progress_bar.set(ratio)
+
+    def _monitor_updater(self, job: dict, process, info: dict):
+        self._updater_job = job
+        self._updater_process = process
+        status = updater.read_status(Path(job["job_dir"]))
+        state = status.get("state")
+        if state == "cancelled" or process.poll() is not None:
+            self._restore_update_prompt(info, status.get("message") or
+                                        ("" if state == "cancelled" else
+                                         "Tiến trình cập nhật chưa mở được. Chi tiết: " + job["job_dir"]))
+            return
+        if state in ("visible", "waiting_parent", "error"):
+            # Independent updater has its own visible window BEFORE this one goes away.
+            if self._update_dialog is not None:
+                self._update_dialog.destroy()
+                self._update_dialog = None
+            self.withdraw()
+        if state == "waiting_parent":
+            thread = self._batch_thread
+            if thread is None or not thread.is_alive():
+                self.destroy()  # Helper waits for this process to actually exit.
+                return
+        self.after(200, lambda: self._monitor_updater(job, process, info))
+
+    def _restore_update_prompt(self, info: dict, error: str):
+        self._updater_active = False
+        self._updater_process = None
+        self._updater_job = None
+        if self._update_dialog is not None:
+            self._update_dialog.destroy()
+        self._show_update_dialog(info, self._update_required)
+        if not self._update_required:
+            self.deiconify()
+            self._btn_process.configure(state="normal")
+            self._recheck_job = self.after(_RECHECK_SECONDS * 1000, self._schedule_recheck)
+        if error:
+            messagebox.showerror("Chưa cập nhật được", error, parent=self._update_dialog)
+
     def _lock_ui_license(self, message: str):
         """Khóa toàn bộ giao diện bằng overlay phủ kín cửa sổ."""
         if self._license_locked:
             return
         self._license_locked = True
+        if self._update_dialog is not None:
+            self._update_dialog.destroy()
+            self._update_dialog = None
 
         # Hủy job đang chờ để không recheck tiếp
         if self._recheck_job is not None:
@@ -1198,13 +1464,22 @@ class App(ctk.CTk):
         return None
 
     def _trim_ui_logs(self) -> list[int]:
-        """Discard the oldest lines and return their pre-trim list indices."""
-        remove_count = len(self._log_entries) - MAX_UI_LOGS
+        """Trim only old non-error lines; return their pre-trim list indices."""
+        normal_indices = [
+            index for index, (cat, _text) in enumerate(self._log_entries)
+            if cat != LOG_ERROR
+        ]
+        remove_count = len(normal_indices) - MAX_UI_LOGS
         if remove_count <= 0:
             return []
 
-        del self._log_entries[:remove_count]
-        return list(range(remove_count))
+        removed_indices = normal_indices[:remove_count]
+        removed = set(removed_indices)
+        self._log_entries[:] = [
+            entry for index, entry in enumerate(self._log_entries)
+            if index not in removed
+        ]
+        return removed_indices
 
     def _visible_log_line(self, entries: list[tuple], index: int, sel: str) -> int:
         """Map an entry index to its one-based line number in the active filter."""
@@ -1436,37 +1711,117 @@ class App(ctk.CTk):
                                         text_color="#4CAF50")
 
     def _pick_audio(self):
-        path = filedialog.askopenfilename(
-            title="Chọn file audio",
+        """Chọn 1 hoặc nhiều file audio; chọn thêm lần nữa sẽ cộng dồn vào danh sách."""
+        paths = filedialog.askopenfilenames(
+            title="Chọn file audio (có thể chọn nhiều)",
             filetypes=[("Audio", "*.mp3 *.wav *.aac *.m4a *.ogg"),
                        ("All", "*.*")],
         )
-        if path:
-            self._audio_path.set(path)
-            self._audio_label.configure(
-                text=f"  {Path(path).name}", text_color="#4CAF50")
-            self._mute_var.set(False)
+        if not paths:
+            return
+        for p in paths:
+            if p not in self._audio_paths:
+                self._audio_paths.append(p)
+        self._audio_path.set(self._audio_paths[0])
+        self._mute_var.set(False)
+        self._refresh_audio_label()
 
     def _clear_audio(self):
+        self._audio_paths = []
         self._audio_path.set("")
-        self._audio_label.configure(text="Chưa chọn file audio",
-                                     text_color="gray")
+        self._refresh_audio_label()
+
+    def _remove_audio(self, path: str):
+        if path in self._audio_paths:
+            self._audio_paths.remove(path)
+        self._audio_path.set(self._audio_paths[0] if self._audio_paths else "")
+        self._refresh_audio_label()
+
+    def _refresh_audio_label(self):
+        """Vẽ lại khung danh sách audio + dòng tóm tắt phía trên."""
+        paths = self._audio_paths
+        for w in self._audio_list.winfo_children():
+            w.destroy()
+
+        if not paths:
+            self._audio_label.configure(
+                text="Chọn nhiều file → random cho từng video",
+                text_color="gray")
+            ctk.CTkLabel(self._audio_list, text="Chưa có file audio nào",
+                         text_color="gray", font=(_UI_FONT, 11),
+                         ).pack(anchor="w", padx=8, pady=6)
+            return
+
+        self._audio_label.configure(
+            text=(f"{len(paths)} audio" + (" (random mỗi video)"
+                                            if len(paths) > 1 else "")),
+            text_color="#4CAF50")
+        for i, p in enumerate(paths, 1):
+            item = ctk.CTkFrame(self._audio_list, fg_color="transparent")
+            item.pack(fill="x", padx=4, pady=(4 if i == 1 else 0, 2))
+            ctk.CTkLabel(item, text=_clean_ui_text(f"{i}. {Path(p).name}", 32),
+                         font=(_UI_FONT, 11), anchor="w",
+                         ).pack(side="left", fill="x", expand=True, padx=(4, 2))
+            ctk.CTkButton(item, text="X", width=24, height=22,
+                          fg_color="#555", hover_color="#c62828",
+                          command=lambda path=p: self._remove_audio(path),
+                          ).pack(side="right")
 
     def _pick_logo(self):
-        path = filedialog.askopenfilename(
-            title="Chọn file logo",
+        """Chọn 1 hoặc nhiều logo; chọn thêm lần nữa sẽ cộng dồn vào danh sách."""
+        paths = filedialog.askopenfilenames(
+            title="Chọn file logo (có thể chọn nhiều)",
             filetypes=[("Image", "*.png *.jpg *.jpeg *.webp"),
                        ("All", "*.*")],
         )
-        if path:
-            self._logo_path.set(path)
-            self._logo_label.configure(
-                text=f"  {Path(path).name}", text_color="#4CAF50")
+        if not paths:
+            return
+        for p in paths:
+            if p not in self._logo_paths:
+                self._logo_paths.append(p)
+        self._logo_path.set(self._logo_paths[0])
+        self._refresh_logo_label()
 
     def _clear_logo(self):
+        self._logo_paths = []
         self._logo_path.set("")
-        self._logo_label.configure(text="Chưa chọn file logo",
-                                    text_color="gray")
+        self._refresh_logo_label()
+
+    def _remove_logo(self, path: str):
+        if path in self._logo_paths:
+            self._logo_paths.remove(path)
+        self._logo_path.set(self._logo_paths[0] if self._logo_paths else "")
+        self._refresh_logo_label()
+
+    def _refresh_logo_label(self):
+        """Vẽ lại khung danh sách logo + dòng tóm tắt phía trên."""
+        paths = self._logo_paths
+        for w in self._logo_list.winfo_children():
+            w.destroy()
+
+        if not paths:
+            self._logo_label.configure(
+                text="Chọn nhiều file → random cho từng video",
+                text_color="gray")
+            ctk.CTkLabel(self._logo_list, text="Chưa có file logo nào",
+                         text_color="gray", font=(_UI_FONT, 11),
+                         ).pack(anchor="w", padx=8, pady=6)
+            return
+
+        self._logo_label.configure(
+            text=(f"{len(paths)} logo" + (" (random mỗi video)"
+                                           if len(paths) > 1 else "")),
+            text_color="#4CAF50")
+        for i, p in enumerate(paths, 1):
+            item = ctk.CTkFrame(self._logo_list, fg_color="transparent")
+            item.pack(fill="x", padx=4, pady=(4 if i == 1 else 0, 2))
+            ctk.CTkLabel(item, text=_clean_ui_text(f"{i}. {Path(p).name}", 32),
+                         font=(_UI_FONT, 11), anchor="w",
+                         ).pack(side="left", fill="x", expand=True, padx=(4, 2))
+            ctk.CTkButton(item, text="X", width=24, height=22,
+                          fg_color="#555", hover_color="#c62828",
+                          command=lambda path=p: self._remove_logo(path),
+                          ).pack(side="right")
 
     def _pick_creds(self):
         path = filedialog.askopenfilename(
@@ -1525,14 +1880,10 @@ class App(ctk.CTk):
             return
         self._login_cancel_flag.set()
         self._login_in_progress = False
-        from drive import get_token_path
-        _TOKEN_PATH = get_token_path()
-        if _TOKEN_PATH.exists():
-            _TOKEN_PATH.unlink()
-            self._login_label.configure(text="Đã đăng xuất", text_color="gray")
-            self._log_msg(" Đã xoá token — đăng nhập lại để dùng Drive.")
-        else:
-            self._login_label.configure(text="Chưa đăng nhập", text_color="gray")
+        from drive import clear_credentials
+        clear_credentials()  # Also invalidates pending refresh/login responses.
+        self._login_label.configure(text="Đã đăng xuất", text_color="gray")
+        self._log_msg(" Đã xoá token — đăng nhập lại để dùng Drive.")
 
     # ── Video list ───────────────────────────────────────────────────────────
 
@@ -1615,6 +1966,8 @@ class App(ctk.CTk):
     # ── Processing ───────────────────────────────────────────────────────────
 
     def _start_processing(self):
+        if self._license_locked or self._update_required or self._updater_active:
+            return
         if not self._videos:
             messagebox.showwarning("Chưa có video", "Import file CSV trước!")
             return
@@ -1713,21 +2066,39 @@ class App(ctk.CTk):
                 "prompt":      prompt,
             }
 
+        audio_paths: list[str] = []
         if voice_ai:
             audio_path = None       # sẽ được gán per-row trong worker
         elif self._mute_var.get():
             audio_path = ""
-        elif self._audio_path.get():
-            audio_path = self._audio_path.get()
+        elif self._audio_paths:
+            audio_paths = [p for p in self._audio_paths if os.path.isfile(p)]
+            if not audio_paths:
+                messagebox.showerror(
+                    "Lỗi", "Không tìm thấy file audio nào đã chọn (đã bị xoá/di chuyển?).")
+                return
+            audio_path = audio_paths[0]   # worker random lại cho từng video
         else:
             audio_path = None
+
+        logo_paths: list[str] = []
+        if self._logo_paths:
+            logo_paths = [p for p in self._logo_paths if os.path.isfile(p)]
+            if not logo_paths:
+                messagebox.showerror(
+                    "Lỗi", "Không tìm thấy file logo nào đã chọn (đã bị xoá/di chuyển?).")
+                return
 
         settings = {
             "trim_start":    trim_start,
             "trim_end":      trim_end,
             "audio_path":    audio_path,
+            "audio_paths":   audio_paths,
             "voice_ai":      voice_ai,
-            "logo_path":     self._logo_path.get() or None,
+            "allow_no_product_name": (
+                self._allow_no_product_name_var.get() and not voice_ai),
+            "logo_path":     logo_paths[0] if logo_paths else None,
+            "logo_paths":    logo_paths,    # worker random lại cho từng video
             "logo_position": self._logo_pos.get(),
             "logo_size":     logo_size,
             "logo_motion":   {"Cố định": "static",
@@ -1759,7 +2130,7 @@ class App(ctk.CTk):
         self._progress_bar.set(0)
         self._progress_pct.configure(text="0 %")
 
-        # Bắt đầu batch mới: bỏ log tiến trình cũ, giữ lỗi còn trong 100 dòng gần nhất.
+        # Bắt đầu batch mới: bỏ log tiến trình cũ, giữ toàn bộ log lỗi.
         self._log_entries[:] = [
             entry for entry in self._log_entries if entry[0] == LOG_ERROR
         ]
@@ -1889,6 +2260,12 @@ class App(ctk.CTk):
         voice_pool = (ThreadPoolExecutor(max_workers=pool_size,
                                          thread_name_prefix="voice")
                       if settings.get("voice_ai") else None)
+        # Nhiều audio → mỗi video lấy ngẫu nhiên 1 file, chia đều (hết 1 vòng
+        # mới lặp lại) để không bị 1 bài lặp liên tục.
+        audio_bag = (_AudioBag(settings.get("audio_paths") or [])
+                     if not settings.get("voice_ai") else None)
+        # Nhiều logo → random cho từng video, chia đều giống audio.
+        logo_bag = _AudioBag(settings.get("logo_paths") or [])
 
         # Mỗi luồng giữ 1 VideoDownloader (tái dùng kết nối HTTP) và 1
         # DriveUploader (khỏi đọc token + dựng service mỗi video). Không chia
@@ -2033,6 +2410,14 @@ class App(ctk.CTk):
             voice_abort  = threading.Event() # tải lỗi → dừng voice của video này
             out_mp3      = os.path.join(tmp_dir, f"voice_{idx}.mp3")
             try:
+                voice_ai = settings.get("voice_ai")
+                if not p_name and (voice_ai or not settings.get("allow_no_product_name", False)):
+                    raise ValueError(
+                        "Voice AI cần tên sản phẩm: ô 'product_name' bị rỗng hoặc không tồn tại trong CSV/Excel"
+                        if voice_ai else
+                        "Ô 'product_name' bị rỗng hoặc không tồn tại trong CSV/Excel. "
+                        "Điền tên sản phẩm hoặc bật 'Render không có tên sản phẩm'.")
+
                 # Client riêng của luồng (tạo 1 lần, tái dùng cho video sau).
                 # Keep this inside the try block so auth/setup failures are
                 # surfaced as a normal per-video error.
@@ -2050,12 +2435,21 @@ class App(ctk.CTk):
                 #    Nếu lỗi sau toàn bộ retry → bỏ qua video hoàn toàn.
                 #    Không fallback về audio gốc.
                 row_settings = settings
-                voice_ai = settings.get("voice_ai")
+                if audio_bag:
+                    row_settings = dict(settings)    # copy riêng, không sửa settings chung
+                    row_settings["audio_path"] = audio_bag.next()
+                    self._log_add(
+                        f"[{idx+1}/{total}] Audio: {Path(row_settings['audio_path']).name}",
+                        LOG_VOICE)
+                if len(logo_bag) > 1:
+                    if row_settings is settings:
+                        row_settings = dict(settings)
+                    row_settings["logo_path"] = logo_bag.next()
+                    self._log_add(
+                        f"[{idx+1}/{total}] Logo: {Path(row_settings['logo_path']).name}",
+                        LOG_PROCESS)
                 if voice_ai:
                     prompt_txt = voice_ai.get("prompt", "")
-                    if re.search(r"\$?\{\s*(product_name|productName)\s*\}", prompt_txt) and not p_name:
-                        raise RuntimeError(
-                            f"Voice AI bỏ qua: ô 'product_name' bị rỗng trong CSV")
 
                     # Lời thoại sinh xong → log nhãn "Tạo text"; retry Gemini cũng
                     # về "Tạo text", còn lại (TTS) về "Tạo voice".
@@ -2081,9 +2475,9 @@ class App(ctk.CTk):
                         provider=voice_ai.get("provider", "google"),
                         voice_name=voice_ai["voice_name"],
                         speaking_rate=voice_ai["speed"],
-                        retries=7,
-                        tts_retries=7,
-                        tts_backoff=2,
+                        retries=5,
+                        tts_retries=5,
+                        tts_backoff=1,
                         log=_voice_log,
                         on_script=_on_script,
                         should_stop=lambda: (self._cancel_event.is_set()
@@ -2122,7 +2516,7 @@ class App(ctk.CTk):
                     voice_future.result()            # chờ voice xong / ném lỗi
                     voice_future = None              # đã dùng → tự dọn ở dưới
                     voice_mp3 = out_mp3
-                    row_settings = dict(settings)    # copy riêng, không sửa settings chung
+                    row_settings = dict(row_settings)  # copy riêng, giữ logo đã random
                     row_settings["audio_path"] = out_mp3   # thay audio gốc
                     self._log_add(
                         f"OK  [{idx+1}/{total}] Tạo voice xong: {name}", LOG_VOICE)
@@ -2431,6 +2825,35 @@ def _safe_remove(path: str):
         pass
 
 
+class _AudioBag:
+    """Phát ngẫu nhiên audio cho từng video, chia đều: xáo trộn cả danh sách,
+    lấy lần lượt hết 1 vòng rồi mới xáo lại. Thread-safe (nhiều worker)."""
+
+    def __init__(self, paths, rng: random.Random | None = None):
+        self._paths = list(paths)
+        self._rng = rng or random.Random()
+        self._deck: list[str] = []
+        self._last = None
+        self._lock = threading.Lock()
+
+    def __bool__(self):
+        return bool(self._paths)
+
+    def __len__(self):
+        return len(self._paths)
+
+    def next(self) -> str:
+        with self._lock:
+            if not self._deck:
+                self._deck = list(self._paths)
+                self._rng.shuffle(self._deck)
+                # Tránh 2 video liền nhau cùng 1 bài ở chỗ nối giữa 2 vòng.
+                if len(self._deck) > 1 and self._deck[-1] == self._last:
+                    self._deck[0], self._deck[-1] = self._deck[-1], self._deck[0]
+            self._last = self._deck.pop()
+            return self._last
+
+
 def _clean_rows(headers: list, rows) -> list[dict]:
     """Ghép header + dòng thành dict; bỏ dòng trống (toàn ô rỗng/khoảng
     trắng) và ô thừa không có tên cột."""
@@ -2529,6 +2952,7 @@ class LicenseDialog(ctk.CTk):
                 pass
         self.activated = False
         self.activated_data = None
+        self.after(100, lambda: updater.acknowledge_startup(license_mod.APP_VERSION))
 
         self.title("Kích hoạt bản quyền")
         self.geometry("420x300")
@@ -2586,6 +3010,12 @@ class LicenseDialog(ctk.CTk):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--self-test":
+        from packaging_smoke import run
+        raise SystemExit(0 if run(Path(sys.argv[2])) else 1)
+    if len(sys.argv) == 3 and sys.argv[1] == "--reup-updater":
+        updater.run_worker(Path(sys.argv[2]))
+        return
     # Bản KHÁCH: chỉ cho mở 1 instance. Bản PRO: cho mở nhiều instance/tab thoải mái
     if not IS_PRO and not single_instance.acquire():
         try:
@@ -2606,8 +3036,16 @@ def main():
         # Cổng bản quyền: kiểm tra key lúc mở app (chặt — mất mạng = không vào được)
         while True:
             status = license_mod.check_license()
+            if status.get("state_changed"):
+                continue
+            if status.get("storage_error"):
+                root = ctk.CTk()
+                root.withdraw()
+                messagebox.showerror("Lỗi dữ liệu bản quyền", status["message"], parent=root)
+                root.destroy()
+                return
             if status["is_valid"]:
-                app = App(license_data=status["data"])
+                app = App(license_data=status["data"], update_info=status.get("update"))
                 app.mainloop()
                 # Cửa sổ đã đóng nhưng luồng batch (daemon) có thể còn đang
                 # dọn dẹp + ghi CSV — chờ nó xong để không mất kết quả.
@@ -2621,6 +3059,7 @@ def main():
                 # không bắt nhập lại key.
                 root = ctk.CTk()
                 root.withdraw()
+                root.after(100, lambda: updater.acknowledge_startup(license_mod.APP_VERSION))
                 retry = messagebox.askretrycancel(
                     "Không kết nối được máy chủ bản quyền",
                     "Không thể xác minh bản quyền do lỗi kết nối mạng.\n"
@@ -2649,7 +3088,8 @@ if __name__ == "__main__":
         # chẩn đoán khi chạy không có console (double-click không hiện traceback).
         _write_crash(tb)
         # In ra stderr (hiện khi chạy từ terminal)
-        sys.stderr.write(tb)
+        if sys.stderr is not None:
+            sys.stderr.write(tb)
         # Cố hiển thị hộp thoại nếu Tk còn dùng được
         try:
             messagebox.showerror("Lỗi khởi động", tb)

@@ -14,8 +14,8 @@ cd "$(dirname "$0")"
 read_const() {   # read_const <file> <NAME>
     python3 -c "import re, sys; m = re.search(r'^' + sys.argv[2] + r'\s*=\s*[\"\x27]([^\"\x27]+)', open(sys.argv[1], encoding='utf-8').read(), re.M); print(m.group(1) if m else '')" "$1" "$2"
 }
-VERSION="$(read_const main.py APP_VERSION)"
-VERSION="${VERSION:-v1.0.1}"
+VERSION="$(read_const license.py APP_VERSION)"
+VERSION="v${VERSION:-1.0.5}"
 if [ "$(read_const license.py APP_ID)" = "tool_reup_video_pro" ]; then
     APP_BASE="RenderVideoReupPro"
     APP_TITLE="Render Video Reup Pro $VERSION"

@@ -28,11 +28,22 @@ class _Textbox:
     def configure(self, **_kwargs):
         pass
 
-    def insert(self, _position, text):
-        self.content += text
+    def _offset(self, position):
+        if position == "end":
+            return len(self.content)
+        line, column = position.split(".")
+        lines = self.content.splitlines(keepends=True)
+        start = sum(len(text) for text in lines[:int(line) - 1])
+        if column == "end":
+            return start + len(lines[int(line) - 1].rstrip("\n"))
+        return start + int(column)
 
-    def delete(self, _start, _end):
-        self.content = ""
+    def insert(self, position, text):
+        offset = self._offset(position)
+        self.content = self.content[:offset] + text + self.content[offset:]
+
+    def delete(self, start, end):
+        self.content = self.content[:self._offset(start)] + self.content[self._offset(end):]
 
     def see(self, _position):
         pass
@@ -81,16 +92,53 @@ class LogOptimizationTests(unittest.TestCase):
             ]
             retry = [text for text in normal if "Tải lần" in text]
 
-            # UI chỉ giữ MAX_UI_LOGS dòng mới nhất (tính cả lỗi); lỗi đầy đủ
-            # vẫn nằm trong app_error.log.
-            self.assertEqual([], errors)
+            # Errors do not count towards the limit and stay on screen and disk.
+            self.assertEqual(1000, main.MAX_UI_LOGS)
+            self.assertEqual(50, len(errors))
             self.assertEqual(main.MAX_UI_LOGS, len(normal))
+            self.assertTrue(normal[0].endswith("progress 501"))
             self.assertEqual(1, len(retry))
             self.assertTrue(retry[0].endswith("[1/1] ! Tải lần 10/10"))
+            self.assertEqual(
+                [text for _cat, text in app._log_entries],
+                app._log.content.splitlines(),
+            )
 
             error_file = Path(tmp) / "app_error.log"
             persisted = error_file.read_text(encoding="utf-8")
             self.assertEqual(50, persisted.count("X error detail"))
+
+    def test_trimming_interleaved_errors_preserves_each_filtered_view(self):
+        for selected in (main.LOG_FILTER_ALL, main.LOG_ERROR, main.LOG_PROCESS):
+            with self.subTest(selected=selected), patch("main.MAX_UI_LOGS", 3), patch(
+                "main.App._append_error_log"
+            ):
+                app = _make_app()
+                app._log_filter.value = selected
+                for index in range(8):
+                    app._log_add(f"failure {index}", main.LOG_ERROR)
+                    app._log_add(f"progress {index}", main.LOG_PROCESS)
+
+                self.assertEqual(8, sum(cat == main.LOG_ERROR for cat, _ in app._log_entries))
+                self.assertEqual(
+                    [f"progress {index}" for index in (5, 6, 7)],
+                    [text[11:] for cat, text in app._log_entries if cat != main.LOG_ERROR],
+                )
+                expected = [
+                    text for cat, text in app._log_entries
+                    if app._is_log_match(selected, cat, text)
+                ]
+                self.assertEqual(expected, app._log.content.splitlines())
+                app._render_log()
+                self.assertEqual(expected, app._log.content.splitlines())
+
+    def test_error_history_can_exceed_normal_log_limit(self):
+        app = _make_app()
+        errors = [(main.LOG_ERROR, f"failure {index}") for index in range(1500)]
+        app._log_entries[:] = errors
+
+        self.assertEqual([], app._trim_ui_logs())
+        self.assertEqual(errors, app._log_entries)
 
     def test_parallel_video_retry_lines_do_not_overwrite_each_other(self):
         app = _make_app()

@@ -1,7 +1,7 @@
 """
 drive.py - Google Drive uploader using OAuth 2.0 (Desktop app credentials).
 
-First run: opens browser for Google login → saves token.json next to the exe.
+First run: opens browser for Google login → saves token.json in the per-user profile.
 Subsequent runs: uses saved token automatically (refreshes if expired).
 
 Files are uploaded to the authenticated user's own Drive → no quota issue.
@@ -20,6 +20,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
+import app_paths
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -50,7 +51,7 @@ def _is_retryable_drive_error(exc: Exception) -> bool:
 
 # Lỗi tầng mạng (mất kết nối, TLS bị cắt ngang, timeout...).  Không phải lỗi
 # của Drive nên không tính vào ngân sách retry rate-limit; dùng ngân sách riêng:
-# tối đa 5 lần, chờ cố định 2s giữa các lần thử.
+# tối đa 5 lần, chờ cố định 1s giữa các lần thử.
 _NETWORK_ERRORS = (
     ssl.SSLError,            # gồm SSLEOFError, SSLZeroReturnError...
     ConnectionError,         # ConnectionReset/Aborted/Refused, BrokenPipe
@@ -58,7 +59,7 @@ _NETWORK_ERRORS = (
     TimeoutError,
     http.client.HTTPException,  # RemoteDisconnected, IncompleteRead...
 )
-NETWORK_RETRY_WAITS = (2.0,) * 5
+NETWORK_RETRY_WAITS = (1.0,) * 5
 
 
 def _is_network_error(exc: Exception) -> bool:
@@ -117,34 +118,16 @@ def _bundle_dir() -> Path:
 
 
 def _exe_dir() -> Path:
-    """
-    Where runtime files (token.json) live — a WRITABLE folder.
-    - AppImage: mount is read-only → write next to the .AppImage file
-      ($APPIMAGE); fall back to ~/.config/VideoReupTool if not writable.
-    - Other frozen (Windows exe / onedir): next to the executable.
-    - Dev: next to this source file.
-    """
-    appimg = os.environ.get("APPIMAGE")
-    if appimg:
-        here = Path(appimg).parent
-        if os.access(str(here), os.W_OK):
-            return here
-        import license as license_mod
-        _cfg_name = "RenderVideoReupPro" if getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro" else "RenderVideoReup"
-        cfg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config")) / _cfg_name
-        try:
-            cfg.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            pass
-        return cfg
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
-    return Path(__file__).parent
+    return app_paths.get_data_dir()
 
 
 # Public path so main.py can reference it for logout
 def get_token_path() -> Path:
-    return _exe_dir() / "token.json"
+    return app_paths.auth_path("token.json")
+
+
+def clear_credentials():
+    app_paths.delete_auth(get_token_path())
 
 
 def _secret_path() -> Path:
@@ -221,26 +204,24 @@ def _get_credentials(should_stop=None) -> Credentials:
     token = get_token_path()
     creds: Credentials | None = None
 
+    revision = None
+
     def _read_token() -> Credentials | None:
-        if not token.exists():
+        nonlocal revision
+        data, revision = app_paths.read_auth(token, should_stop)
+        if data is None:
             return None
         try:
-            return Credentials.from_authorized_user_file(str(token), SCOPES)
+            return Credentials.from_authorized_user_info(data, SCOPES)
         except Exception:
             # A prior crash can leave a truncated token.  Treat it as absent so
             # the user can authenticate again instead of blocking every worker.
             return None
 
     def _write_token(value: Credentials) -> None:
-        tmp = token.with_name(f"{token.name}.{threading.get_ident()}.tmp")
-        try:
-            tmp.write_text(value.to_json(), encoding="utf-8")
-            os.replace(tmp, token)
-        finally:
-            try:
-                tmp.unlink(missing_ok=True)
-            except OSError:
-                pass
+        import json
+        if not app_paths.write_auth(token, json.loads(value.to_json()), revision, should_stop):
+            raise RuntimeError("Thông tin đăng nhập Drive đã thay đổi hoặc đã đăng xuất ở cửa sổ khác. Vui lòng thử lại.")
 
     # Serialize token access and OAuth, but let superseded login attempts stop
     # both while waiting for the lock and while waiting for the browser.
@@ -285,7 +266,7 @@ class DriveUploader:
         meta   = {"name": name, "mimeType": MIME_DIR}
         net_attempt = 0
         attempt = 0
-        while attempt < 7:
+        while attempt < 5:
             if should_stop and should_stop():
                 raise RuntimeError("Đã dừng theo yêu cầu")
             try:
@@ -304,12 +285,12 @@ class DriveUploader:
                         raise RuntimeError("Đã dừng theo yêu cầu")
                     continue
                 attempt += 1
-                if not _is_retryable_drive_error(exc) or attempt >= 7:
+                if not _is_retryable_drive_error(exc) or attempt >= 5:
                     raise
-                wait = 2.0   # chờ cố định 2s giữa các lần thử
+                wait = 1.0   # chờ cố định 1s giữa các lần thử
                 if log:
                     log(f"! Drive quá tải, thử tạo folder lại sau {wait:.1f}s "
-                        f"({attempt}/7)")
+                        f"({attempt}/5)")
                 if not _wait_or_stop(wait, should_stop):
                     raise RuntimeError("Đã dừng theo yêu cầu")
 

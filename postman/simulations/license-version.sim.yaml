@@ -1,0 +1,5 @@
+simulation: license-version
+routing: path
+mocks:
+  - routeKey: license
+    path: ../mocks/license-version/config.yaml

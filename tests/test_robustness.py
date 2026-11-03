@@ -80,8 +80,8 @@ class SafeFilenameTests(unittest.TestCase):
 
 class LicenseNetworkTests(unittest.TestCase):
     def test_network_error_keeps_saved_key(self):
-        with patch("license.load_saved_key", return_value="KEY"), \
-                patch("license.validate_key",
+        license_mod.save_key("KEY")
+        with patch("license.validate_key",
                       return_value={"status": 0, "network_error": True}), \
                 patch("license.clear_key") as clear:
             result = license_mod.check_license()
@@ -90,8 +90,8 @@ class LicenseNetworkTests(unittest.TestCase):
         self.assertFalse(result["is_valid"])
 
     def test_invalid_key_is_cleared(self):
-        with patch("license.load_saved_key", return_value="KEY"), \
-                patch("license.validate_key",
+        license_mod.save_key("KEY")
+        with patch("license.validate_key",
                       return_value={"status": 0, "message": "Key sai"}), \
                 patch("license.clear_key") as clear:
             license_mod.check_license()

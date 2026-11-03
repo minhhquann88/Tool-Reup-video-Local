@@ -134,6 +134,30 @@ _TIKTOK_EXPIRY_RE = re.compile(
 _PERMANENT_HTTP_STATUS = (401, 403, 404, 410)
 
 
+def _is_expired_cert_error(exc) -> bool:
+    """
+    True nếu lỗi do chứng chỉ SSL của máy chủ ĐÃ HẾT HẠN (X509 code 10).
+    Chỉ trường hợp này mới được phép tải lại không kiểm tra chứng chỉ —
+    sai tên miền, tự ký, CA lạ… vẫn bị từ chối như bình thường.
+    """
+    import ssl
+    seen, stack = set(), [exc]
+    while stack:
+        e = stack.pop()
+        if e is None or id(e) in seen:
+            continue
+        seen.add(id(e))
+        if isinstance(e, ssl.SSLCertVerificationError):
+            if getattr(e, "verify_code", None) == 10:
+                return True
+            continue
+        if isinstance(e, BaseException):
+            stack.extend([e.__cause__, e.__context__,
+                          getattr(e, "reason", None)])
+            stack.extend(a for a in e.args if isinstance(a, BaseException))
+    return False
+
+
 def link_expiry(url: str):
     """Mốc hết hạn (epoch giây) của link TikTok CDN, None nếu không có."""
     m = _TIKTOK_EXPIRY_RE.search(url or "")
@@ -580,7 +604,7 @@ class VideoDownloader:
         self.last_info = None
         self.session = requests.Session()
         # Retry tự động ngay ở tầng mạng/urllib3 khi gặp lỗi SSL handshake, connection reset, hoặc server lỗi
-        # Vòng thử lại chính nằm trong download() (7 lần); ở tầng urllib3 chỉ
+        # Vòng thử lại chính nằm trong download() (5 lần); ở tầng urllib3 chỉ
         # thử nhẹ. Retry lồng nhau 5×7 với timeout 60s từng khiến 1 link chết
         # chiếm luồng hàng chục phút.
         retries = Retry(
@@ -597,7 +621,7 @@ class VideoDownloader:
         self.session.mount("https://", adapter)
 
     def download(self, url: str, output_path: str,
-                 progress_cb=None, retries: int = 7, log=None,
+                 progress_cb=None, retries: int = 5, log=None,
                  should_stop=None) -> str:
         """
         Download *url* to *output_path*.
@@ -615,6 +639,10 @@ class VideoDownloader:
         # link còn hạn) — chỉ dùng mốc hết hạn để giải thích khi CDN trả 403.
         expiry = link_expiry(req_url)
 
+        # False sau khi máy chủ trả chứng chỉ SSL hết hạn (giống bấm "vẫn
+        # truy cập" trên trình duyệt); file tải về vẫn qua ffprobe ở bước (4).
+        verify = True
+
         last_err = None
         for attempt in range(1, retries + 1):
             if should_stop and should_stop():
@@ -623,7 +651,7 @@ class VideoDownloader:
             try:
                 resp = self.session.get(
                     req_url, stream=True, headers=self.HEADERS,
-                    timeout=(20, 120), allow_redirects=True
+                    timeout=(20, 120), allow_redirects=True, verify=verify
                 )
                 resp.raise_for_status()
 
@@ -644,7 +672,7 @@ class VideoDownloader:
                         log(f"   ↻ Trang HTML → dùng link gốc: {real}")
                     resp = self.session.get(
                         real, stream=True, headers=self.HEADERS,
-                        timeout=(20, 120), allow_redirects=True
+                        timeout=(20, 120), allow_redirects=True, verify=verify
                     )
                     resp.raise_for_status()
                     ctype = (resp.headers.get("Content-Type") or "").lower()
@@ -695,6 +723,15 @@ class VideoDownloader:
                 last_err = exc
                 if should_stop and should_stop():
                     break
+                if verify and _is_expired_cert_error(exc):
+                    import urllib3
+                    urllib3.disable_warnings(
+                        urllib3.exceptions.InsecureRequestWarning)
+                    verify = False
+                    if log:
+                        log("! Chứng chỉ SSL của máy chủ video đã hết hạn "
+                            "→ tải lại bỏ qua kiểm tra chứng chỉ")
+                    continue
                 if log:
                     log(f"! Tải lần {attempt}/{retries} lỗi: {short_reason(exc, 'DL')}")
                 status = getattr(getattr(exc, "response", None), "status_code", None)
@@ -706,10 +743,8 @@ class VideoDownloader:
                             f" — cần lấy link mới (HTTP {status})")
                     break   # link hết hạn/bị chặn: thử lại cũng vô ích
                 if attempt < retries:
-                    # Chờ cố định 2s giữa các lần thử (mặc định).
-                    for _ in range(2):
-                        if should_stop and should_stop():
-                            break
+                    # Chờ cố định 1s giữa các lần thử.
+                    if not (should_stop and should_stop()):
                         time.sleep(1)
             finally:
                 if resp is not None:

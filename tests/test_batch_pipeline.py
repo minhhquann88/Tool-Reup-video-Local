@@ -39,12 +39,14 @@ class BatchPipelineTests(unittest.TestCase):
         self.uploader_inits = 0
         self.voice_fail_for = set()
         self.logs = []
+        self.seen_settings = []          # settings mỗi lần encode
 
     def _make_app(self):
         test = self
 
         class FakeProcessor:
             def process_video(self, src, out, settings, should_stop=None, info=None):
+                test.seen_settings.append(dict(settings))
                 with test.encode:
                     time.sleep(0.05)
                 with open(out, "wb") as fh:
@@ -118,14 +120,18 @@ class BatchPipelineTests(unittest.TestCase):
             patch.object(drive, "DriveUploader", FakeUploader),
         ]
 
-    def _run(self, n, workers, save_mode="local", voice=False):
-        videos = [{"item_id": f"id{i}", "video_url": f"http://x/{i}",
-                   "product_name": f"P{i}"} for i in range(n)]
+    def _run(self, n, workers, save_mode="local", voice=False,
+             videos=None, allow_no_product_name=False, extra=None):
+        if videos is None:
+            videos = [{"item_id": f"id{i}", "video_url": f"http://x/{i}",
+                       "product_name": f"P{i}"} for i in range(n)]
         settings = {
             "save_mode": save_mode, "videos_snapshot": videos,
             "workers": workers, "delay": 0, "local_dir": self.tmp,
             "folder_name": "out", "csv_out": os.path.join(self.tmp, "o.csv"),
+            "allow_no_product_name": allow_no_product_name,
         }
+        settings.update(extra or {})
         if voice:
             settings["voice_ai"] = {
                 "prompt": "", "ai_key": "k", "tts_key": "k", "model": "m",
@@ -141,6 +147,44 @@ class BatchPipelineTests(unittest.TestCase):
             for p in ps:
                 p.stop()
         return app
+
+    @staticmethod
+    def _unnamed_videos():
+        videos = [{"item_id": "id0", "video_url": "http://x/0"}]
+        for i, value in enumerate(("", "   ", None, "nan", float("nan"), "None"), 1):
+            videos.append({"item_id": f"id{i}", "video_url": f"http://x/{i}",
+                           "product_name": value})
+        return videos
+
+    def test_missing_product_names_are_rejected_when_option_is_off(self):
+        videos = self._unnamed_videos()
+        self._run(len(videos), workers=2, videos=videos)
+        self.assertEqual([], os.listdir(os.path.join(self.tmp, "out")))
+        self.assertEqual([], self.events)
+        self.assertTrue(any("product_name" in m for m in self.logs))
+
+    def test_missing_product_names_render_when_option_is_on(self):
+        videos = self._unnamed_videos()
+        self._run(len(videos), workers=2, videos=videos,
+                  allow_no_product_name=True)
+        self.assertEqual([f"id{i}.mp4" for i in range(len(videos))],
+                         sorted(os.listdir(os.path.join(self.tmp, "out"))))
+
+    def test_voice_requires_product_name_even_with_option_on_and_custom_prompt(self):
+        # The fake Voice AI prompt has no product_name placeholder. Validation
+        # must still happen before downloading or spending a voice request.
+        videos = self._unnamed_videos()
+        self._run(len(videos), workers=2, videos=videos, voice=True,
+                  allow_no_product_name=True)
+        self.assertEqual([], os.listdir(os.path.join(self.tmp, "out")))
+        self.assertEqual([], self.events)
+        self.assertTrue(any("Voice AI cần tên sản phẩm" in m for m in self.logs))
+
+    def test_product_name_alias_is_still_accepted(self):
+        videos = [{"item_id": "id0", "video_url": "http://x/0",
+                   "productName": "Tên sản phẩm"}]
+        self._run(1, workers=1, videos=videos, voice=True)
+        self.assertEqual(["id0.mp4"], os.listdir(os.path.join(self.tmp, "out")))
 
     def test_encode_concurrency_equals_user_setting(self):
         self._run(12, workers=2)
@@ -222,6 +266,21 @@ class BatchPipelineTests(unittest.TestCase):
         t0 = time.monotonic()
         self._run(40, workers=2, save_mode="drive")
         self.assertLess(time.monotonic() - t0, 5)
+
+    def test_multiple_logos_are_spread_across_videos(self):
+        logos = ["a.png", "b.png", "c.png"]
+        self._run(6, workers=2,
+                  extra={"logo_path": logos[0], "logo_paths": logos})
+        used = sorted(st["logo_path"] for st in self.seen_settings)
+        self.assertEqual(sorted(logos * 2), used)
+
+    def test_random_logo_survives_voice_ai_audio(self):
+        logos = ["a.png", "b.png"]
+        self._run(4, workers=2, voice=True,
+                  extra={"logo_path": logos[0], "logo_paths": logos})
+        self.assertEqual(sorted(logos * 2),
+                         sorted(st["logo_path"] for st in self.seen_settings))
+        self.assertTrue(all(st["audio_path"] for st in self.seen_settings))
 
 
 if __name__ == "__main__":

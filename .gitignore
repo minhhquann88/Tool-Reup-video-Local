@@ -19,15 +19,24 @@ client_secret.json
 build/
 dist/
 *.spec
+!packaging/windows-onefile.spec
 
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
 .venv/
+.venv-build-windows/
 venv/
 env/
 
 # ── Temp files created by the app ─────────────────────────────────────────────
 _tmp_*.mp4
 reup_*/
+
+# ── Log / file cá nhân / công cụ agent (không thuộc mã nguồn) ─────────────────
+app_error.log
+crash.log
+*.mp3
+.agents/
+skills-lock.json

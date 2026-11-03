@@ -1,5 +1,7 @@
 # Kế Hoạch Xử Lý Triệt Để Lỗi X11 BadLength (Tối Ưu Log UI & Phân Loại Storage)
 
+Đã triển khai: giữ 1.000 dòng log thường gần nhất và toàn bộ log lỗi trong phiên chạy, kể cả khi bắt đầu batch mới. Khi đóng ứng dụng, có thể xem lại lỗi trong `app_error.log` tại thư mục dữ liệu người dùng (`%LOCALAPPDATA%\RenderVideoReupPro` trên Windows bản Pro); lịch sử trên UI bắt đầu lại khi mở ứng dụng.
+
 Ứng dụng bị crash trên Ubuntu với lỗi `X Error of failed request: BadLength (RenderAddGlyphs)` do ô hiển thị Log trên giao diện (Widget `CTkTextbox`) tích tụ quá nhiều dòng văn bản (đặc biệt là các dòng thông báo thử lại / retry lặp đi lặp lại), vượt quá dung lượng gói tin request bộ đệm của X11 Server.
 
 Tài liệu này lưu trữ quy tắc quản lý Log chi tiết được thống nhất để triển khai cho hệ thống:

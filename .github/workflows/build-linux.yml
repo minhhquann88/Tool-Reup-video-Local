@@ -68,4 +68,4 @@ jobs:
             dist/*.AppImage \
             --title "${GITHUB_REF_NAME}" \
             --notes "AppImage cho Linux (Ubuntu 22.04+ / glibc 2.35+). Tải file về, chuột phải → Properties → Permissions → tick 'Allow executing file as program' → double-click để mở." \
-            --clobber
+            || gh release upload "${GITHUB_REF_NAME}" dist/*.AppImage --clobber

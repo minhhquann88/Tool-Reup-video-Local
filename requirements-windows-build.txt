@@ -1,0 +1,11 @@
+# Known build toolchain and direct dependencies for the standalone Windows EXE.
+pyinstaller==6.22.2
+pyinstaller-hooks-contrib==2026.6
+customtkinter==6.0.0
+requests==2.34.2
+Pillow==12.3.0
+google-api-python-client==2.198.0
+google-auth==2.56.3
+google-auth-httplib2==0.4.1
+google-auth-oauthlib==1.4.0
+openpyxl==3.1.5

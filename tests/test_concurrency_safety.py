@@ -102,12 +102,12 @@ class DriveTokenTests(unittest.TestCase):
             secret = root / "client_secret.json"
             token = root / "token.json"
             secret.write_text("{}", encoding="utf-8")
-            token.write_text("saved-token", encoding="utf-8")
+            token.write_text('{"token": "saved-token"}', encoding="utf-8")
 
             with patch("drive._secret_path", return_value=secret), patch(
                 "drive.get_token_path", return_value=token
             ), patch(
-                "drive.Credentials.from_authorized_user_file",
+                "drive.Credentials.from_authorized_user_info",
                 return_value=FakeCredentials(),
             ), patch("drive.InstalledAppFlow.from_client_secrets_file") as flow:
                 result = drive._get_credentials()

@@ -21,7 +21,7 @@ python -m pytest tests
 python -m pytest tests/test_encode_args.py
 python -m pytest tests/test_batch_pipeline.py -k <name>
 
-# Build Windows exe (PyInstaller onedir, requires client_secret.json + bin/ffmpeg.exe)
+# Build one standalone Windows EXE, including isolated dependencies + frozen self-test
 build.bat
 # Build Linux AppImage (PACKAGE=tar for .tar.gz); Docker variant uses ubuntu:22.04
 bash build_linux.sh
@@ -37,8 +37,11 @@ CI (`.github/workflows/build-linux.yml`) builds the AppImage on ubuntu-22.04 on 
 - **`main.py`** (~2.6k lines) holds the entire GUI (`App`, `VideoRow`, `LicenseDialog`), the batch pipeline (`App._run_batch`), CSV/XLSX input and output, and the `main()` entry point (single-instance check, then the license gate loop, then `App`).
 - **`core.py`**: `VideoProcessor` builds and runs the FFmpeg commands (logo motion, position and opacity tables live here) and `VideoDownloader` handles HTTP, Google Drive and TikTok link downloads. Both are cancellable through `cancel_active()`.
 - **`tts.py`**: generates a voiceover script from a CSV row with Gemini or OpenAI (`replace_prompt_variables` fills `{column}` placeholders), then synthesizes it with one of several TTS providers (Google TTS, autovoice.vn, videoai). The result is validated with `_validate_audio_file`.
-- **`drive.py`**: `DriveUploader` handles OAuth desktop flow with `client_secret.json` and `token.json` stored next to the exe, folder creation, uploads and network retries. Drive clients are **not thread-safe**, so each worker thread keeps its own instance in thread-local storage.
+- **`drive.py`**: `DriveUploader` handles OAuth desktop flow with bundled `client_secret.json` and per-user `token.json`, folder creation, uploads and network retries. Drive clients are **not thread-safe**, so each worker thread keeps its own instance in thread-local storage.
+- **`app_paths.py`**: fixed per-user paths shared by source and frozen builds, legacy auth migration, cross-process file locking, atomic writes, revision checks and logout tombstones. Tests isolate profile paths and legacy lookup; never migrate real credentials in a test.
 - **`license.py`**: checks the key against `key.byscom.vn`. The API always returns HTTP 200, so read `status` in the JSON body. `APP_ID == "tool_reup_video_pro"` defines `IS_PRO`, which changes behavior across the app (see below). The app rechecks the license periodically, and the interval can be overridden with the `LICENSE_RECHECK_SECONDS`, `LICENSE_RETRY_SECONDS` and `LICENSE_MAX_RETRIES` environment variables.
+- **`updater.py`**: independent updater process with its own Tk progress window. It downloads and stages releases, waits for the parent app to save/exit, transactionally replaces program files, then waits for the new GUI's version handshake before closing. Windows onefile helpers copy just the EXE and reset PyInstaller's runtime environment; onedir helpers copy their runtime too. User data stays untouched. See `docs/KIEM_TRA_PHIEN_BAN.md` for release formats and local HTTP simulation tests.
+- **`build_windows.py`**, **`packaging/windows-onefile.spec`**: isolated Windows build with pinned direct dependencies, resource validation and an actual frozen EXE self-test (`packaging_smoke.py`). See `docs/BUILD_WINDOWS.md`.
 - **`error_text.py`**: `explain(exc, stage)` and `short_reason()` turn exceptions into short Vietnamese messages with an error code (for example `NET-DRIVE`). Full tracebacks go to `app_error.log`.
 - **`single_instance.py`**: uses a kernel mutex on Windows and an abstract socket on Linux. It is enforced only in the non-Pro build.
 
@@ -56,13 +59,13 @@ Stop requests go through `self._cancel_event`, and every long operation accepts 
 
 ### Threading rule
 
-Only the Tk thread may touch widgets. Background code must call `self._ui(lambda: ...)`, which queues work drained every 25 ms by `_drain_ui_queue`. Logging goes through `_log_msg`/`_log_add` with a category from `LOG_CATS`. The UI keeps only the last `MAX_UI_LOGS` lines.
+Only the Tk thread may touch widgets. Background code must call `self._ui(lambda: ...)`, which queues work drained every 25 ms by `_drain_ui_queue`. Logging goes through `_log_msg`/`_log_add` with a category from `LOG_CATS`. The UI keeps the last `MAX_UI_LOGS` (1,000) non-error lines and all errors for the current app session, including across batches. Errors also append to `app_error.log` on disk.
 
 ### Paths and frozen builds
 
 Each module has its own `_app_dir`/`_bundle_dir`/`_exe_dir` helper:
 - Bundled assets (`bin/`, icons, fontconfig) come from `sys._MEIPASS` when frozen.
-- User files (`token.json`, `license.json`, `app_error.log`) live next to the exe or AppImage.
+- User auth files and logs live in `%LOCALAPPDATA%/RenderVideoReupPro` on Windows or `${XDG_CONFIG_HOME:-~/.config}/RenderVideoReupPro` on Linux (standard edition uses `RenderVideoReup`). Migration and concurrency details are in `docs/KE_HOACH_LUU_DU_LIEU_UNG_DUNG.md`.
 
 Keep this split when adding resources. Also add any new resource to the `--add-data` lists in `build.bat` and `build_linux.sh`.
 

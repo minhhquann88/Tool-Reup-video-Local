@@ -20,7 +20,13 @@ FILES=(
     core.py
     drive.py
     license.py
+    app_paths.py
     tts.py
+    updater.py
+    packaging_smoke.py
+    single_instance.py
+    error_text.py
+    linux-fontconfig.conf
     setup_ffmpeg.py
     requirements.txt
     run_linux.sh
