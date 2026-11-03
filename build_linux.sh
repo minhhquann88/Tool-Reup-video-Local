@@ -6,8 +6,14 @@
 #   - PyInstaller KHÔNG cross-compile: phải chạy script này TRÊN Linux.
 #   - Để tương thích máy cũ, build trên bản Ubuntu CŨ NHẤT cần hỗ trợ
 #     (hoặc dùng Docker ubuntu:20.04 — xem docs/BUILD_LINUX.md).
+#   - Chọn bản: EDITION=pro (mặc định) hoặc EDITION=khach (bản thường), ví dụ
+#         EDITION=khach bash build_linux.sh
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Bản build: đóng cứng vào gói qua _edition_stamp.py (edition.py đọc biến này
+# để đặt tên/tiêu đề; giá trị sai → python báo lỗi và script dừng).
+export REUP_EDITION="${EDITION:-${REUP_EDITION:-pro}}"
 
 # Đọc APP_VERSION bằng regex — KHÔNG "import main" vì lúc này chưa cài thư viện
 # (customtkinter...). Tên/tiêu đề lấy từ edition.py (không phụ thuộc thư viện ngoài).
@@ -107,10 +113,15 @@ echo
 echo "[2/4] Đóng gói PyInstaller..."
 rm -rf "$BUILD_DIR/$APP" "$DIST_DIR/$APP" "dist/$APP" "$APP.spec" 2>/dev/null || true
 mkdir -p "$DIST_DIR" "dist"
+# _edition_stamp.py nằm NGOÀI thư mục nguồn → không ảnh hưởng lần chạy mã nguồn sau.
+STAMP_DIR="$BUILD_DIR/edition-stamp/$REUP_EDITION"
+"$VENV_PY" -c "import edition, sys; edition.write_stamp(sys.argv[1], sys.argv[2])" "$STAMP_DIR" "$REUP_EDITION"
 "$VENV_PY" -m PyInstaller --noconfirm --onedir \
     --workpath "$BUILD_DIR" \
     --distpath "$DIST_DIR" \
     --name "$APP" \
+    --paths "$STAMP_DIR" \
+    --hidden-import "_edition_stamp" \
     --add-data "client_secret.json:." \
     --add-data "bin/ffmpeg:bin" \
     --add-data "bin/ffprobe:bin" \
@@ -160,6 +171,9 @@ done
 
 # Không để token/license lọt vào gói
 rm -f "$DIST_DIR/$APP/token.json" "$DIST_DIR/$APP/license.json" 2>/dev/null || true
+
+# Gói phải đóng cứng đúng bản đã chọn (đọc _edition_stamp trong PYZ, không cần chạy app)
+"$VENV_PY" packaging/verify_edition.py "$DIST_DIR/$APP/$APP" "$REUP_EDITION"
 
 # ── Quyền thực thi cho binary chính + ffmpeg/ffprobe ──────────────────────────
 chmod +x "$DIST_DIR/$APP/$APP" 2>/dev/null || true

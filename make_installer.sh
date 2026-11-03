@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Tạo MỘT file cài đặt tự giải nén: dist/RenderVideoReupPro-installer.run
+# Tạo MỘT file cài đặt tự giải nén: dist/<Tên bản>-installer.run
+#   bash make_installer.sh                  # bản Pro  → RenderVideoReupPro-installer.run
+#   EDITION=khach bash make_installer.sh    # bản thường → RenderVideoReup-installer.run
 #
-# Gói gồm: mã nguồn + run_linux.sh + (ffmpeg Linux nếu có sẵn). Người dùng chạy:
-#     bash RenderVideoReupPro-installer.run
-# → tự giải nén vào ~/.local/share/RenderVideoReupPro, tạo lối tắt trong menu, rồi
+# Gói gồm: mã nguồn + _edition_stamp.py + run_linux.sh + (ffmpeg Linux nếu có sẵn).
+# Người dùng chạy:
+#     bash <Tên bản>-installer.run
+# → tự giải nén vào ~/.local/share/<Tên bản>, tạo lối tắt trong menu, rồi
 #   khởi động. App chạy bằng Python + Tk CỦA MÁY người dùng → KHÔNG segfault,
 #   KHÔNG lỗi glibc, hợp Ubuntu cũ (>= 20.04, Python >= 3.8).
 #
@@ -12,12 +15,22 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="RenderVideoReupPro"
+export REUP_EDITION="${EDITION:-${REUP_EDITION:-pro}}"
+# Python chạy được thật (trên Windows "python3" có thể là lối tắt Microsoft Store).
+PY="${PYTHON:-}"
+if [ -z "$PY" ]; then
+    for c in python3 python; do
+        if "$c" -c "" >/dev/null 2>&1; then PY="$c"; break; fi
+    done
+fi
+[ -n "$PY" ] || { echo "[ERROR] Không tìm thấy Python."; exit 1; }
+APP="$("$PY" -c "import edition; print(edition.BASE_NAME)")"
+APP_TITLE="$("$PY" -c "import edition; print(edition.TITLE)")"
 OUT="dist/$APP-installer.run"
 STAGE="dist/.installer_stage"
 PKG="$STAGE/$APP"
 
-FILES=(main.py core.py drive.py license.py app_paths.py tts.py updater.py packaging_smoke.py single_instance.py error_text.py
+FILES=(main.py core.py drive.py license.py app_paths.py edition.py tts.py updater.py packaging_smoke.py single_instance.py error_text.py
        linux-fontconfig.conf setup_ffmpeg.py
        requirements.txt run_linux.sh client_secret.json video.png video.ico)
 for f in "${FILES[@]}"; do
@@ -33,6 +46,7 @@ fi
 echo "[*] Gom file..."
 rm -rf "$STAGE"; mkdir -p "$PKG"
 cp "${FILES[@]}" "$PKG"/
+"$PY" -c "import edition, sys; edition.write_stamp(sys.argv[1], sys.argv[2])" "$PKG" "$REUP_EDITION"
 
 # Kèm ffmpeg nếu là binary Linux (ELF: 4 byte đầu chứa 'ELF')
 if [ -f bin/ffmpeg ] && head -c4 bin/ffmpeg 2>/dev/null | grep -qa ELF; then
@@ -51,15 +65,22 @@ tar -czf "$PAYLOAD" -C "$STAGE" "$APP"
 
 echo "[*] Ghi file .run..."
 mkdir -p dist
-cat > "$OUT" <<'RUNHEADER'
-#!/usr/bin/env bash
+# Tên theo bản ghi ở đầu file .run; phần còn lại giữ nguyên (biến chạy lúc cài).
+{
+    echo '#!/usr/bin/env bash'
+    printf 'APP_NAME=%q
+APP_TITLE=%q
+' "$APP" "$APP_TITLE"
+} > "$OUT"
+cat >> "$OUT" <<'RUNHEADER'
 # === Video Reup Tool — self-extracting installer ===
 set -e
 INSTALL_PARENT="${VIDEOREUP_DIR:-$HOME/.local/share}"
-APP_DIR="$INSTALL_PARENT/VideoReupTool"
+APP_DIR="$INSTALL_PARENT/$APP_NAME"          # trùng thư mục gốc trong payload
+DESKTOP_ID="$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]')"
 
 echo "=================================================="
-echo " Cài Video Reup Tool"
+echo " Cài $APP_TITLE"
 echo " Thư mục: $APP_DIR"
 echo "=================================================="
 
@@ -71,16 +92,16 @@ tail -n +$((LINE + 1)) "$0" | tar -xz -C "$INSTALL_PARENT"
 # Lối tắt trong menu ứng dụng (mở bằng double-click sau này)
 APPS_DIR="$HOME/.local/share/applications"
 mkdir -p "$APPS_DIR"
-cat > "$APPS_DIR/rendervideoreuppro.desktop" <<DESK
+cat > "$APPS_DIR/$DESKTOP_ID.desktop" <<DESK
 [Desktop Entry]
 Type=Application
-Name=Render Video Reup Pro
+Name=$APP_TITLE
 Exec=bash -c "cd '$APP_DIR' && bash run_linux.sh"
 Icon=$APP_DIR/video.png
 Terminal=true
 Categories=AudioVideo;
 DESK
-chmod +x "$APPS_DIR/rendervideoreuppro.desktop" 2>/dev/null || true
+chmod +x "$APPS_DIR/$DESKTOP_ID.desktop" 2>/dev/null || true
 
 echo
 echo "Đã cài. Khởi động lần đầu (cài thư viện Python — cần mạng, vài phút)..."

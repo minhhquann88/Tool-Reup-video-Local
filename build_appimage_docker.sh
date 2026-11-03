@@ -11,6 +11,7 @@
 # Cách dùng:
 #   bash build_appimage_docker.sh                                  # ra AppImage, ubuntu:22.04 (glibc 2.35)
 #   PACKAGE=tar bash build_appimage_docker.sh                      # ra .tar.gz (bản thư mục, KHÔNG AppImage)
+#   EDITION=khach bash build_appimage_docker.sh                    # bản thường (mặc định: pro)
 #   BASE_IMAGE=ubuntu:20.04 PYVER=3.11 bash build_appimage_docker.sh   # đỡ máy cũ hơn (glibc 2.31)
 #
 # Kết quả: dist/<APP>.AppImage  (hoặc dist/<APP>-linux.tar.gz nếu PACKAGE=tar)
@@ -49,6 +50,7 @@ docker run --rm \
     -e DEBIAN_FRONTEND=noninteractive \
     -e PYVER="$PYVER" \
     -e PACKAGE="${PACKAGE:-}" \
+    -e EDITION="${EDITION:-${REUP_EDITION:-}}" \
     -e HOST_UID="$HOST_UID" -e HOST_GID="$HOST_GID" \
     "$BASE_IMAGE" bash -c '
         set -e

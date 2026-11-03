@@ -1,8 +1,16 @@
 # Build Windows: một file EXE
 
-Chạy `build.bat` hoặc `python build_windows.py` trên Windows với Python 3.12
-64-bit. Kết quả phân phối là **`dist/RenderVideoReupPro_v1.0.3.exe`** (tên tự
-đổi theo `APP_ID`/`APP_VERSION` trong `license.py`). Chỉ gửi file EXE này.
+Chạy trên Windows với Python 3.12 64-bit:
+
+| Lệnh | Kết quả trong `dist/` |
+|---|---|
+| `build.bat` hoặc `python build_windows.py` | **`RenderVideoReupPro_v1.0.3.exe`** (bản Pro) |
+| `build.bat khach` hoặc `python build_windows.py --edition khach` | **`RenderVideoReup_v1.0.3.exe`** (bản thường) |
+| `build.bat all` | cả 2 file |
+
+Tên và `app_id` theo bản trong `edition.py`, phiên bản theo `APP_VERSION` trong
+`license.py`. Bản được đóng cứng vào EXE (`_edition_stamp.py`), không đổi được
+bằng biến môi trường trên máy khách. Chỉ gửi file EXE đúng bản cho từng khách.
 
 Đây là bản portable cho Windows 10/11 64-bit: mở EXE để chạy, không cần cài
 Python, pip, FFmpeg hay các thư viện Python trên máy người dùng. Không cần quyền
@@ -10,8 +18,8 @@ administrator. Khi chạy, PyInstaller tự giải nén runtime vào thư mục 
 Các file key/token/log phát sinh khi sử dụng là dữ liệu runtime, không phải
 file thư viện cần gửi kèm.
 
-Mỗi lần build tự xóa các `RenderVideoReup*.exe` cũ trong `dist/`, nên sau khi
-build xong chỉ còn đúng một file EXE. Nếu EXE cũ đang mở (bị khóa), build báo lỗi:
+Mỗi lần build tự xóa EXE cũ **cùng bản** trong `dist/` (build bản thường không
+xóa EXE Pro và ngược lại), nên mỗi bản chỉ còn đúng một file EXE. Nếu EXE cũ đang mở (bị khóa), build báo lỗi:
 hãy đóng app rồi build lại. Không có bộ cài setup.exe: cùng một file EXE dùng để
 gửi khách và làm gói cập nhật.
 
@@ -21,13 +29,18 @@ gửi khách và làm gói cập nhật.
 2. Tạo tag trùng phiên bản rồi push: `git tag v1.0.3` và `git push origin v1.0.3`.
    CI dừng nếu tag khác `v` + `APP_VERSION`. Bản EXE có phiên bản sai sẽ bị updater
    khôi phục về bản cũ.
-3. Workflow `build-windows.yml` build, kiểm tra rồi tạo Release `v1.0.3` đính kèm
-   `RenderVideoReupPro_v1.0.3.exe`. Ghi chú Release và Summary của job có sẵn
-   `download_url` và `sha256`.
-4. Trên trang quản trị key, tạo phiên bản `1.0.3`, nền tảng `win`, dán
-   `download_url` dạng
-   `https://github.com/<owner>/<repo>/releases/download/v1.0.3/RenderVideoReupPro_v1.0.3.exe`
-   và `sha256` nếu có ô nhập.
+3. Workflow `build-windows.yml` build song song 2 bản, kiểm tra rồi tạo Release
+   `v1.0.3` đính kèm `RenderVideoReupPro_v1.0.3.exe` và `RenderVideoReup_v1.0.3.exe`
+   (mỗi file kèm `.sha256`). Summary của từng job ghi `app_id`, `download_url` và
+   `sha256`.
+4. Trên trang quản trị key, tạo phiên bản `1.0.3`, nền tảng `win` **cho từng app**:
+   - `tool_reup_video_pro`: `download_url` dạng
+     `https://github.com/<owner>/<repo>/releases/download/v1.0.3/RenderVideoReupPro_v1.0.3.exe`
+   - `tool_reup_video`: `download_url` dạng
+     `https://github.com/<owner>/<repo>/releases/download/v1.0.3/RenderVideoReup_v1.0.3.exe`
+
+   và `sha256` tương ứng nếu có ô nhập. Dán nhầm link bản kia thì updater sẽ từ
+   chối hoặc khôi phục bản cũ.
 
 Nếu build trên máy, có thể tự tạo Release trên GitHub và kéo file EXE trong `dist/`
 vào. Lấy link bằng chuột phải vào file đính kèm, chọn "Copy link address". Repo phải
@@ -51,8 +64,9 @@ public thì app của khách mới tải được. Không dùng link trang Relea
    và render logo bằng chính FFmpeg/FFprobe nhúng. Không gọi server bản quyền,
    không đăng nhập Google và không thay key/token đang dùng.
 
-Build chỉ báo thành công nếu EXE qua đủ kiểm tra. Báo cáo và SHA-256 nằm tại
-`build/windows-onefile-report.json`; kết quả từng kiểm tra ở
+Self-test còn kiểm tra EXE đã đóng cứng đúng bản yêu cầu (`edition_source` =
+`stamp`, đúng `app_id`). Build chỉ báo thành công nếu EXE qua đủ kiểm tra. Báo cáo
+và SHA-256 nằm tại `build/windows-onefile-report-<pro|khach>.json`; kết quả từng kiểm tra ở
 `build/windows-onefile-check/Máy khác - kiểm thử/self-test.json`.
 
 Workflow `.github/workflows/build-windows.yml` thực hiện cùng quy trình trên

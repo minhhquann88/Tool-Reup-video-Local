@@ -17,17 +17,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 
-def release_constants():
+sys.path.insert(0, str(ROOT))
+import edition  # noqa: E402  (không phụ thuộc thư viện ngoài)
+
+
+def release_constants(name: str | None = None):
+    """(hằng số license.py + APP_ID, tên file EXE) của bản `name` (mặc định: bản hiện hành)."""
     values = {}
     for node in ast.parse((ROOT / "license.py").read_text(encoding="utf-8")).body:
         if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     values[target.id] = node.value.value
-    sys.path.insert(0, str(ROOT))
-    import edition
-    values["APP_ID"] = edition.APP_ID
-    return values, f"{edition.BASE_NAME}_v{values['APP_VERSION']}"
+    profile = edition.profile_for(name) if name else edition.PROFILE
+    values["APP_ID"] = profile["app_id"]
+    return values, f"{profile['base_name']}_v{values['APP_VERSION']}"
 
 
 def preflight():
@@ -81,7 +85,7 @@ def clean_test_environment(directory: Path):
     return env
 
 
-def verify_executable(executable: Path):
+def verify_executable(executable: Path, name: str):
     # Only the EXE is copied: no source, Python, FFmpeg or _internal next to it.
     # A Unicode path also checks common Windows path/encoding mistakes.
     folder = ROOT / "build" / "windows-onefile-check" / "Máy khác - kiểm thử"
@@ -108,6 +112,9 @@ def verify_executable(executable: Path):
     result = json.loads(report.read_text(encoding="utf-8"))
     if not result.get("ok") or result.get("distribution") != "onefile":
         raise RuntimeError("Bản EXE không qua kiểm tra: " + str(report))
+    expected = edition.profile_for(name)["app_id"]
+    if (result.get("edition"), result.get("edition_source"), result.get("app_id")) != (name, "stamp", expected):
+        raise RuntimeError(f"EXE không đóng cứng đúng bản '{name}' ({expected}): " + str(report))
     return report
 
 
@@ -128,23 +135,28 @@ def audit_archive(executable: Path):
     return {"entries": len(names), "required_files": sorted(required)}
 
 
-def clean_previous_outputs(dist_dir: Path):
-    # One release = one EXE in dist; drop older EXEs/old setup.exe so nothing is mixed up.
+def clean_previous_outputs(dist_dir: Path, name: str):
+    # One release = one EXE per edition in dist; drop this edition's older
+    # EXEs/old setup.exe so nothing is mixed up, but keep the other edition's.
     if not dist_dir.is_dir():
         return
-    for path in dist_dir.glob("RenderVideoReup*.exe"):
+    base = edition.profile_for(name)["base_name"]
+    for path in dist_dir.glob(base + "*.exe"):
+        if path.name[len(base):][:1] not in ("_", "-", "."):
+            continue                       # "RenderVideoReup" không xóa "RenderVideoReupPro…"
         try:
             path.unlink()
         except OSError as exc:
             raise RuntimeError("Không xóa được " + str(path) + ". Hãy đóng app đang chạy từ file này rồi build lại.") from exc
 
 
-def build(dist_dir: Path):
+def build(dist_dir: Path, edition_name: str):
     preflight()
-    clean_previous_outputs(dist_dir)
-    _, name = release_constants()
+    clean_previous_outputs(dist_dir, edition_name)
+    _, name = release_constants(edition_name)
     env = dict(os.environ)
     env["PYINSTALLER_CONFIG_DIR"] = str(ROOT / "build" / "pyinstaller-cache")
+    env[edition.ENV_VAR] = edition_name     # spec đọc để đặt tên + đóng cứng bản
     subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean",
                     "--distpath", str(dist_dir),
                     "--workpath", str(ROOT / "build" / "windows-onefile"),
@@ -152,14 +164,15 @@ def build(dist_dir: Path):
                    cwd=str(ROOT), env=env, check=True)
     executable = dist_dir / (name + ".exe")
     audit = audit_archive(executable)
-    report = verify_executable(executable)
+    report = verify_executable(executable, edition_name)
     digest = hashlib.sha256()
     with executable.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
-    build_report = ROOT / "build" / "windows-onefile-report.json"
+    build_report = ROOT / "build" / f"windows-onefile-report-{edition_name}.json"
     build_report.write_text(json.dumps({
         "executable": str(executable), "bytes": executable.stat().st_size,
+        "edition": edition_name, "app_id": edition.profile_for(edition_name)["app_id"],
         "sha256": digest.hexdigest(), "python": sys.version,
         "platform": platform.platform(), "self_test": str(report),
         "archive_audit": audit,
@@ -175,9 +188,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--dist-dir", type=Path, default=ROOT / "dist")
+    parser.add_argument("--edition", choices=sorted(edition.PROFILES),
+                        default=os.environ.get(edition.ENV_VAR, "").strip().lower() or edition.DEFAULT_EDITION,
+                        help="Bản cần build: pro (mặc định) hoặc khach (bản thường)")
     args = parser.parse_args()
     if args.worker:
-        build(args.dist_dir.resolve())
+        build(args.dist_dir.resolve(), args.edition)
         return
     if sys.platform != "win32" or struct.calcsize("P") != 8:
         raise RuntimeError("Hãy build bằng Python 64-bit trên Windows")
@@ -187,7 +203,8 @@ def main():
         subprocess.run([sys.executable, "-m", "venv", str(env_dir)], check=True)
     subprocess.run([str(python), "-m", "pip", "install", "--disable-pip-version-check",
                     "-r", str(ROOT / "requirements-windows-build.txt")], check=True)
-    subprocess.run([str(python), str(Path(__file__)), "--worker", "--dist-dir", str(args.dist_dir.resolve())],
+    subprocess.run([str(python), str(Path(__file__)), "--worker", "--dist-dir", str(args.dist_dir.resolve()),
+                    "--edition", args.edition],
                    cwd=str(ROOT), check=True)
 
 

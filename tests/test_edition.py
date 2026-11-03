@@ -119,3 +119,38 @@ def test_source_update_must_match_running_edition(tmp_path, stamp, app_id, ok):
     else:
         with pytest.raises(ValueError):
             updater._verify_source(root, job)
+
+
+def test_write_stamp_round_trips_and_rejects_unknown(tmp_path):
+    path = edition.write_stamp(tmp_path / "stamp", "KHACH")
+    assert path.read_text(encoding="utf-8") == 'EDITION = "khach"\n'
+    shutil.copy2(str(ROOT / "edition.py"), str(path.parent / "edition.py"))
+    assert _edition_of(tmp_path, cwd=path.parent) == "khach"
+    with pytest.raises(ValueError):
+        edition.write_stamp(tmp_path / "bad", "vip")
+
+
+def test_edition_source_is_reported(tmp_path):
+    result = _run("import edition; print(edition.EDITION, edition.EDITION_SOURCE)", tmp_path,
+                  REUP_EDITION="khach")
+    assert result.stdout.split() == ["khach", "env"]
+    result = _run("import edition; print(edition.EDITION, edition.EDITION_SOURCE)", tmp_path)
+    assert result.stdout.split() == ["pro", "default"]
+
+
+def test_build_names_follow_requested_edition():
+    import build_windows
+    for name, profile in edition.PROFILES.items():
+        values, exe = build_windows.release_constants(name)
+        assert values["APP_ID"] == profile["app_id"]
+        assert exe == f"{profile['base_name']}_v{values['APP_VERSION']}"
+
+
+def test_cleaning_one_edition_keeps_the_other(tmp_path):
+    import build_windows
+    for file in ("RenderVideoReupPro_v1.0.6.exe", "RenderVideoReup_v1.0.6.exe", "RenderVideoReup-setup.exe"):
+        (tmp_path / file).write_bytes(b"MZ")
+    build_windows.clean_previous_outputs(tmp_path, "khach")
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["RenderVideoReupPro_v1.0.6.exe"]
+    build_windows.clean_previous_outputs(tmp_path, "pro")
+    assert list(tmp_path.iterdir()) == []

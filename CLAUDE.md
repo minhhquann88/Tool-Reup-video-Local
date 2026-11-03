@@ -13,22 +13,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 run.bat
 # Linux equivalent (creates .venv, needs Python >= 3.10 + python3-tk)
 ./run_linux.sh
-# Direct launch
+# Direct launch (Pro); standard edition from source
 python main.py
+REUP_EDITION=khach python main.py
 
-# Tests (pytest; tests/conftest.py adds repo root to sys.path and redirects crash/error logs to tmp)
+# Tests (pytest; tests/conftest.py adds repo root to sys.path and redirects crash/error logs to tmp).
+# Run the whole suite under both editions.
 python -m pytest tests
-python -m pytest tests/test_encode_args.py
+REUP_EDITION=khach python -m pytest tests
 python -m pytest tests/test_batch_pipeline.py -k <name>
 
-# Build one standalone Windows EXE, including isolated dependencies + frozen self-test
-build.bat
+# Build one standalone Windows EXE per edition, including isolated dependencies + frozen self-test
+build.bat                 # Pro → dist/RenderVideoReupPro_v*.exe
+build.bat khach           # standard → dist/RenderVideoReup_v*.exe
+build.bat all
 # Build Linux AppImage (PACKAGE=tar for .tar.gz); Docker variant uses ubuntu:22.04
-bash build_linux.sh
-bash build_appimage_docker.sh
+EDITION=khach bash build_linux.sh
+EDITION=khach bash build_appimage_docker.sh
+# Source package / self-extracting installer (also take EDITION=khach)
+bash package_source.sh
+bash make_installer.sh
 ```
 
-CI (`.github/workflows/build-linux.yml`) builds the AppImage on ubuntu-22.04 on every push to `main`, runs `tests/linux_x11_render_stress.py` under xvfb against the bundled libXft, and attaches a Release on `v*` tags.
+Every build stamps the edition with `edition.write_stamp()` outside the source tree (`build/edition-stamp/<edition>/_edition_stamp.py`, added via `pathex`/`--paths`) and verifies it: the Windows self-test must report `edition_source == "stamp"`, and Linux runs `packaging/verify_edition.py`. Source packages and installers ship the stamp file itself.
+
+CI (`.github/workflows/build-windows.yml`, `build-linux.yml`) builds both editions as a matrix on every push to `main`. The Linux job runs `tests/linux_x11_render_stress.py` under xvfb against the bundled libXft. On `v*` tags, both workflows attach all four files to one Release.
 
 `bin/` holds the FFmpeg/FFprobe binaries via **Git LFS**. If they are tiny pointer files, run `git lfs pull`. `core._local_or_system()` falls back to the system `ffmpeg` on PATH.
 
@@ -39,7 +48,7 @@ CI (`.github/workflows/build-linux.yml`) builds the AppImage on ubuntu-22.04 on 
 - **`tts.py`**: generates a voiceover script from a CSV row with Gemini or OpenAI (`replace_prompt_variables` fills `{column}` placeholders), then synthesizes it with one of several TTS providers (Google TTS, autovoice.vn, videoai). The result is validated with `_validate_audio_file`.
 - **`drive.py`**: `DriveUploader` handles OAuth desktop flow with bundled `client_secret.json` and per-user `token.json`, folder creation, uploads and network retries. Drive clients are **not thread-safe**, so each worker thread keeps its own instance in thread-local storage.
 - **`app_paths.py`**: fixed per-user paths shared by source and frozen builds, legacy auth migration, cross-process file locking, atomic writes, revision checks and logout tombstones. Tests isolate profile paths and legacy lookup; never migrate real credentials in a test.
-- **`edition.py`**: the single place that defines the two editions, Pro (`tool_reup_video_pro`) and standard/khách (`tool_reup_video`): `app_id`, file/data-dir base name, title and the thread limits of every pipeline stage (`main.PROFILE`). Both editions run the same pipeline code and differ only in these numbers. Both editions are built from `main`; never compare `app_id` strings elsewhere. A build stamps the edition into a gitignored `_edition_stamp.py`, and frozen builds read only that. Source runs default to Pro, and `REUP_EDITION=khach` selects the standard edition (run the test suite under both).
+- **`edition.py`**: the single place that defines the two editions, Pro (`tool_reup_video_pro`) and standard/khách (`tool_reup_video`): `app_id`, file/data-dir base name, title and the thread limits of every pipeline stage (`main.PROFILE`). Both editions run the same pipeline code and differ only in these numbers. Both editions are built from `main`; never compare `app_id` strings elsewhere. A build stamps the edition into a gitignored `_edition_stamp.py`, and frozen builds read only that (`EDITION_SOURCE` says where the edition came from). Source runs default to Pro, and `REUP_EDITION=khach` selects the standard edition (run the test suite under both).
 - **`license.py`**: checks the key against `key.byscom.vn`. The API always returns HTTP 200, so read `status` in the JSON body. `APP_ID` comes from `edition.py`. The app rechecks the license periodically, and the interval can be overridden with the `LICENSE_RECHECK_SECONDS`, `LICENSE_RETRY_SECONDS` and `LICENSE_MAX_RETRIES` environment variables.
 - **`updater.py`**: independent updater process with its own Tk progress window. It downloads and stages releases, waits for the parent app to save/exit, transactionally replaces program files, then waits for the new GUI's version handshake before closing. Windows onefile helpers copy just the EXE and reset PyInstaller's runtime environment; onedir helpers copy their runtime too. User data stays untouched. See `docs/KIEM_TRA_PHIEN_BAN.md` for release formats and local HTTP simulation tests.
 - **`build_windows.py`**, **`packaging/windows-onefile.spec`**: isolated Windows build with pinned direct dependencies, resource validation and an actual frozen EXE self-test (`packaging_smoke.py`). See `docs/BUILD_WINDOWS.md`.

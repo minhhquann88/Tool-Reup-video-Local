@@ -86,7 +86,11 @@ def run(report_path: Path) -> bool:
             if not info or info["width"] != 320:
                 raise RuntimeError("Không render hoặc đọc được video kiểm tra")
             result["checks"].append("Bundled FFmpeg / FFprobe / H264 / AAC / logo / Unicode paths")
+        import edition
         result["version"] = license_mod.APP_VERSION
+        result["edition"] = edition.EDITION
+        result["edition_source"] = edition.EDITION_SOURCE
+        result["app_id"] = license_mod.APP_ID
         result["updater_imported"] = updater.READY_ENV == "REUP_UPDATE_READY"
         result["ok"] = True
     except Exception:

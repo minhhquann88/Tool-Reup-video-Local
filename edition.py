@@ -7,6 +7,7 @@ khác đọc EDITION / PROFILE, không tự so sánh chuỗi app_id.
 Chọn bản:
 - Bản build: script build sinh `_edition_stamp.py` (EDITION = "khach") đóng
   cứng vào gói → bản đóng gói chỉ đọc file này, bỏ qua biến môi trường.
+  Windows: `build.bat khach`; Linux: `EDITION=khach bash build_linux.sh`.
 - Chạy mã nguồn: mặc định Pro; thử bản thường bằng REUP_EDITION=khach.
 
 Module này KHÔNG import thư viện ngoài để script build / runtime hook / updater
@@ -20,6 +21,7 @@ import sys
 
 DEFAULT_EDITION = "pro"
 ENV_VAR = "REUP_EDITION"
+STAMP_FILE = "_edition_stamp.py"
 
 # Giới hạn luồng: 2 bản chạy CÙNG một dây chuyền (App._run_batch), chỉ khác số.
 #   user_can_set_workers : hiện ô "Số video cùng lúc" / "Giãn cách" cho người dùng
@@ -70,18 +72,28 @@ def _checked(name, source: str) -> str:
     return value
 
 
-def _resolve() -> str:
+def _resolve() -> tuple:
+    """Trả (bản, nguồn) — nguồn: "stamp" | "env" | "default"."""
     try:
         from _edition_stamp import EDITION as stamped    # type: ignore
     except ImportError:
         stamped = None
     if stamped is not None:
-        return _checked(stamped, "_edition_stamp.py")
+        return _checked(stamped, STAMP_FILE), "stamp"
     if not getattr(sys, "frozen", False):
         env = os.environ.get(ENV_VAR, "").strip()
         if env:
-            return _checked(env, ENV_VAR)
-    return DEFAULT_EDITION
+            return _checked(env, ENV_VAR), "env"
+    return DEFAULT_EDITION, "default"
+
+
+def write_stamp(directory, name: str):
+    """Script build gọi: ghi `_edition_stamp.py` vào `directory`, trả đường dẫn."""
+    from pathlib import Path
+    path = Path(directory) / STAMP_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f'EDITION = "{_checked(name, "tham số build")}"\n', encoding="utf-8")
+    return path
 
 
 def profile_for(name: str) -> dict:
@@ -95,7 +107,7 @@ def edition_for_app_id(app_id: str) -> str | None:
     return None
 
 
-EDITION = _resolve()
+EDITION, EDITION_SOURCE = _resolve()
 PROFILE = PROFILES[EDITION]
 APP_ID = PROFILE["app_id"]
 BASE_NAME = PROFILE["base_name"]

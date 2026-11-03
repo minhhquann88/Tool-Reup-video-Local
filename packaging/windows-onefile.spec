@@ -12,8 +12,12 @@ for node in ast.parse((root / 'license.py').read_text(encoding='utf-8')).body:
             if isinstance(target, ast.Name):
                 constants[target.id] = node.value.value
 sys.path.insert(0, str(root))
-import edition
+import edition   # bản chọn qua REUP_EDITION (build_windows.py --edition đặt sẵn)
 name = edition.BASE_NAME + '_v' + constants['APP_VERSION']
+# Đóng cứng bản vào EXE: _edition_stamp.py nằm ngoài thư mục nguồn để không
+# ảnh hưởng lần chạy mã nguồn sau đó.
+stamp_dir = root / 'build' / 'edition-stamp' / edition.EDITION
+edition.write_stamp(stamp_dir, edition.EDITION)
 
 datas = [(str(root / file), '.') for file in ('client_secret.json', 'video.ico', 'video.png')]
 datas += collect_data_files('customtkinter')
@@ -24,8 +28,8 @@ for path in Path(sys.base_prefix).glob('vcruntime140*.dll'):
     binaries.append((str(path), '.'))
 
 a = Analysis(
-    [str(root / 'main.py')], pathex=[str(root)], binaries=binaries, datas=datas,
-    hiddenimports=['PIL._tkinter_finder', 'PIL.ImageTk', 'tkinter.ttk',
+    [str(root / 'main.py')], pathex=[str(root), str(stamp_dir)], binaries=binaries, datas=datas,
+    hiddenimports=['_edition_stamp', 'PIL._tkinter_finder', 'PIL.ImageTk', 'tkinter.ttk',
                    'google.auth.transport.requests', 'google.oauth2.credentials',
                    'google_auth_oauthlib.flow', 'googleapiclient.discovery',
                    'googleapiclient.http', 'googleapiclient._helpers', 'openpyxl'],

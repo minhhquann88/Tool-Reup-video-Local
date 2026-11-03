@@ -12,6 +12,10 @@ permissions:
 jobs:
   build:
     runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [pro, khach]    # 1 tag → 2 EXE: RenderVideoReupPro_v*.exe + RenderVideoReup_v*.exe
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,19 +33,19 @@ jobs:
             echo "::error::Tag ${GITHUB_REF_NAME} khác APP_VERSION v${VERSION}. Sửa license.py hoặc tag lại; nếu không, updater sẽ khôi phục bản cũ vì sai phiên bản."
             exit 1
           fi
-      - name: Build standalone EXE and verify GUI, video and bundled dependencies
-        run: python build_windows.py
+      - name: Build standalone EXE (${{ matrix.edition }}) and verify GUI, video and bundled dependencies
+        run: python build_windows.py --edition ${{ matrix.edition }}
       - uses: actions/upload-artifact@v4
         with:
-          name: RenderVideoReup-Windows-onefile
+          name: RenderVideoReup-Windows-onefile-${{ matrix.edition }}
           path: dist/*.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Windows-build-diagnostics
+          name: Windows-build-diagnostics-${{ matrix.edition }}
           path: |
-            build/windows-onefile-report.json
+            build/windows-onefile-report-${{ matrix.edition }}.json
             build/windows-onefile-check/**/self-test.json
             build/windows-onefile-check/**/startup.log
             build/windows-onefile/**/warn-*.txt
@@ -52,12 +56,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          EXE=$(ls dist/RenderVideoReup*_v*.exe)
-          SHA=$(python -c "import json; print(json.load(open('build/windows-onefile-report.json', encoding='utf-8'))['sha256'])")
+          REPORT="build/windows-onefile-report-${{ matrix.edition }}.json"
+          EXE="dist/$(python -c "import json, sys, pathlib; print(pathlib.PureWindowsPath(json.load(open(sys.argv[1], encoding='utf-8'))['executable']).name)" "$REPORT")"
+          SHA=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['sha256'])" "$REPORT")
+          APP_ID=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['app_id'])" "$REPORT")
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/$(basename "$EXE")"
-          NOTES=$(printf 'Windows 10/11 64-bit: tải file .exe và chạy trực tiếp.\n\ndownload_url cho server key:\n%s\n\nsha256: %s' "$URL" "$SHA")
-          # Workflow Linux có thể đã tạo Release cho cùng tag: khi đó chỉ đính kèm thêm file.
-          gh release create "${GITHUB_REF_NAME}" "$EXE" --title "${GITHUB_REF_NAME}" --notes "$NOTES" \
-            || gh release upload "${GITHUB_REF_NAME}" "$EXE" --clobber
+          printf '%s  %s\n' "$SHA" "$(basename "$EXE")" > "$EXE.sha256"
+          NOTES='Windows 10/11 64-bit: tải file .exe và chạy trực tiếp. RenderVideoReupPro_v*.exe = bản Pro, RenderVideoReup_v*.exe = bản thường. Mỗi file có kèm .sha256; download_url cho server key ghi trong Summary của từng job.'
+          # Job còn lại (hoặc workflow Linux) có thể đã tạo Release cho cùng tag: khi đó chỉ đính kèm thêm file.
+          gh release create "${GITHUB_REF_NAME}" "$EXE" "$EXE.sha256" --title "${GITHUB_REF_NAME}" --notes "$NOTES" \
+            || gh release upload "${GITHUB_REF_NAME}" "$EXE" "$EXE.sha256" --clobber
+          echo "app_id: $APP_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "download_url: $URL" >> "$GITHUB_STEP_SUMMARY"
           echo "sha256: $SHA" >> "$GITHUB_STEP_SUMMARY"

@@ -25,6 +25,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-22.04  # << glibc 2.35, khớp máy người dùng
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [pro, khach]    # RenderVideoReupPro_v*.AppImage + RenderVideoReup_v*.AppImage
     steps:
       - name: Lấy mã nguồn
         uses: actions/checkout@v4
@@ -38,8 +42,8 @@ jobs:
             build-essential pkg-config libfontconfig1-dev libfreetype6-dev \
             libxrender-dev fonts-dejavu-core xvfb
 
-      - name: Build AppImage
-        run: bash build_linux.sh
+      - name: Build AppImage (${{ matrix.edition }})
+        run: EDITION=${{ matrix.edition }} bash build_linux.sh
 
       - name: Stress test Tk/X11 với libXft đã bundle
         run: |
@@ -55,7 +59,7 @@ jobs:
       - name: Tải lên Artifact (tải về từ tab Actions)
         uses: actions/upload-artifact@v4
         with:
-          name: RenderVideoReupPro-AppImage
+          name: RenderVideoReup-AppImage-${{ matrix.edition }}
           path: dist/*.AppImage
           if-no-files-found: error
 
@@ -67,5 +71,5 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             dist/*.AppImage \
             --title "${GITHUB_REF_NAME}" \
-            --notes "AppImage cho Linux (Ubuntu 22.04+ / glibc 2.35+). Tải file về, chuột phải → Properties → Permissions → tick 'Allow executing file as program' → double-click để mở." \
+            --notes "AppImage cho Linux (Ubuntu 22.04+ / glibc 2.35+). RenderVideoReupPro_v* = bản Pro, RenderVideoReup_v* = bản thường. Tải file về, chuột phải → Properties → Permissions → tick 'Allow executing file as program' → double-click để mở." \
             || gh release upload "${GITHUB_REF_NAME}" dist/*.AppImage --clobber
