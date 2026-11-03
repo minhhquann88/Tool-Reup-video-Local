@@ -78,14 +78,14 @@ def test_every_module_follows_the_selected_edition(tmp_path, name):
 
 
 def test_standard_edition_limits():
-    # Bản thường: 1 encode/lần, tải sẵn 1 video, upload nền 1 file/lần, không
-    # giãn cách, không cho chỉnh và không mở được 2 cửa sổ. Luôn ít hơn Pro.
+    # Bản thường: chạy lần lượt (xong hẳn 1 video, kể cả upload, mới sang video
+    # kế), 2 video bắt đầu cách nhau >= 20 giây, không cho chỉnh và không mở được 2 cửa sổ.
     khach, pro = edition.PROFILES["khach"], edition.PROFILES["pro"]
     assert (khach["max_workers"], khach["default_workers"]) == (1, 1)
-    assert khach["default_delay"] == 0.0
-    assert khach["prefetch"] == 1
+    assert khach["default_delay"] == 20.0
+    assert khach["prefetch"] == 0
     assert khach["upload_concurrency"] == 1
-    assert khach["split_upload_pool"]
+    assert not khach["split_upload_pool"]
     for key in ("max_workers", "default_workers", "prefetch", "upload_concurrency"):
         assert khach[key] < pro[key], key
     assert not khach["user_can_set_workers"]
@@ -185,7 +185,7 @@ def test_standard_default_workers_ignore_cpu():
 
 @pytest.mark.parametrize("name,workers,expected", [
     ("pro", 1, 2), ("pro", 2, 2), ("pro", 3, 3), ("pro", 6, 4), ("pro", 8, 4),
-    ("khach", 1, 1),
+    ("khach", 1, 0),
 ])
 def test_prefetch_scales_with_encodes(name, workers, expected):
     assert edition.prefetch_for(edition.PROFILES[name], workers) == expected

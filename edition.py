@@ -61,11 +61,11 @@ PROFILES = {
         "max_workers": 1,
         "default_workers": 1,
         "auto_workers": False,
-        "default_delay": 0.0,
-        "prefetch": 1,                        # tải/voice sẵn 1 video trong lúc encode
-        "max_prefetch": 1,
+        "default_delay": 20.0,                # 2 video bắt đầu cách nhau >= 20 giây
+        "prefetch": 0,                        # xong hẳn 1 video mới sang video kế
+        "max_prefetch": 0,
         "upload_concurrency": 1,
-        "split_upload_pool": True,            # upload nền, mỗi lần 1 file
+        "split_upload_pool": False,           # upload xong mới nhận video kế
         "single_instance": True,
     },
 }

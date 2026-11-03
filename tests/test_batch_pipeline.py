@@ -239,14 +239,14 @@ class BatchPipelineTests(unittest.TestCase):
     def _starts(self, kind):
         return sorted(t for k, _i, t in self.events if k == kind)
 
-    def test_standard_edition_encodes_one_and_prefetches_one(self):
+    def test_standard_edition_processes_one_video_at_a_time(self):
         self._standard()
         self._run(6, workers=5)          # settings cố vượt giới hạn
         self.assertEqual(1, self.encode.peak)
-        self.assertEqual(2, self.download.peak)      # 1 video + 1 tải trước
+        self.assertEqual(1, self.download.peak)
         self.assertEqual(6, len(os.listdir(os.path.join(self.tmp, "out"))))
 
-    def test_standard_edition_uploads_in_background_one_at_a_time(self):
+    def test_standard_edition_uploads_before_next_video(self):
         captured = {}
         real_make_app = self._make_app
 
@@ -260,12 +260,13 @@ class BatchPipelineTests(unittest.TestCase):
         self._run(6, workers=3, save_mode="drive")
         self.assertEqual(1, self.upload.peak)
         self.assertEqual(1, self.encode.peak)
-        self.assertLessEqual(self.download.peak, 2)
+        self.assertEqual(1, self.download.peak)
         self.assertEqual(6, len(captured["refs"]))
         self.assertTrue(all(r.startswith("https://drive/") for r in captured["refs"].values()))
-        # Upload chạy nền: video kế được tải trước khi upload video trước xong.
+        # Lần lượt: video kế chỉ bắt đầu tải sau khi video trước upload xong.
         downloads, uploads = self._starts("dl_start"), self._starts("up_end")
-        self.assertLess(downloads[1], uploads[0])
+        for up_end, next_dl in zip(uploads, downloads[1:]):
+            self.assertGreaterEqual(next_dl, up_end)
 
     def test_standard_edition_enforces_minimum_delay(self):
         self._standard(delay=0.2)
