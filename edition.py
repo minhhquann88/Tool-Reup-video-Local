@@ -56,9 +56,9 @@ PROFILES = {
         "max_workers": 1,
         "default_workers": 1,
         "default_delay": 0.0,
-        "prefetch": 0,
+        "prefetch": 1,                        # tải/voice sẵn 1 video trong lúc encode
         "upload_concurrency": 1,
-        "split_upload_pool": False,
+        "split_upload_pool": True,            # upload nền, mỗi lần 1 file
         "single_instance": True,
     },
 }

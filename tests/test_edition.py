@@ -78,14 +78,16 @@ def test_every_module_follows_the_selected_edition(tmp_path, name):
 
 
 def test_standard_edition_limits():
-    # Bản thường: 1 video/lần, không giãn cách, không tải trước, upload xong mới
-    # sang video kế, không cho chỉnh và không mở được 2 cửa sổ.
-    khach = edition.PROFILES["khach"]
+    # Bản thường: 1 encode/lần, tải sẵn 1 video, upload nền 1 file/lần, không
+    # giãn cách, không cho chỉnh và không mở được 2 cửa sổ. Luôn ít hơn Pro.
+    khach, pro = edition.PROFILES["khach"], edition.PROFILES["pro"]
     assert (khach["max_workers"], khach["default_workers"]) == (1, 1)
     assert khach["default_delay"] == 0.0
-    assert khach["prefetch"] == 0
+    assert khach["prefetch"] == 1
     assert khach["upload_concurrency"] == 1
-    assert not khach["split_upload_pool"]
+    assert khach["split_upload_pool"]
+    for key in ("max_workers", "default_workers", "prefetch", "upload_concurrency"):
+        assert khach[key] < pro[key], key
     assert not khach["user_can_set_workers"]
     assert khach["single_instance"]
 
