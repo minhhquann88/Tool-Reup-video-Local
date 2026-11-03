@@ -61,7 +61,7 @@ The pipeline runs in stages on a thread pool. Every number below comes from `edi
 - `workers` caps concurrent FFmpeg encodes through `_ffmpeg_sem` (user-set up to 8, default 2 [fixed 1]).
 - `pool_size = workers + _PREFETCH`; the `_PREFETCH` extra threads let downloads and voice generation run ahead of encoding (2 [0]).
 - With `split_upload_pool` + Drive, uploads run on a separate `upload_pool` (5 [no split: upload inline, 1 at a time]). `_upload_slots` provides backpressure by capping how many encoded files can wait on disk.
-- `delay` staggers video start times through `_gate_start` (`default_delay`, not shown in the UI of either edition and enforced as a minimum in `_run_batch`: 0 [30 s]).
+- `delay` staggers video start times through `_gate_start` (`default_delay`, not shown in the UI of either edition and enforced as a minimum in `_run_batch`: 0 [0]).
 - Results are keyed by `id(video_dict)` in `out_refs`, so duplicate `item_id`s still work.
 
 Stop requests go through `self._cancel_event`, and every long operation accepts a `should_stop` callable. A video that has already uploaded is always recorded, even after Stop.

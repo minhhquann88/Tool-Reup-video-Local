@@ -55,7 +55,7 @@ PROFILES = {
         "user_can_set_workers": False,
         "max_workers": 1,
         "default_workers": 1,
-        "default_delay": 30.0,
+        "default_delay": 0.0,
         "prefetch": 0,
         "upload_concurrency": 1,
         "split_upload_pool": False,

@@ -225,7 +225,7 @@ class BatchPipelineTests(unittest.TestCase):
 
     # ── Bản thường: cùng dây chuyền, giới hạn theo edition.py ──────────────
     def _standard(self, delay=0.0):
-        # Giãn cách thật là 30 giây; test thu nhỏ để chạy nhanh.
+        # Kiểm tra cơ chế giãn cách tối thiểu (giá trị thật trong edition.py).
         self.profile = dict(edition.PROFILES["khach"], default_delay=delay)
 
     def _starts(self, kind):
