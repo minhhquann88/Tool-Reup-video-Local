@@ -2,7 +2,7 @@
 # Đóng gói MÃ NGUỒN để phân phối theo "Hướng B" — người dùng chạy bằng Python
 # của chính máy họ (không đóng băng, nên không dính lỗi Tcl/Tk / glibc / FUSE).
 #
-# Tạo: dist/<Tên bản>-src.tar.gz  (chỉ gồm file cần thiết; KHÔNG kèm
+# Tạo: dist/<Tên bản>_v<phiên bản>-src.tar.gz  (chỉ gồm file cần thiết; KHÔNG kèm
 #      .venv / bin / dist / build / .git / token.json / license.json).
 #      Gói kèm _edition_stamp.py để chạy đúng bản đã chọn.
 #
@@ -22,7 +22,8 @@ if [ -z "$PY" ]; then
 fi
 [ -n "$PY" ] || { echo "[ERROR] Không tìm thấy Python."; exit 1; }
 APP="$("$PY" -c "import edition; print(edition.BASE_NAME)")"
-OUT="dist/$APP-src.tar.gz"
+NAME="$("$PY" -c "import build_windows; print(build_windows.release_constants()[1])")"   # vd RenderVideoReup_v1.0.8 — giữ bản cũ trong dist
+OUT="dist/$NAME-src.tar.gz"
 STAGE_ROOT="dist/.srcpkg"
 STAGE="$STAGE_ROOT/$APP"
 
@@ -69,6 +70,6 @@ echo "========================================================"
 echo " Xong: $OUT"
 echo "========================================================"
 echo " Gửi DUY NHẤT file này cho người dùng. Họ chạy:"
-echo "   tar -xzf $APP-src.tar.gz"
+echo "   tar -xzf $NAME-src.tar.gz"
 echo "   cd $APP"
 echo "   bash run_linux.sh"

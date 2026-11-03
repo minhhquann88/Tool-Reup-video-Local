@@ -146,14 +146,16 @@ def test_build_names_follow_requested_edition():
         assert exe == f"{profile['base_name']}_v{values['APP_VERSION']}"
 
 
-def test_cleaning_one_edition_keeps_the_other(tmp_path):
+def test_build_keeps_older_outputs_and_replaces_only_same_name(tmp_path):
     import build_windows
-    for file in ("RenderVideoReupPro_v1.0.6.exe", "RenderVideoReup_v1.0.6.exe", "RenderVideoReup-setup.exe"):
+    old = ["RenderVideoReupPro_v1.0.6.exe", "RenderVideoReup_v1.0.6.exe", "RenderVideoReupPro_v1.0.7.exe"]
+    for file in old + ["RenderVideoReup_v1.0.7.exe"]:
         (tmp_path / file).write_bytes(b"MZ")
-    build_windows.clean_previous_outputs(tmp_path, "khach")
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["RenderVideoReupPro_v1.0.6.exe"]
-    build_windows.clean_previous_outputs(tmp_path, "pro")
-    assert list(tmp_path.iterdir()) == []
+    build_windows.remove_same_output(tmp_path, "RenderVideoReup_v1.0.7")
+    assert sorted(p.name for p in tmp_path.iterdir()) == sorted(old)
+    build_windows.remove_same_output(tmp_path, "RenderVideoReup_v1.0.9")   # chưa có → không lỗi
+    build_windows.remove_same_output(tmp_path / "missing-dist", "RenderVideoReup_v1.0.9")
+    assert sorted(p.name for p in tmp_path.iterdir()) == sorted(old)
 
 
 @pytest.mark.parametrize("filename,expected", [

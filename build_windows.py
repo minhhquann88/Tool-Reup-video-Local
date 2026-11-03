@@ -135,24 +135,20 @@ def audit_archive(executable: Path):
     return {"entries": len(names), "required_files": sorted(required)}
 
 
-def clean_previous_outputs(dist_dir: Path, name: str):
-    # One release = one EXE per edition in dist; drop this edition's older
-    # EXEs/old setup.exe so nothing is mixed up, but keep the other edition's.
-    if not dist_dir.is_dir():
-        return
-    for path in dist_dir.glob("RenderVideoReup*.exe"):
-        if edition.edition_for_filename(path.name) != name:
-            continue                       # build bản thường không xóa EXE Pro và ngược lại
-        try:
-            path.unlink()
-        except OSError as exc:
-            raise RuntimeError("Không xóa được " + str(path) + ". Hãy đóng app đang chạy từ file này rồi build lại.") from exc
+def remove_same_output(dist_dir: Path, name: str):
+    # Giữ mọi bản build cũ trong dist (khác phiên bản/khác bản); chỉ thay file
+    # TRÙNG tên với bản sắp build. Xóa trước để báo rõ khi EXE đó đang mở.
+    path = dist_dir / (name + ".exe")
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as exc:
+        raise RuntimeError("Không xóa được " + str(path) + ". Hãy đóng app đang chạy từ file này rồi build lại.") from exc
 
 
 def build(dist_dir: Path, edition_name: str):
     preflight()
-    clean_previous_outputs(dist_dir, edition_name)
     _, name = release_constants(edition_name)
+    remove_same_output(dist_dir, name)
     env = dict(os.environ)
     env["PYINSTALLER_CONFIG_DIR"] = str(ROOT / "build" / "pyinstaller-cache")
     env[edition.ENV_VAR] = edition_name     # spec đọc để đặt tên + đóng cứng bản

@@ -18,9 +18,10 @@ administrator. Khi chạy, PyInstaller tự giải nén runtime vào thư mục 
 Các file key/token/log phát sinh khi sử dụng là dữ liệu runtime, không phải
 file thư viện cần gửi kèm.
 
-Mỗi lần build tự xóa EXE cũ **cùng bản** trong `dist/` (build bản thường không
-xóa EXE Pro và ngược lại), nên mỗi bản chỉ còn đúng một file EXE. Nếu EXE cũ đang mở (bị khóa), build báo lỗi:
-hãy đóng app rồi build lại. Không có bộ cài setup.exe: cùng một file EXE dùng để
+Các bản build cũ trong `dist/` (phiên bản trước, bản kia) **được giữ nguyên**; build
+chỉ thay file trùng tên (cùng bản, cùng phiên bản). Nếu file trùng tên đó đang mở
+(bị khóa), build báo lỗi: hãy đóng app rồi build lại. Gửi khách đúng file có số
+phiên bản mới nhất. Không có bộ cài setup.exe: cùng một file EXE dùng để
 gửi khách và làm gói cập nhật.
 
 ## Phát hành bản mới qua GitHub Release

@@ -32,9 +32,9 @@ for %%E in (%EDITIONS%) do (
     )
 )
 echo.
-echo [OK] Moi ban chi co 1 file trong dist\:
+echo [OK] File moi nam trong dist\ (cac ban build cu van duoc giu lai):
 echo      RenderVideoReupPro_v*.exe  = ban Pro
 echo      RenderVideoReup_v*.exe     = ban thuong (khach)
-echo Dung file nay de gui khach VA de dua len GitHub Release lam download_url cap nhat.
+echo Gui khach / dua len GitHub Release file co so phien ban MOI NHAT.
 echo May nguoi dung khong can cai Python, pip hay FFmpeg.
 pause

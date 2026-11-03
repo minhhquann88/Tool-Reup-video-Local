@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Tạo MỘT file cài đặt tự giải nén: dist/<Tên bản>-installer.run
-#   bash make_installer.sh                  # bản Pro  → RenderVideoReupPro-installer.run
-#   EDITION=khach bash make_installer.sh    # bản thường → RenderVideoReup-installer.run
+# Tạo MỘT file cài đặt tự giải nén: dist/<Tên bản>_v<phiên bản>-installer.run
+#   bash make_installer.sh                  # bản Pro  → RenderVideoReupPro_v1.0.8-installer.run
+#   EDITION=khach bash make_installer.sh    # bản thường → RenderVideoReup_v1.0.8-installer.run
 #
 # Gói gồm: mã nguồn + _edition_stamp.py + run_linux.sh + (ffmpeg Linux nếu có sẵn).
 # Người dùng chạy:
-#     bash <Tên bản>-installer.run
+#     bash <Tên bản>_v<phiên bản>-installer.run
 # → tự giải nén vào ~/.local/share/<Tên bản>, tạo lối tắt trong menu, rồi
 #   khởi động. App chạy bằng Python + Tk CỦA MÁY người dùng → KHÔNG segfault,
 #   KHÔNG lỗi glibc, hợp Ubuntu cũ (>= 20.04, Python >= 3.8).
@@ -26,7 +26,8 @@ fi
 [ -n "$PY" ] || { echo "[ERROR] Không tìm thấy Python."; exit 1; }
 APP="$("$PY" -c "import edition; print(edition.BASE_NAME)")"
 APP_TITLE="$("$PY" -c "import edition; print(edition.TITLE)")"
-OUT="dist/$APP-installer.run"
+NAME="$("$PY" -c "import build_windows; print(build_windows.release_constants()[1])")"   # vd RenderVideoReup_v1.0.8 — giữ bản cũ trong dist
+OUT="dist/$NAME-installer.run"
 STAGE="dist/.installer_stage"
 PKG="$STAGE/$APP"
 
@@ -121,7 +122,7 @@ echo "========================================================"
 echo " Xong: $OUT  ($SIZE)"
 echo "========================================================"
 echo " Gửi DUY NHẤT file này. Người dùng cài & chạy bằng:"
-echo "     bash $APP-installer.run"
+echo "     bash $NAME-installer.run"
 echo
 echo " Yêu cầu máy người dùng (Ubuntu >= 20.04):"
 echo "     sudo apt install -y python3 python3-venv python3-tk"
