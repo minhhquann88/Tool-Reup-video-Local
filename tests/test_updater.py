@@ -264,7 +264,71 @@ def test_startup_timeout_is_an_error_and_never_reported_as_success(tmp_path):
     process = Mock()
     process.poll.return_value = None
     with pytest.raises(RuntimeError, match="khôi phục"):
-        updater.wait_for_startup(process, tmp_path / "absent.json", "1.1.0", timeout=0)
+        updater.wait_for_startup(process, tmp_path / "absent.json", "1.1.0", "tool_reup_video_pro",
+                                 timeout=0)
+
+
+# ── Không cài đè bản Pro lên bản thường (và ngược lại) ───────────────────────
+def _ready(tmp_path, **data):
+    marker = tmp_path / "ready.json"
+    marker.write_text(json.dumps(data), encoding="utf-8")
+    process = Mock()
+    process.poll.return_value = None
+    return process, marker
+
+
+def test_startup_handshake_accepts_same_edition(tmp_path):
+    process, marker = _ready(tmp_path, version="1.1.0", app_id="tool_reup_video")
+    updater.wait_for_startup(process, marker, "1.1.0", "tool_reup_video", timeout=1)
+
+
+@pytest.mark.parametrize("reported", [{"app_id": "tool_reup_video_pro"}, {}])
+def test_startup_handshake_rejects_other_edition(tmp_path, reported):
+    process, marker = _ready(tmp_path, version="1.1.0", **reported)
+    with pytest.raises(RuntimeError, match="bản khác"):
+        updater.wait_for_startup(process, marker, "1.1.0", "tool_reup_video", timeout=1)
+
+
+def test_new_app_reports_its_app_id(tmp_path, monkeypatch):
+    marker = tmp_path / "ready.json"
+    monkeypatch.setenv(updater.READY_ENV, str(marker))
+    monkeypatch.setattr(updater, "cleanup_completed_jobs", lambda: None)
+    updater.acknowledge_startup("1.1.0")
+    assert json.loads(marker.read_text(encoding="utf-8")) == {
+        "version": "1.1.0", "app_id": license_mod.APP_ID}
+
+
+def test_wrong_edition_link_is_rejected_before_download(tmp_path):
+    job = _job(tmp_path)
+    job.update(app_id="tool_reup_video", mode="onefile",
+               url="https://example.com/v1.1.0/RenderVideoReupPro_v1.1.0.exe")
+    with patch.object(updater, "download", side_effect=AssertionError("không được tải")):
+        with pytest.raises(ValueError, match="bản khác"):
+            updater.perform_update(job, lambda *args: None)
+    assert Path(job["entry"]).read_text(encoding="utf-8") == "# old program\n"
+
+
+@pytest.mark.parametrize("app_id,packaged", [
+    ("tool_reup_video", "RenderVideoReupPro_v1.1.0.exe"),
+    ("tool_reup_video_pro", "RenderVideoReup_v1.1.0.exe"),
+])
+def test_zip_with_other_edition_is_rejected(tmp_path, app_id, packaged):
+    job = _job(tmp_path)
+    job.update(app_id=app_id, mode="frozen", entry=str(Path(job["base_dir"]) / "App_v1.0.1.exe"))
+    archive = tmp_path / "windows.zip"
+    with zipfile.ZipFile(archive, "w") as package:
+        package.writestr("app/" + packaged, b"MZ-program")
+        package.writestr("app/_internal/runtime.dll", b"runtime")
+    with pytest.raises(ValueError, match="bản khác"):
+        updater.package_entries(archive, job, lambda *args: None)
+
+
+def test_unnamed_or_matching_links_pass_the_name_check():
+    job = {"app_id": "tool_reup_video"}
+    for url in ("https://example.com/download?id=42", "https://example.com/setup.exe",
+                "https://example.com/v1/RenderVideoReup_v1.1.0.exe",
+                "https://example.com/v1/RenderVideoReup%5Fv1.1.0.AppImage"):
+        updater._check_edition_name(updater._url_filename(url), job)
 
 
 def test_helper_has_its_own_copy_of_frozen_runtime(tmp_path, monkeypatch):

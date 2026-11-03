@@ -17,7 +17,7 @@ import threading
 import time
 import zipfile
 from pathlib import Path, PurePosixPath
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import requests
 
@@ -360,6 +360,23 @@ def _verify_source(root: Path, job: dict):
         raise ValueError("Gói cập nhật không đúng ứng dụng hoặc phiên bản được thông báo")
 
 
+def _check_edition_name(filename: str, job: dict):
+    """Từ chối sớm gói mang tên bản khác (vd bản thường nhận RenderVideoReupPro_…).
+
+    Tên không theo mẫu thì cho qua — bước bắt tay app_id lúc mở bản mới vẫn chặn.
+    """
+    import edition
+    found = edition.edition_for_filename(filename)
+    own = edition.edition_for_app_id(job["app_id"])
+    if found and own and found != own:
+        raise ValueError(f"Gói cập nhật là bản khác ({filename}), không cài đè lên bản đang dùng. "
+                         "Vui lòng báo quản trị kiểm tra lại link tải trên máy chủ bản quyền.")
+
+
+def _url_filename(url: str) -> str:
+    return PurePosixPath(unquote(urlparse(url).path)).name
+
+
 def package_entries(archive: Path, job: dict, progress) -> list:
     if job["mode"] == "onefile":
         with archive.open("rb") as stream:
@@ -372,6 +389,7 @@ def package_entries(archive: Path, job: dict, progress) -> list:
         candidates = [p for p in root.rglob("RenderVideoReup*.exe") if p.is_file()]
         if len(candidates) != 1 or (candidates[0].parent / "_internal").exists():
             raise ValueError("Cần file EXE standalone, hoặc ZIP chỉ chứa file EXE standalone")
+        _check_edition_name(candidates[0].name, job)
         verify_windows_onefile(candidates[0])
         return [(candidates[0], Path(job["entry"]).name)]
     if job["mode"] == "appimage":
@@ -403,6 +421,7 @@ def package_entries(archive: Path, job: dict, progress) -> list:
     if len(candidates) != 1:
         raise ValueError("Gói cập nhật cần chứa một ứng dụng RenderVideoReup và thư mục _internal")
     executable = candidates[0]
+    _check_edition_name(executable.name, job)
     with executable.open("rb") as stream:
         magic = stream.read(4)
     if not (magic[:2] == b"MZ" if suffix else magic == b"\x7fELF"):
@@ -518,13 +537,18 @@ def launch_app(job: dict, marker: Path) -> subprocess.Popen:
                                 close_fds=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 
-def wait_for_startup(process, marker: Path, version: str, timeout=90):
+def wait_for_startup(process, marker: Path, version: str, app_id: str, timeout=90):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if marker.exists():
             data = json.loads(marker.read_text(encoding="utf-8"))
             if data.get("version") != version:
                 raise RuntimeError("Ứng dụng mở lại không đúng phiên bản mới")
+            # Gói của bản khác (Pro ↔ thường) mở được nhưng sẽ không nhận key
+            # của khách → coi là lỗi để khôi phục bản cũ.
+            if data.get("app_id") != app_id:
+                raise RuntimeError("Gói cập nhật là bản khác (Pro/thường) với bản đang dùng. "
+                                   "Vui lòng báo quản trị kiểm tra lại link tải trên máy chủ bản quyền.")
             return
         if process.poll() is not None:
             raise RuntimeError("Bản mới chưa mở được giao diện. Đang khôi phục bản cũ.")
@@ -547,6 +571,7 @@ def stop_launched_app(process):
 
 
 def perform_update(job: dict, progress):
+    _check_edition_name(_url_filename(job["url"]), job)     # trước khi tải file lớn
     archive = download(job, progress)
     entries = package_entries(archive, job, progress)
     transaction = InstallTransaction(job, entries, progress)
@@ -565,7 +590,7 @@ def perform_update(job: dict, progress):
         marker = Path(job["job_dir"]) / "app-ready.json"
         marker.unlink(missing_ok=True)
         process = launch_app(job, marker)
-        wait_for_startup(process, marker, job["version"],
+        wait_for_startup(process, marker, job["version"], job["app_id"],
                          timeout=240 if job["mode"] == "onefile" else 90)
     except Exception as exc:
         progress("Cập nhật gặp lỗi. Đang khôi phục file của bản cũ…", None)
@@ -587,10 +612,11 @@ def perform_update(job: dict, progress):
 
 
 def acknowledge_startup(version: str):
+    import edition
     marker = os.environ.pop(READY_ENV, None)
     if marker:
         try:
-            write_json(Path(marker), {"version": version})
+            write_json(Path(marker), {"version": version, "app_id": edition.APP_ID})
         except OSError:
             pass
     # The helper can only be removed after its own executable/DLLs are closed.
@@ -712,7 +738,7 @@ def run_worker(job_file: Path):
                 marker = Path(job["job_dir"]) / "previous-ready.json"
                 marker.unlink(missing_ok=True)
                 process = launch_app(job, marker)
-                wait_for_startup(process, marker, job["previous_version"])
+                wait_for_startup(process, marker, job["previous_version"], job["app_id"])
                 events.put(("progress", "Đã mở lại phiên bản trước cập nhật.", 1.0))
                 _release_lock(job)
                 events.put(("done", "", None))

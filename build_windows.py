@@ -140,10 +140,9 @@ def clean_previous_outputs(dist_dir: Path, name: str):
     # EXEs/old setup.exe so nothing is mixed up, but keep the other edition's.
     if not dist_dir.is_dir():
         return
-    base = edition.profile_for(name)["base_name"]
-    for path in dist_dir.glob(base + "*.exe"):
-        if path.name[len(base):][:1] not in ("_", "-", "."):
-            continue                       # "RenderVideoReup" không xóa "RenderVideoReupPro…"
+    for path in dist_dir.glob("RenderVideoReup*.exe"):
+        if edition.edition_for_filename(path.name) != name:
+            continue                       # build bản thường không xóa EXE Pro và ngược lại
         try:
             path.unlink()
         except OSError as exc:

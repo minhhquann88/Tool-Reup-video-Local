@@ -122,6 +122,9 @@ $env:LICENSE_TEST_API_URL = 'http://127.0.0.1:4917/license/api/validate-key'
 python -m pytest tests -q
 ```
 
+Không có Postman CLI thì chạy thẳng mock bằng Node (`node postman/mocks/license-version/default.js`)
+và đặt `LICENSE_TEST_API_URL = 'http://127.0.0.1:4917/api/validate-key'`.
+
 Không đặt biến trên thì các ca HTTP được bỏ qua; các ca logic giao diện vẫn chạy.
 Các test đổi nơi lưu key sang thư mục tạm, không chạm `license.json` thật.
 Log Postman phải có sự kiện `request` tại `/api/validate-key`.
@@ -130,4 +133,5 @@ Mock còn phục vụ `/releases/source.tar.gz`, `/releases/unknown-size`,
 `/releases/fail`, `/releases/corrupt`. `tests/test_updater.py` tải gói qua HTTP,
 cài vào thư mục tạm và khởi động một tiến trình Python thật để kiểm tra handshake;
 không thay mã nguồn hay dữ liệu đang dùng. Có các ca giữ dữ liệu người dùng,
-rollback khi file bị khóa/khởi động sai phiên bản và chặn archive traversal.
+rollback khi file bị khóa/khởi động sai phiên bản hoặc sai bản (Pro/thường) và chặn archive traversal.
+Link tải mang tên bản khác (vd bản thường nhận `RenderVideoReupPro_…`) bị từ chối trước khi tải.

@@ -7,8 +7,9 @@ const zlib = require("zlib");
 // process that acknowledges startup. It deliberately needs no GUI or real key.
 function sourceRelease() {
   const files = {
-    "main.py": "import json, os\nfrom pathlib import Path\np = os.environ.get('REUP_UPDATE_READY')\nif p: Path(p).write_text(json.dumps({'version': '1.1.0'}), encoding='utf-8')\n",
+    "main.py": "import json, os\nfrom pathlib import Path\np = os.environ.get('REUP_UPDATE_READY')\nif p: Path(p).write_text(json.dumps({'version': '1.1.0', 'app_id': 'tool_reup_video_pro'}), encoding='utf-8')\n",
     "license.py": "APP_ID = 'tool_reup_video_pro'\nAPP_VERSION = '1.1.0'\n",
+    "edition.py": "# Test release module\n",
     "updater.py": "# Test release module\n", "core.py": "# Test release module\n",
     "app_paths.py": "# Test release module\n",
     "drive.py": "# Test release module\n", "tts.py": "# Test release module\n",

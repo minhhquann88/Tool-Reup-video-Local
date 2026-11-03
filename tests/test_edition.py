@@ -154,3 +154,16 @@ def test_cleaning_one_edition_keeps_the_other(tmp_path):
     assert sorted(p.name for p in tmp_path.iterdir()) == ["RenderVideoReupPro_v1.0.6.exe"]
     build_windows.clean_previous_outputs(tmp_path, "pro")
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("filename,expected", [
+    ("RenderVideoReupPro_v1.0.8.exe", "pro"),
+    ("RenderVideoReupPro.AppImage", "pro"),
+    ("RenderVideoReup_v1.0.8.exe", "khach"),
+    ("RenderVideoReup-src.tar.gz", "khach"),
+    ("RenderVideoReup", "khach"),
+    ("RenderVideoReupProMax_v1.exe", None),
+    ("setup.exe", None),
+])
+def test_edition_for_filename(filename, expected):
+    assert edition.edition_for_filename(filename) == expected

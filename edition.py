@@ -107,6 +107,20 @@ def edition_for_app_id(app_id: str) -> str | None:
     return None
 
 
+def edition_for_filename(filename: str) -> str | None:
+    """Bản của file build theo tên ("RenderVideoReupPro_v1.0.8.exe" → "pro").
+
+    Tên gốc phải đứng đầu và theo sau là "_", "-", "." hoặc hết tên, nên
+    "RenderVideoReup_…" không bị nhận nhầm thành bản Pro và ngược lại.
+    Tên không theo mẫu (vd "setup.exe") → None.
+    """
+    for name, values in sorted(PROFILES.items(), key=lambda item: -len(item[1]["base_name"])):
+        base = values["base_name"]
+        if filename.startswith(base) and filename[len(base):][:1] in ("", "_", "-", "."):
+            return name
+    return None
+
+
 EDITION, EDITION_SOURCE = _resolve()
 PROFILE = PROFILES[EDITION]
 APP_ID = PROFILE["app_id"]
