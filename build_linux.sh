@@ -9,20 +9,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# Đọc APP_VERSION / APP_ID bằng regex — KHÔNG "import main" vì lúc này chưa cài
-# thư viện (customtkinter...) → import lỗi → rơi về tên bản không-Pro.
+# Đọc APP_VERSION bằng regex — KHÔNG "import main" vì lúc này chưa cài thư viện
+# (customtkinter...). Tên/tiêu đề lấy từ edition.py (không phụ thuộc thư viện ngoài).
 read_const() {   # read_const <file> <NAME>
     python3 -c "import re, sys; m = re.search(r'^' + sys.argv[2] + r'\s*=\s*[\"\x27]([^\"\x27]+)', open(sys.argv[1], encoding='utf-8').read(), re.M); print(m.group(1) if m else '')" "$1" "$2"
 }
 VERSION="$(read_const license.py APP_VERSION)"
 VERSION="v${VERSION:-1.0.5}"
-if [ "$(read_const license.py APP_ID)" = "tool_reup_video_pro" ]; then
-    APP_BASE="RenderVideoReupPro"
-    APP_TITLE="Render Video Reup Pro $VERSION"
-else
-    APP_BASE="RenderVideoReup"
-    APP_TITLE="Render Video Reup $VERSION"
-fi
+APP_BASE="$(python3 -c "import edition; print(edition.BASE_NAME)")"
+APP_TITLE="$(python3 -c "import edition; print(edition.TITLE)") $VERSION"
 APP="${APP:-${APP_BASE}_${VERSION}}"
 case "$APP" in
     *"$VERSION"*) ;;

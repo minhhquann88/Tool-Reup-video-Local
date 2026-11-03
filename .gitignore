@@ -4,6 +4,8 @@
 token.json
 license.json
 client_secret.json
+# _edition_stamp.py : script build sinh ra để chọn bản Pro/thường → KHÔNG commit
+_edition_stamp.py
 # LƯU Ý: client_secret.json (OAuth "installed/desktop") ĐƯỢC commit CÓ CHỦ ĐÍCH —
 # nó vốn đã nằm trong app phân phối và build cần nó. Vì vậy KHÔNG dùng "*.json"
 # (sẽ chặn nhầm client_secret.json).

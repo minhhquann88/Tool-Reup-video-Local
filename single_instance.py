@@ -13,13 +13,9 @@ Nguoi dung KHONG THE bypass bang cach xoa file vi khong co file nao ton tai.
 """
 
 import sys
-import license as license_mod
+import edition
 
-_LOCK_NAME = (
-    "RenderVideoReupPro_SingleInstance"
-    if getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro"
-    else "RenderVideoReup_SingleInstance"
-)
+_LOCK_NAME = edition.BASE_NAME + "_SingleInstance"
 
 # -- Windows: Named Kernel Mutex -------------------------------------------------
 if sys.platform == "win32":

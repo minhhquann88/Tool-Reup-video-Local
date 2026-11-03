@@ -21,6 +21,7 @@ FILES=(
     drive.py
     license.py
     app_paths.py
+    edition.py
     tts.py
     updater.py
     packaging_smoke.py

@@ -33,10 +33,9 @@ def _private_dir(path: Path) -> Path:
 
 
 def get_data_dir(app_id: str | None = None) -> Path:
-    if app_id is None:
-        import license as license_mod
-        app_id = license_mod.APP_ID
-    name = "RenderVideoReupPro" if app_id == "tool_reup_video_pro" else "RenderVideoReup"
+    import edition
+    # app_id lạ → thư mục bản thường, như hành vi cũ.
+    name = edition.PROFILES[edition.edition_for_app_id(app_id or edition.APP_ID) or "khach"]["base_name"]
     if sys.platform == "win32":
         root = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
     elif sys.platform == "darwin":

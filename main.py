@@ -49,6 +49,7 @@ from tkinter import BooleanVar, StringVar, filedialog, messagebox
 
 import customtkinter as ctk
 
+import edition
 import license as license_mod
 import single_instance
 import updater
@@ -64,12 +65,8 @@ if sys.platform != "win32":
         pass
 
 APP_VERSION = f"v{license_mod.APP_VERSION}"
-IS_PRO = (getattr(license_mod, "APP_ID", "") == "tool_reup_video_pro")
-APP_TITLE = (
-    f"Render Video Reup Pro {APP_VERSION}"
-    if IS_PRO
-    else f"Render Video Reup {APP_VERSION}"
-)
+IS_PRO = edition.IS_PRO
+APP_TITLE = f"{edition.TITLE} {APP_VERSION}"
 _UI_FONT = "Segoe UI" if sys.platform == "win32" else "DejaVu Sans"
 _UI_MONO_FONT = "Consolas" if sys.platform == "win32" else "DejaVu Sans Mono"
 

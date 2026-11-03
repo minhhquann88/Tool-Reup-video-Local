@@ -17,9 +17,10 @@ from pathlib import Path
 
 import requests
 import app_paths
+import edition
 
 API_URL = "https://key.byscom.vn/api/validate-key"
-APP_ID  = "tool_reup_video_pro"      # đã đăng ký trong bảng apps (giữ đúng chữ thường)
+APP_ID  = edition.APP_ID             # Pro/thường — khai báo trong edition.py
 APP_VERSION = "1.0.7"               # SemVer gửi lên API; GUI thêm tiền tố v
 
 _TIMEOUT = 15                        # giây — lỗi/timeout coi như không hợp lệ (chặt)

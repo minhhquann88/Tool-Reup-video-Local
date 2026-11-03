@@ -24,8 +24,10 @@ def release_constants():
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     values[target.id] = node.value.value
-    base = "RenderVideoReupPro" if values["APP_ID"] == "tool_reup_video_pro" else "RenderVideoReup"
-    return values, f"{base}_v{values['APP_VERSION']}"
+    sys.path.insert(0, str(ROOT))
+    import edition
+    values["APP_ID"] = edition.APP_ID
+    return values, f"{edition.BASE_NAME}_v{values['APP_VERSION']}"
 
 
 def preflight():

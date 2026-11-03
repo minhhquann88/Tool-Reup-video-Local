@@ -8,7 +8,8 @@ if sys.platform == 'win32':
         sys.stdout = open(os.devnull, 'w', encoding='utf-8')
     if sys.stderr is None:
         try:
-            directory = Path(os.environ.get('LOCALAPPDATA') or Path.home() / 'AppData' / 'Local') / 'RenderVideoReup'
+            import edition
+            directory = Path(os.environ.get('LOCALAPPDATA') or Path.home() / 'AppData' / 'Local') / edition.BASE_NAME
             directory.mkdir(parents=True, exist_ok=True)
             sys.stderr = open(directory / 'startup.log', 'a', encoding='utf-8', errors='backslashreplace')
         except OSError:

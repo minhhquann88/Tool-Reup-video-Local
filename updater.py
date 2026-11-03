@@ -25,10 +25,10 @@ SOURCE_FILES = (
     "main.py", "core.py", "drive.py", "license.py", "tts.py", "updater.py",
     "single_instance.py", "error_text.py", "setup_ffmpeg.py", "requirements.txt",
     "run_linux.sh", "run.bat", "linux-fontconfig.conf", "video.png", "video.ico",
-    "packaging_smoke.py", "app_paths.py",
+    "packaging_smoke.py", "app_paths.py", "edition.py", "_edition_stamp.py",
 )
 REQUIRED_SOURCE = ("main.py", "license.py", "updater.py", "app_paths.py", "core.py", "drive.py",
-                   "tts.py", "error_text.py", "single_instance.py")
+                   "tts.py", "error_text.py", "single_instance.py", "edition.py")
 PROTECTED = {"license.json", "token.json", "client_secret.json", "app_error.log", "crash.log", ".auth-state.json", ".auth.lock"}
 MAX_UNPACKED = 8 * 1024 ** 3
 READY_ENV = "REUP_UPDATE_READY"
@@ -340,15 +340,23 @@ def extract_archive(archive: Path, root: Path, progress):
         raise ValueError("Cần gói ZIP, tar.gz hoặc AppImage phù hợp với bản đang chạy")
 
 
-def _verify_source(root: Path, job: dict):
-    tree = ast.parse((root / "license.py").read_text(encoding="utf-8"))
+def _constants(path: Path) -> dict:
     values = {}
-    for node in tree.body:
+    for node in ast.parse(path.read_text(encoding="utf-8")).body:
         if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     values[target.id] = node.value.value
-    if values.get("APP_ID") != job["app_id"] or values.get("APP_VERSION") != job["version"]:
+    return values
+
+
+def _verify_source(root: Path, job: dict):
+    import edition
+    values = _constants(root / "license.py")
+    stamp = root / "_edition_stamp.py"
+    name = _constants(stamp).get("EDITION") if stamp.is_file() else edition.DEFAULT_EDITION
+    app_id = edition.PROFILES.get(name, {}).get("app_id")
+    if app_id != job["app_id"] or values.get("APP_VERSION") != job["version"]:
         raise ValueError("Gói cập nhật không đúng ứng dụng hoặc phiên bản được thông báo")
 
 

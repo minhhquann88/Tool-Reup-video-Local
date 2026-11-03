@@ -11,8 +11,9 @@ for node in ast.parse((root / 'license.py').read_text(encoding='utf-8')).body:
         for target in node.targets:
             if isinstance(target, ast.Name):
                 constants[target.id] = node.value.value
-base = 'RenderVideoReupPro' if constants['APP_ID'] == 'tool_reup_video_pro' else 'RenderVideoReup'
-name = base + '_v' + constants['APP_VERSION']
+sys.path.insert(0, str(root))
+import edition
+name = edition.BASE_NAME + '_v' + constants['APP_VERSION']
 
 datas = [(str(root / file), '.') for file in ('client_secret.json', 'video.ico', 'video.png')]
 datas += collect_data_files('customtkinter')
