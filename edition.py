@@ -24,11 +24,11 @@ ENV_VAR = "REUP_EDITION"
 STAMP_FILE = "_edition_stamp.py"
 
 # Giới hạn luồng: 2 bản chạy CÙNG một dây chuyền (App._run_batch), chỉ khác số.
-#   user_can_set_workers : hiện ô "Số video cùng lúc" / "Giãn cách" cho người dùng
+#   user_can_set_workers : hiện ô "Số video cùng lúc" cho người dùng
 #   max_workers          : trần số FFmpeg encode chạy đồng thời
 #   default_workers      : số encode khi người dùng không chỉnh (hoặc không được chỉnh)
-#   default_delay        : giãn cách KHỞI ĐỘNG giữa 2 video (giây); bản không cho
-#                          chỉnh thì đây là mức tối thiểu bắt buộc
+#   default_delay        : giãn cách KHỞI ĐỘNG giữa 2 video (giây), mức tối thiểu
+#                          bắt buộc; không hiện trên giao diện ở bản nào
 #   prefetch             : số video Tải/Voice chạy trước khi tới lượt encode
 #   upload_concurrency   : số upload/cấp quyền Drive chạy đồng thời
 #   split_upload_pool    : upload ở pool riêng (luồng xử lý đi làm video kế ngay)

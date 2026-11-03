@@ -460,11 +460,9 @@ class App(ctk.CTk):
             self._section(pane, "  Xử lý đồng thời")
             self._workers = self._labeled_entry(pane, "Số video cùng lúc:",
                                                 str(PROFILE["default_workers"]))
-            self._delay   = self._labeled_entry(pane, "Giãn cách mỗi video (giây):",
-                                                f"{PROFILE['default_delay']:g}")
         else:
             self._workers = None
-            self._delay   = None
+        # Giãn cách giữa 2 video không cho chỉnh ở bản nào: lấy từ edition.py.
 
         # ── Dữ liệu sản phẩm ──
         self._section(pane, "  Dữ liệu sản phẩm")
@@ -1996,13 +1994,12 @@ class App(ctk.CTk):
             trim_start = float(self._trim_start.get() or "0")
             trim_end   = float(self._trim_end.get() or "0")
             logo_size  = int(self._logo_size.get() or "15")
-            if PROFILE["user_can_set_workers"] and self._workers and self._delay:
+            if PROFILE["user_can_set_workers"] and self._workers:
                 workers = int(self._workers.get() or PROFILE["default_workers"])
-                delay   = max(0.0, float(self._delay.get() or PROFILE["default_delay"]))
             else:
                 workers = PROFILE["default_workers"]
-                delay   = PROFILE["default_delay"]
             workers = max(1, min(PROFILE["max_workers"], workers))
+            delay   = PROFILE["default_delay"]
         except ValueError:
             messagebox.showerror("Lỗi", "Giây cắt và % logo phải là số!")
             return
@@ -2176,9 +2173,7 @@ class App(ctk.CTk):
         # Giới hạn của bản (edition.py) áp ở đây nữa → không vượt được dù
         # settings truyền vào là gì.
         workers     = max(1, min(PROFILE["max_workers"], int(settings.get("workers", 1))))
-        delay       = max(0.0, float(settings.get("delay", 0)))
-        if not PROFILE["user_can_set_workers"]:
-            delay = max(delay, PROFILE["default_delay"])
+        delay       = max(0.0, float(settings.get("delay", 0)), PROFILE["default_delay"])
         # Giãn cách KHỞI ĐỘNG: 2 video liên tiếp cách nhau >= `delay` giây khi
         # bắt đầu (tránh dồn request). next_start = mốc monotonic sớm nhất cho
         # video kế; bảo vệ bằng start_lock riêng để không tranh chấp với `lock`.
