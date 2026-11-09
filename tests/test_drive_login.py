@@ -31,7 +31,7 @@ class DriveLoginCancellationTests(unittest.TestCase):
         credentials.to_json.return_value = '{"test": true}'
         attempts = []
 
-        def login(_flow, should_stop):
+        def login(_flow, should_stop, **_kw):
             attempts.append(True)
             if len(attempts) == 1:
                 cancel.set()
@@ -55,6 +55,48 @@ class DriveLoginCancellationTests(unittest.TestCase):
                 self.assertIs(result, credentials)
                 self.assertEqual('{"test": true}', token.read_text(encoding="utf-8"))
                 self.assertFalse(drive._CREDS_LOCK.locked())
+
+    def _fake_server(self):
+        server = MagicMock()
+        server.__enter__.return_value = server
+        server.server_port = 12345
+        return server
+
+    def test_auth_url_is_reported_before_opening_browser(self):
+        cancel = threading.Event()
+        flow = MagicMock()
+        flow.authorization_url.return_value = ("https://accounts.example/x", "s")
+        server = self._fake_server()
+        server.handle_request.side_effect = cancel.set
+        seen = []
+        with patch("drive.HTTPServer", return_value=server), patch(
+            "drive.webbrowser.open", side_effect=lambda *a, **k: seen.append("open") or True
+        ), self.assertRaisesRegex(RuntimeError, "Đã hủy"):
+            drive._run_oauth_login(flow, cancel.is_set,
+                                   on_auth_url=lambda u: seen.append(u))
+        self.assertEqual(["https://accounts.example/x", "open"], seen)
+
+    def test_browser_failure_keeps_waiting_when_link_is_shown(self):
+        cancel = threading.Event()
+        flow = MagicMock()
+        flow.authorization_url.return_value = ("https://accounts.example/x", "s")
+        server = self._fake_server()
+        server.handle_request.side_effect = cancel.set
+        with patch("drive.HTTPServer", return_value=server), patch(
+            "drive.webbrowser.open", return_value=False
+        ), self.assertRaisesRegex(RuntimeError, "Đã hủy"):
+            drive._run_oauth_login(flow, cancel.is_set, on_auth_url=lambda u: None)
+        server.handle_request.assert_called()
+
+    def test_browser_failure_without_link_still_errors(self):
+        flow = MagicMock()
+        flow.authorization_url.return_value = ("https://accounts.example/x", "s")
+        server = self._fake_server()
+        with patch("drive.HTTPServer", return_value=server), patch(
+            "drive.webbrowser.open", return_value=False
+        ), self.assertRaisesRegex(RuntimeError, "Không mở được trình duyệt"):
+            drive._run_oauth_login(flow, threading.Event().is_set)
+        server.handle_request.assert_not_called()
 
     def test_cancelled_lock_wait_does_not_start_browser(self):
         cancel = threading.Event()

@@ -29,7 +29,7 @@ SOURCE_FILES = (
 )
 REQUIRED_SOURCE = ("main.py", "license.py", "updater.py", "app_paths.py", "core.py", "drive.py",
                    "tts.py", "error_text.py", "single_instance.py", "edition.py")
-PROTECTED = {"license.json", "token.json", "client_secret.json", "app_error.log", "crash.log", ".auth-state.json", ".auth.lock"}
+PROTECTED = {"license.json", "token.json", "drive_accounts.json", "client_secret.json", "app_error.log", "crash.log", ".auth-state.json", ".auth.lock"}
 MAX_UNPACKED = 8 * 1024 ** 3
 READY_ENV = "REUP_UPDATE_READY"
 FILE_RETRY_SECONDS = 15

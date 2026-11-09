@@ -13,7 +13,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
-AUTH_FILES = ("license.json", "token.json")
+AUTH_FILES = ("license.json", "token.json", "drive_accounts.json")
 _THREAD_LOCKS = {}
 _LOCKS_GUARD = threading.Lock()
 

@@ -45,7 +45,7 @@ if sys.platform != "win32":
     os.environ.pop("WAYLAND_DISPLAY", None)
 # ────────────────────────────────────────────────────────────────────────────
 
-from tkinter import BooleanVar, StringVar, filedialog, messagebox
+from tkinter import BooleanVar, StringVar, TclError, filedialog, messagebox
 
 import customtkinter as ctk
 
@@ -216,6 +216,10 @@ LOG_FILTER_OPTS = (LOG_FILTER_ALL,) + LOG_CATS
 # Keep the latest 1,000 non-error UI log lines and all errors.
 MAX_UI_LOGS = 1000
 _ERROR_LOG_LOCK = threading.Lock()
+
+# Mục trong menu chọn tài khoản Drive khi chưa có / chưa rõ email.
+_NO_DRIVE_ACCOUNT = "Chưa có tài khoản"
+_UNKNOWN_DRIVE_ACCOUNT = "Tài khoản hiện tại (chưa rõ email)"
 _RETRY_LOG_RE = re.compile(
     r"^(?P<prefix>.*?(?:tải\s+lần|thử\s+lại)\s+)"
     r"(?P<attempt>\d+)\s*/\s*(?P<total>\d+)(?P<suffix>.*)$",
@@ -269,6 +273,10 @@ class VideoRow(ctk.CTkFrame):
 # ── Main App ─────────────────────────────────────────────────────────────────
 
 class App(ctk.CTk):
+
+    # Email tài khoản Drive đang dùng ("" = chưa rõ); luồng batch chỉ đọc.
+    _drive_active = ""
+    _drive_list_gen = 0     # bỏ kết quả đọc danh sách tài khoản đã cũ
 
     def __init__(self, license_data: dict | None = None,
                  update_info: dict | None = None):
@@ -329,6 +337,8 @@ class App(ctk.CTk):
 
         self._build_ui()
         self._ui_drain_job = self.after(25, self._drain_ui_queue)
+        # Đọc danh sách tài khoản Drive đã lưu + kiểm tra tài khoản đang dùng.
+        self.after(300, lambda: self._reload_drive_accounts(check_active=True))
 
         # ── Trạng thái kiểm tra license định kỳ ──
         self._recheck_job      = None    # id job after() để có thể hủy
@@ -733,15 +743,50 @@ class App(ctk.CTk):
         )
         self._login_label.pack(anchor="w", pady=(0, 6))
 
+        # Chọn tài khoản Drive đang dùng (nhiều tài khoản đã đăng nhập).
+        acc_row = ctk.CTkFrame(self._drive_box, fg_color="transparent")
+        acc_row.pack(fill="x", pady=(0, 6))
+        ctk.CTkLabel(acc_row, text="Tài khoản:", width=70,
+                     anchor="w").pack(side="left")
+        self._drive_accounts: list = []      # email theo thứ tự trong menu
+        self._drive_account_menu = ctk.CTkOptionMenu(
+            acc_row, values=[_NO_DRIVE_ACCOUNT], dynamic_resizing=False,
+            command=self._on_select_drive_account,
+        )
+        self._drive_account_menu.pack(side="left", fill="x", expand=True)
+
         btn_row = ctk.CTkFrame(self._drive_box, fg_color="transparent")
         btn_row.pack(fill="x", pady=(0, 6))
-        ctk.CTkButton(btn_row, text=" Đăng nhập", height=34,
+        self._login_btn_row = btn_row
+        ctk.CTkButton(btn_row, text=" Thêm tài khoản", height=34,
                       fg_color="#2d6a4f",
                       command=self._login_drive).pack(side="left", fill="x",
                                                        expand=True, padx=(0, 2))
         ctk.CTkButton(btn_row, text=" Đăng xuất", height=34, width=90,
                       fg_color="#555",
                       command=self._logout_drive).pack(side="right")
+
+        # Link đăng nhập (hiện khi đang chờ đăng nhập) để copy sang trình duyệt
+        # khác nếu trình duyệt không tự mở hoặc muốn chọn tài khoản khác.
+        self._login_link_box = ctk.CTkFrame(self._drive_box, fg_color="transparent")
+        ctk.CTkLabel(
+            self._login_link_box,
+            text="Link đăng nhập (mở bằng trình duyệt trên máy này):",
+            text_color="gray", font=(_UI_FONT, 11),
+            wraplength=230, justify="left",
+        ).pack(anchor="w")
+        link_row = ctk.CTkFrame(self._login_link_box, fg_color="transparent")
+        link_row.pack(fill="x", pady=(2, 6))
+        self._login_link_entry = ctk.CTkEntry(link_row, height=30,
+                                              font=(_UI_FONT, 11))
+        self._login_link_entry.pack(side="left", fill="x", expand=True,
+                                    padx=(0, 2))
+        self._login_link_copy_btn = ctk.CTkButton(
+            link_row, text="Copy", height=30, width=70,
+            fg_color="#1f6aa5", command=self._copy_login_link)
+        self._login_link_copy_btn.pack(side="right")
+        self._login_link = ""
+        self._login_link_copy_job = None
 
         # Khối Local (hiện khi chọn "Local")
         self._local_box = ctk.CTkFrame(pane, fg_color="transparent")
@@ -1845,23 +1890,36 @@ class App(ctk.CTk):
         cancel_flag = self._login_cancel_flag
         self._login_in_progress = True
         self._login_label.configure(text="Đang đăng nhập…", text_color="gray")
+        self._hide_login_link()
+
+        def _on_auth_url(url):
+            self._ui(lambda u=url: None if cancel_flag.is_set()
+                     else self._show_login_link(u))
 
         def _do():
             try:
-                from drive import DriveUploader
-                email = DriveUploader(should_stop=cancel_flag.is_set).test_connection()
+                import drive
+                email = drive.add_account(should_stop=cancel_flag.is_set,
+                                          on_auth_url=_on_auth_url)
                 if cancel_flag.is_set():
                     return
+                self._login_in_progress = False
                 self._ui(lambda e=email: None if cancel_flag.is_set() else [
+                    self._hide_login_link(),
                     self._login_label.configure(text=f"OK {e}", text_color="#4CAF50"),
-                    messagebox.showinfo("Đăng nhập thành công OK", f"Đã đăng nhập:\n{e}"),
+                    self._reload_drive_accounts(),
+                    messagebox.showinfo("Đăng nhập thành công OK",
+                                        f"Đã đăng nhập và chuyển sang dùng:\n{e}"),
                 ])
                 self._log_msg(f"OK Drive đăng nhập OK — {email}")
             except Exception as exc:
                 if cancel_flag.is_set():
                     return
                 self._log_exception("Lỗi đăng nhập Google Drive", exc)
+                self._login_in_progress = False
                 self._ui(lambda e=exc: None if cancel_flag.is_set() else [
+                    self._hide_login_link(),
+                    self._reload_drive_accounts(),
                     self._login_label.configure(
                         text="Đăng nhập thất bại", text_color="#f44336"),
                     messagebox.showerror("Lỗi đăng nhập X", str(e)),
@@ -1872,16 +1930,166 @@ class App(ctk.CTk):
 
         threading.Thread(target=_do, daemon=True).start()
 
+    # ── Nhiều tài khoản Drive ──
+
+    def _reload_drive_accounts(self, check_active: bool = False):
+        """Đọc lại danh sách tài khoản (luồng nền) rồi cập nhật menu.
+
+        ``check_active``: hỏi Google email của tài khoản đang dùng (lúc mở
+        app) để hiện đúng trạng thái và ghi nhận token từ bản cũ.
+        """
+        self._drive_list_gen += 1
+        gen = self._drive_list_gen
+
+        def _apply(info):
+            if gen == self._drive_list_gen:
+                self._apply_drive_accounts(info)
+
+        def _do():
+            import drive
+            try:
+                info = drive.list_accounts()
+            except Exception as exc:
+                self._log_exception("Lỗi đọc danh sách tài khoản Drive", exc)
+                return
+            self._ui(lambda i=info: _apply(i))
+            if not (check_active and info["has_token"]):
+                return
+            try:
+                drive.current_account_email()
+                info = drive.list_accounts()
+            except Exception as exc:
+                self._log_msg(f"! Chưa kiểm tra được tài khoản Drive đang dùng: {exc}")
+                return
+            self._ui(lambda i=info: _apply(i))
+
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _apply_drive_accounts(self, info: dict):
+        """Đổ danh sách tài khoản vào menu + nhãn trạng thái (Tk thread)."""
+        accounts = list(info.get("accounts") or [])
+        active = info.get("active") or ""
+        unknown = bool(info.get("has_token")) and not active
+        self._drive_accounts = accounts
+        self._drive_active = active
+        values = ([_UNKNOWN_DRIVE_ACCOUNT] if unknown else []) + accounts
+        self._drive_account_menu.configure(values=values or [_NO_DRIVE_ACCOUNT])
+        self._drive_account_menu.set(
+            active or (_UNKNOWN_DRIVE_ACCOUNT if unknown else _NO_DRIVE_ACCOUNT))
+        if self._login_in_progress:
+            return  # giữ nhãn "Đang đăng nhập…"
+        if active:
+            self._login_label.configure(text=f"OK {active}", text_color="#4CAF50")
+        elif unknown:
+            self._login_label.configure(text="Đã đăng nhập (chưa rõ email)",
+                                        text_color="gray")
+        else:
+            self._login_label.configure(text="Chưa đăng nhập", text_color="gray")
+
+    def _current_drive_choice(self) -> str:
+        if self._drive_active:
+            return self._drive_active
+        return _UNKNOWN_DRIVE_ACCOUNT if _UNKNOWN_DRIVE_ACCOUNT in self._drive_account_menu.cget("values") \
+            else _NO_DRIVE_ACCOUNT
+
+    def _on_select_drive_account(self, choice: str):
+        previous = self._current_drive_choice()
+        if choice in (_NO_DRIVE_ACCOUNT, _UNKNOWN_DRIVE_ACCOUNT) or choice == self._drive_active:
+            self._drive_account_menu.set(previous)
+            return
+        if self._processing:
+            self._drive_account_menu.set(previous)
+            messagebox.showwarning("Đang xử lý",
+                                   "Không thể đổi tài khoản Google Drive khi batch đang chạy.")
+            return
+        self._login_label.configure(text="Đang chuyển tài khoản…", text_color="gray")
+
+        def _do():
+            import drive
+            try:
+                drive.switch_account(choice)
+                self._log_msg(f"OK Đã chuyển sang tài khoản Drive: {choice}")
+            except Exception as exc:
+                self._log_exception("Lỗi đổi tài khoản Google Drive", exc)
+                self._ui(lambda e=exc: messagebox.showerror("Lỗi đổi tài khoản X", str(e)))
+            self._ui(self._reload_drive_accounts)
+
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _show_login_link(self, url: str):
+        """Hiện link đăng nhập Google kèm nút Copy (chạy trên Tk thread)."""
+        self._login_link = url
+        entry = self._login_link_entry
+        entry.configure(state="normal")
+        entry.delete(0, "end")
+        entry.insert(0, url)
+        entry.configure(state="readonly")
+        self._login_link_copy_btn.configure(text="Copy")
+        self._login_link_box.pack(fill="x", after=self._login_btn_row)
+
+    def _hide_login_link(self):
+        self._login_link = ""
+        self._login_link_box.pack_forget()
+
+    def _copy_login_link(self):
+        if not self._login_link:
+            return
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(self._login_link)
+            self.update_idletasks()
+        except TclError as exc:
+            messagebox.showerror("Lỗi", f"Không copy được link:\n{exc}")
+            return
+        btn = self._login_link_copy_btn
+        btn.configure(text="Đã copy")
+        if self._login_link_copy_job is not None:
+            try:
+                self.after_cancel(self._login_link_copy_job)
+            except TclError:
+                pass
+
+        def _reset():
+            self._login_link_copy_job = None
+            try:
+                btn.configure(text="Copy")
+            except TclError:
+                pass
+        self._login_link_copy_job = self.after(1500, _reset)
+
     def _logout_drive(self):
         if self._processing:
             messagebox.showwarning("Đang xử lý", "Không thể đăng xuất Google Drive khi batch đang chạy.")
             return
         self._login_cancel_flag.set()
         self._login_in_progress = False
-        from drive import clear_credentials
-        clear_credentials()  # Also invalidates pending refresh/login responses.
-        self._login_label.configure(text="Đã đăng xuất", text_color="gray")
-        self._log_msg(" Đã xoá token — đăng nhập lại để dùng Drive.")
+        self._hide_login_link()
+        choice = self._current_drive_choice()
+        if choice == _NO_DRIVE_ACCOUNT:
+            self._reload_drive_accounts()
+            return
+        email = "" if choice == _UNKNOWN_DRIVE_ACCOUNT else choice
+        shown = email or "tài khoản hiện tại"
+        if not messagebox.askyesno(
+                "Đăng xuất Google Drive",
+                f"Đăng xuất {shown} khỏi tool?\n"
+                "Nếu còn tài khoản khác đã đăng nhập, tool sẽ chuyển sang tài khoản đó."):
+            return
+        self._login_label.configure(text="Đang đăng xuất…", text_color="gray")
+
+        def _do():
+            import drive
+            try:
+                # Xoá token đang dùng cũng vô hiệu hoá lượt làm mới token đang dở.
+                now = drive.remove_account(email)
+                self._log_msg(f" Đã đăng xuất Drive: {shown}"
+                              + (f" — chuyển sang {now}" if now else ""))
+            except Exception as exc:
+                self._log_exception("Lỗi đăng xuất Google Drive", exc)
+                self._ui(lambda e=exc: messagebox.showerror("Lỗi đăng xuất X", str(e)))
+            self._ui(self._reload_drive_accounts)
+
+        threading.Thread(target=_do, daemon=True).start()
 
     # ── Video list ───────────────────────────────────────────────────────────
 
@@ -2209,7 +2417,9 @@ class App(ctk.CTk):
             self._log_msg(f" Lưu video vào: {dest_dir}")
         else:
             try:
-                self._log_msg("@ Đang kết nối Google Drive…")
+                active = self._drive_active
+                self._log_msg("@ Đang kết nối Google Drive"
+                              + (f" ({active})" if active else "") + "…")
                 init_uploader = DriveUploader()
                 folder_id = init_uploader.create_folder(
                     settings["folder_name"],

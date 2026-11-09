@@ -3,6 +3,8 @@ drive.py - Google Drive uploader using OAuth 2.0 (Desktop app credentials).
 
 First run: opens browser for Google login → saves token.json in the per-user profile.
 Subsequent runs: uses saved token automatically (refreshes if expired).
+Multiple accounts: token.json is the ACTIVE account; drive_accounts.json keeps
+every signed-in account so the user can switch without logging in again.
 
 Files are uploaded to the authenticated user's own Drive → no quota issue.
 """
@@ -10,6 +12,7 @@ Files are uploaded to the authenticated user's own Drive → no quota issue.
 from __future__ import annotations
 
 import http.client
+import json
 import os
 import socket
 import ssl
@@ -31,6 +34,7 @@ from googleapiclient.http import MediaFileUpload
 SCOPES   = ["https://www.googleapis.com/auth/drive"]
 MIME_DIR = "application/vnd.google-apps.folder"
 MIME_MP4 = "video/mp4"
+ACCOUNTS_FILE = "drive_accounts.json"
 
 _CREDS_LOCK = threading.Lock()
 
@@ -139,8 +143,13 @@ def _check_login_cancelled(should_stop=None) -> None:
         raise RuntimeError("Đã hủy đăng nhập Google Drive")
 
 
-def _run_oauth_login(flow, should_stop=None) -> Credentials:
-    """Wait for the browser callback while allowing a new login to cancel us."""
+def _run_oauth_login(flow, should_stop=None, on_auth_url=None) -> Credentials:
+    """Wait for the browser callback while allowing a new login to cancel us.
+
+    ``on_auth_url(url)`` (tùy chọn) nhận link đăng nhập ngay khi sẵn sàng để UI
+    hiển thị/copy — dùng khi trình duyệt không tự mở hoặc muốn mở trình duyệt
+    khác.  Link chỉ dùng được trên chính máy này (redirect về localhost).
+    """
     callback = []
 
     class CallbackHandler(BaseHTTPRequestHandler):
@@ -167,9 +176,20 @@ def _run_oauth_login(flow, should_stop=None) -> Credentials:
     with HTTPServer(("127.0.0.1", 0), CallbackHandler) as server:
         server.timeout = 0.2
         flow.redirect_uri = f"http://localhost:{server.server_port}/"
-        auth_url, _ = flow.authorization_url()
+        # select_account: luôn hiện màn chọn tài khoản (để thêm được tài khoản
+        # khác dù trình duyệt đang đăng nhập sẵn); consent: Google luôn trả
+        # refresh_token kể cả khi tài khoản đã cấp quyền trước đó.
+        auth_url, _ = flow.authorization_url(prompt="select_account consent")
         _check_login_cancelled(should_stop)
-        if not webbrowser.open(auth_url, new=1, autoraise=True):
+        if on_auth_url is not None:
+            on_auth_url(auth_url)
+        try:
+            opened = webbrowser.open(auth_url, new=1, autoraise=True)
+        except Exception:
+            opened = False
+        # Có link hiển thị cho người dùng copy thì không mở được trình duyệt
+        # cũng không sao — vẫn chờ callback.
+        if not opened and on_auth_url is None:
             raise RuntimeError("Không mở được trình duyệt. Hãy mở trình duyệt mặc định rồi đăng nhập lại.")
         deadline = time.monotonic() + 600
         while not callback:
@@ -186,13 +206,7 @@ def _run_oauth_login(flow, should_stop=None) -> Credentials:
     return flow.credentials
 
 
-def _get_credentials(should_stop=None) -> Credentials:
-    """
-    Return valid OAuth credentials (thread-safe).
-    - token.json exists and valid  → reuse silently.
-    - token.json expired           → refresh silently.
-    - No token yet                 → open browser for first-time login (600s timeout).
-    """
+def _require_secret() -> Path:
     secret = _secret_path()
     if not secret.exists():
         raise FileNotFoundError(
@@ -200,6 +214,19 @@ def _get_credentials(should_stop=None) -> Credentials:
             "Đổi tên file client_secret_xxx.json thành client_secret.json\n"
             "và đặt cạnh file VideoReupTool.exe (hoặc main.py khi dev)."
         )
+    return secret
+
+
+def _get_credentials(should_stop=None, on_auth_url=None,
+                     interactive=True) -> Credentials | None:
+    """
+    Return valid OAuth credentials of the active account (thread-safe).
+    - token.json exists and valid  → reuse silently.
+    - token.json expired           → refresh silently.
+    - No token yet                 → open browser for first-time login (600s
+      timeout), or return None when ``interactive`` is False.
+    """
+    secret = _require_secret()
 
     token = get_token_path()
     creds: Credentials | None = None
@@ -219,7 +246,6 @@ def _get_credentials(should_stop=None) -> Credentials:
             return None
 
     def _write_token(value: Credentials) -> None:
-        import json
         if not app_paths.write_auth(token, json.loads(value.to_json()), revision, should_stop):
             raise RuntimeError("Thông tin đăng nhập Drive đã thay đổi hoặc đã đăng xuất ở cửa sổ khác. Vui lòng thử lại.")
 
@@ -237,21 +263,227 @@ def _get_credentials(should_stop=None) -> Credentials:
             _check_login_cancelled(should_stop)
             _write_token(creds)
             return creds
+        if not interactive:
+            return None
 
         flow = InstalledAppFlow.from_client_secrets_file(str(secret), SCOPES)
-        creds = _run_oauth_login(flow, should_stop)
+        creds = _run_oauth_login(flow, should_stop, on_auth_url=on_auth_url)
         _check_login_cancelled(should_stop)
         _write_token(creds)
     finally:
         _CREDS_LOCK.release()
 
+    # Đăng nhập kiểu cũ (không qua add_account) → chưa biết email của token
+    # mới; bỏ đánh dấu "đang dùng" để không gắn nhầm token vào tài khoản cũ.
+    try:
+        _update_store(lambda store: store.update(active=""), should_stop)
+    except Exception:
+        pass
     return creds
+
+
+# ── Nhiều tài khoản ─────────────────────────────────────────────────────────
+#
+# token.json luôn là token của tài khoản ĐANG DÙNG (batch, làm mới token,
+# đăng xuất… giữ nguyên như khi chỉ có 1 tài khoản).  drive_accounts.json lưu
+# mọi tài khoản đã đăng nhập: {"schema": 1, "active": email,
+# "accounts": {email: token}}.  Chuyển tài khoản = lưu lại token hiện tại vào
+# danh sách rồi chép token của tài khoản được chọn vào token.json.
+
+def get_accounts_path() -> Path:
+    return app_paths.auth_path(ACCOUNTS_FILE)
+
+
+def _normalize_store(data) -> dict:
+    store = {"schema": 1, "active": "", "accounts": {}}
+    if not isinstance(data, dict):
+        return store
+    accounts = data.get("accounts")
+    if isinstance(accounts, dict):
+        for email, token in accounts.items():
+            if isinstance(email, str) and email.strip() and isinstance(token, dict):
+                store["accounts"][email.strip()] = token
+    if isinstance(data.get("active"), str):
+        store["active"] = data["active"].strip()
+    return store
+
+
+def _read_store(should_stop=None):
+    data, revision = app_paths.read_auth(get_accounts_path(), should_stop)
+    return _normalize_store(data), revision
+
+
+def _update_store(mutate, should_stop=None) -> dict:
+    """Đọc–sửa–ghi danh sách tài khoản; ghi trùng với cửa sổ khác thì thử lại."""
+    for _ in range(5):
+        store, revision = _read_store(should_stop)
+        mutate(store)
+        if app_paths.write_auth(get_accounts_path(), store, revision, should_stop):
+            return store
+    raise RuntimeError("Danh sách tài khoản Drive đang bị thay đổi ở cửa sổ khác. Vui lòng thử lại.")
+
+
+def _same_email(a: str, b: str) -> bool:
+    return a.casefold() == b.casefold()
+
+
+def _fetch_email(creds: Credentials) -> str:
+    svc = build("drive", "v3", credentials=creds, cache_discovery=False)
+    return svc.about().get(fields="user").execute()["user"]["emailAddress"]
+
+
+def _lock_creds(should_stop=None) -> None:
+    while not _CREDS_LOCK.acquire(timeout=0.2):
+        _check_login_cancelled(should_stop)
+
+
+def _activate(email: str, token_data: dict | None, should_stop=None) -> None:
+    """Đặt ``email`` làm tài khoản đang dùng (cần giữ _CREDS_LOCK).
+
+    ``token_data`` là token mới (vừa đăng nhập); None → lấy token đã lưu.
+    Token của tài khoản đang dùng được lưu lại vào danh sách trước khi bị
+    thay, để chuyển qua lại không phải đăng nhập lại.
+    """
+    current, revision = app_paths.read_auth(get_token_path(), should_stop)
+    store, _ = _read_store(should_stop)
+    old_email = store["active"]
+    if current and not old_email:
+        # Token có từ bản cũ (chưa biết email) → hỏi Google trước khi thay,
+        # nếu không token đó sẽ mất.
+        try:
+            old_email = _fetch_email(Credentials.from_authorized_user_info(current, SCOPES))
+        except Exception as exc:
+            raise RuntimeError(
+                "Không xác định được tài khoản Drive đang dùng để lưu lại. "
+                "Kiểm tra mạng rồi thử lại, hoặc bấm Đăng xuất tài khoản này trước."
+            ) from exc
+    if token_data is None:
+        token_data = next((tok for key, tok in store["accounts"].items()
+                           if _same_email(key, email)), None)
+        if token_data is None:
+            raise RuntimeError(f"Không tìm thấy tài khoản Drive: {email}")
+
+    def _save(s):
+        if current and old_email:
+            s["accounts"][old_email] = current
+        for key in [k for k in s["accounts"] if _same_email(k, email)]:
+            del s["accounts"][key]
+        s["accounts"][email] = token_data
+    _update_store(_save, should_stop)
+
+    _check_login_cancelled(should_stop)
+    if not app_paths.write_auth(get_token_path(), token_data, revision, should_stop):
+        raise RuntimeError("Thông tin đăng nhập Drive đã thay đổi hoặc đã đăng xuất ở cửa sổ khác. Vui lòng thử lại.")
+    _update_store(lambda s: s.update(active=email), should_stop)
+
+
+def list_accounts(should_stop=None) -> dict:
+    """Danh sách tài khoản đã lưu (chỉ đọc file, không gọi mạng).
+
+    ``active`` rỗng mà ``has_token`` True = token từ bản cũ, chưa rõ email.
+    """
+    store, _ = _read_store(should_stop)
+    token, _ = app_paths.read_auth(get_token_path(), should_stop)
+    active = store["active"] if token is not None else ""
+    emails = list(store["accounts"])
+    if active and active not in store["accounts"]:
+        emails.append(active)
+    return {"accounts": emails, "active": active, "has_token": token is not None}
+
+
+def current_account_email(should_stop=None) -> str | None:
+    """Email của tài khoản đang dùng (gọi Google); None nếu chưa đăng nhập.
+
+    Đồng thời ghi email đó vào danh sách tài khoản (token từ bản cũ).
+    """
+    creds = _get_credentials(should_stop, interactive=False)
+    if creds is None:
+        return None
+    email = _fetch_email(creds)
+    _lock_creds(should_stop)
+    try:
+        current, _ = app_paths.read_auth(get_token_path(), should_stop)
+        # Chỉ ghi khi token.json vẫn là token vừa hỏi (không bị đổi giữa chừng).
+        if current and current.get("refresh_token") == creds.refresh_token:
+            def _mark(s):
+                for key in [k for k in s["accounts"] if _same_email(k, email)]:
+                    del s["accounts"][key]
+                s["accounts"][email] = current
+                s["active"] = email
+            _update_store(_mark, should_stop)
+    finally:
+        _CREDS_LOCK.release()
+    return email
+
+
+def add_account(should_stop=None, on_auth_url=None) -> str:
+    """Đăng nhập thêm 1 tài khoản Google và chuyển sang dùng nó. Trả về email."""
+    secret = _require_secret()
+    flow = InstalledAppFlow.from_client_secrets_file(str(secret), SCOPES)
+    # Không giữ khóa trong lúc chờ trình duyệt: batch/làm mới token vẫn chạy.
+    creds = _run_oauth_login(flow, should_stop, on_auth_url=on_auth_url)
+    _check_login_cancelled(should_stop)
+    email = _fetch_email(creds)
+    _check_login_cancelled(should_stop)
+    token_data = json.loads(creds.to_json())
+    _lock_creds(should_stop)
+    try:
+        _check_login_cancelled(should_stop)
+        _activate(email, token_data, should_stop)
+    finally:
+        _CREDS_LOCK.release()
+    return email
+
+
+def switch_account(email: str, should_stop=None) -> None:
+    """Chuyển sang tài khoản đã lưu (không cần đăng nhập lại)."""
+    _lock_creds(should_stop)
+    try:
+        info = list_accounts(should_stop)
+        if info["active"] and _same_email(info["active"], email):
+            return
+        _activate(email, None, should_stop)
+    finally:
+        _CREDS_LOCK.release()
+
+
+def remove_account(email: str, should_stop=None) -> str:
+    """Đăng xuất 1 tài khoản (``email`` rỗng = token chưa rõ email đang dùng).
+
+    Xoá tài khoản đang dùng thì tự chuyển sang tài khoản còn lại đầu tiên.
+    Trả về email đang dùng sau khi xoá ("" nếu không còn tài khoản nào).
+    """
+    _lock_creds(should_stop)
+    try:
+        info = list_accounts(should_stop)
+        is_active = (not email) or (info["active"] and _same_email(info["active"], email))
+        if not is_active:
+            _update_store(lambda s: [s["accounts"].pop(k) for k in list(s["accounts"])
+                                     if _same_email(k, email)], should_stop)
+            return info["active"]
+
+        clear_credentials()  # Cũng vô hiệu hoá lượt làm mới token đang dở.
+
+        def _drop(s):
+            for key in [k for k in s["accounts"] if email and _same_email(k, email)]:
+                del s["accounts"][key]
+            s["active"] = ""
+        store = _update_store(_drop, should_stop)
+        for other in list(store["accounts"]):
+            try:
+                _activate(other, None, should_stop)
+                return other
+            except Exception:
+                continue
+        return ""
+    finally:
+        _CREDS_LOCK.release()
 
 
 class DriveUploader:
 
-    def __init__(self, should_stop=None):
-        creds     = _get_credentials(should_stop)
+    def __init__(self, should_stop=None, on_auth_url=None):
+        creds     = _get_credentials(should_stop, on_auth_url)
         _check_login_cancelled(should_stop)
         self._svc = build("drive", "v3", credentials=creds,
                           cache_discovery=False)
