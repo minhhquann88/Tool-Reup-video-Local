@@ -520,8 +520,8 @@ class App(ctk.CTk):
     # ── Settings panel ───────────────────────────────────────────────────────
 
     def _build_settings(self):
-        """Cột cài đặt bên trái: chia tab (ít phải cuộn), chữ to, nút Xử lý
-        và Dừng ghim ở dưới cùng nên luôn nhìn thấy."""
+        """Cột cài đặt bên trái: chia tab (ít phải cuộn), chữ to, nút Xử lý,
+        Tạm dừng và Kết thúc ghim ở dưới cùng nên luôn nhìn thấy."""
         col = ctk.CTkFrame(self, width=_SET_W, fg_color="transparent")
         # Chiếm cả hàng danh sách video lẫn hàng nhật ký → cao hết cửa sổ.
         col.grid(row=1, column=0, rowspan=2, sticky="nsew", padx=(8, 4), pady=8)
@@ -539,7 +539,7 @@ class App(ctk.CTk):
         )
         self._btn_process.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self._btn_stop = ctk.CTkButton(
-            btns, text="DỪNG", width=100, height=46,
+            btns, text="KẾT THÚC", width=100, height=46,
             font=(_UI_FONT, 14, "bold"), fg_color="#8B0000", state="disabled",
             command=self._request_stop,
         )
@@ -2488,7 +2488,7 @@ class App(ctk.CTk):
         self._processor.cancel_active()
         for future in list(self._batch_futures):
             future.cancel()
-        self._log_msg("[Dung] Dừng sau khi xong video hiện tại…")
+        self._log_msg("[Ket thuc] Đang kết thúc, video dở sẽ không chạy tiếp…")
         self._btn_stop.configure(state="disabled")
         self._btn_pause.configure(state="disabled")
 
@@ -3107,7 +3107,7 @@ class App(ctk.CTk):
             self._stop_batch_clock()
             if self._cancel_event.is_set():
                 self._log_msg(
-                    f"\n[Dung] Đã dừng.  {done}/{total} hoàn tất trước khi dừng"
+                    f"\n[Ket thuc] Đã kết thúc.  {done}/{total} hoàn tất trước khi kết thúc"
                     + (f"  X {errors} lỗi" if errors else "")
                 )
             else:

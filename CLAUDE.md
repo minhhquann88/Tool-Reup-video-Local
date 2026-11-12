@@ -67,7 +67,7 @@ The pipeline runs in stages on a thread pool. Every number below comes from `edi
 
 Stop requests go through `self._cancel_event`, and every long operation accepts a `should_stop` callable. A video that has already uploaded is always recorded, even after Stop.
 
-Pause ("TẠM DỪNG"/"TIẾP TỤC") sets `self._pause_event`. Workers block in `_wait_while_paused()` at stage boundaries (start gate, before encode, before save/upload, start of `upload_one`), and `VideoProcessor.suspend_active()` freezes running FFmpeg processes (NtSuspendProcess on Windows, SIGSTOP on Linux; suspended time does not count toward the 10-minute timeout). In-flight downloads, uploads and voice requests finish their current step. Time spent paused is excluded from the batch clock, and the `_gate_start` delay re-reserves its slot after a resume.
+The Stop button is labelled "KẾT THÚC" so it is not confused with Pause. Pause ("TẠM DỪNG"/"TIẾP TỤC") sets `self._pause_event`. Workers block in `_wait_while_paused()` at stage boundaries (start gate, before encode, before save/upload, start of `upload_one`), and `VideoProcessor.suspend_active()` freezes running FFmpeg processes (NtSuspendProcess on Windows, SIGSTOP on Linux; suspended time does not count toward the 10-minute timeout). In-flight downloads, uploads and voice requests finish their current step. Time spent paused is excluded from the batch clock, and the `_gate_start` delay re-reserves its slot after a resume.
 
 ### Threading rule
 
