@@ -50,6 +50,7 @@ from tkinter import BooleanVar, StringVar, TclError, filedialog, messagebox
 import customtkinter as ctk
 
 import edition
+import hwinfo
 import license as license_mod
 import single_instance
 import updater
@@ -64,11 +65,64 @@ if sys.platform != "win32":
     except Exception:
         pass
 
+
+def _patch_ctk_scroll_for_tcl_widgets() -> None:
+    """CTkScrollableFrame gắn bind_all cho con lăn chuột rồi đi ngược widget.master.
+    Hộp chọn file / messagebox của Tk trên Linux là widget thuần Tcl → event.widget
+    là chuỗi (vd '.__tk_filedialog.contents.f2.list') → AttributeError 'str' ... 'master'
+    mỗi lần lăn chuột trong hộp thoại. Widget không phải của Python thì bỏ qua."""
+    try:
+        from customtkinter import CTkScrollableFrame
+    except Exception:
+        return
+    orig = getattr(CTkScrollableFrame, "_check_if_valid_scroll", None)
+    if orig is None or getattr(orig, "_reup_safe", False):
+        return
+
+    def _safe_check(self, widget):
+        if not hasattr(widget, "master"):
+            return False
+        try:
+            return orig(self, widget)
+        except (AttributeError, TclError):
+            return False
+
+    _safe_check._reup_safe = True
+    CTkScrollableFrame._check_if_valid_scroll = _safe_check
+
+
+_patch_ctk_scroll_for_tcl_widgets()
+
+
+def _file_types(*groups):
+    """filetypes cho filedialog. Hộp chọn file Tk trên Linux phân biệt hoa/thường
+    (ẩn 'NHAC.MP3') và '*.*' bỏ sót file không có đuôi → thêm mẫu HOA, dùng '*'."""
+    out = []
+    for label, patterns in groups:
+        pats = patterns.split()
+        if sys.platform != "win32":
+            pats += [p.upper() for p in pats if p.upper() != p]
+        out.append((label, " ".join(pats)))
+    out.append(("Tất cả", "*.*" if sys.platform == "win32" else "*"))
+    return out
+
 APP_VERSION = f"v{license_mod.APP_VERSION}"
 PROFILE = edition.PROFILE           # giới hạn luồng + định danh theo bản Pro/thường
 APP_TITLE = f"{edition.TITLE} {APP_VERSION}"
 _UI_FONT = "Segoe UI" if sys.platform == "win32" else "DejaVu Sans"
 _UI_MONO_FONT = "Consolas" if sys.platform == "win32" else "DejaVu Sans Mono"
+
+# Cột cài đặt bên trái: rộng, chữ to, chia tab để ít phải cuộn.
+_SETTINGS_TABS = ("Video", "Logo", "Âm thanh", "Lưu video")
+_SET_W     = 400                       # chiều rộng cột cài đặt (px)
+_PAUSE_TEXT,  _PAUSE_COLOR  = "TẠM DỪNG", "#B26A00"
+_RESUME_TEXT, _RESUME_COLOR = "TIẾP TỤC", "#2E7D32"
+_SET_WRAP  = _SET_W - 70               # wraplength cho chữ nhiều dòng
+_F_SET     = (_UI_FONT, 14)            # chữ thường
+_F_HINT    = (_UI_FONT, 12)            # chữ gợi ý (xám)
+_F_SECTION = (_UI_FONT, 16, "bold")    # tiêu đề nhóm
+_ROW_H     = 34                        # chiều cao ô nhập / nút / menu
+_CTRL_W    = 200                       # độ rộng menu chọn / ô nhập bên phải
 
 def _clean_ui_text(text: str, max_len: int = 60) -> str:
     """Sanitize text for display in UI widgets to prevent X11 BadLength (RenderAddGlyphs) crash on Linux."""
@@ -276,6 +330,7 @@ class App(ctk.CTk):
 
     # Email tài khoản Drive đang dùng ("" = chưa rõ); luồng batch chỉ đọc.
     _drive_active = ""
+    _drive_has_unknown = False  # có token từ bản cũ chưa rõ email
     _drive_list_gen = 0     # bỏ kết quả đọc danh sách tài khoản đã cũ
 
     def __init__(self, license_data: dict | None = None,
@@ -311,6 +366,10 @@ class App(ctk.CTk):
         self._page       = 0                     # trang đang xem (0-based)
         self._csv_path:  str            = ""
         self._cancel_event = threading.Event()
+        # Đang bật = batch tạm dừng: không bắt đầu bước mới, FFmpeg bị treo.
+        self._pause_event = threading.Event()
+        self._paused_total = 0.0          # tổng giây đã tạm dừng (không tính giờ chạy)
+        self._paused_since = None         # mốc monotonic bắt đầu lần tạm dừng hiện tại
         self._processing = False
         self._batch_started_at = None
         self._batch_started_monotonic = None
@@ -461,89 +520,210 @@ class App(ctk.CTk):
     # ── Settings panel ───────────────────────────────────────────────────────
 
     def _build_settings(self):
-        pane = ctk.CTkScrollableFrame(self, width=250,
-                                       label_text="*  Cài đặt xử lý")
-        pane.grid(row=1, column=0, sticky="nsew", padx=(8, 4), pady=8)
+        """Cột cài đặt bên trái: chia tab (ít phải cuộn), chữ to, nút Xử lý
+        và Dừng ghim ở dưới cùng nên luôn nhìn thấy."""
+        col = ctk.CTkFrame(self, width=_SET_W, fg_color="transparent")
+        # Chiếm cả hàng danh sách video lẫn hàng nhật ký → cao hết cửa sổ.
+        col.grid(row=1, column=0, rowspan=2, sticky="nsew", padx=(8, 4), pady=8)
+        col.pack_propagate(False)
 
+        # ── Nút hành động + bản quyền: ghim đáy cột (pack trước tab) ──
+        actions = ctk.CTkFrame(col, fg_color="transparent")
+        actions.pack(side="bottom", fill="x", pady=(8, 0))
+        btns = ctk.CTkFrame(actions, fg_color="transparent")
+        btns.pack(fill="x")
+        self._btn_process = ctk.CTkButton(
+            btns, text="XỬ LÝ VIDEO", height=46,
+            font=(_UI_FONT, 16, "bold"), fg_color="#1565C0",
+            command=self._start_processing,
+        )
+        self._btn_process.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self._btn_stop = ctk.CTkButton(
+            btns, text="DỪNG", width=100, height=46,
+            font=(_UI_FONT, 14, "bold"), fg_color="#8B0000", state="disabled",
+            command=self._request_stop,
+        )
+        self._btn_stop.pack(side="right")
+        self._btn_pause = ctk.CTkButton(
+            btns, text=_PAUSE_TEXT, width=110, height=46,
+            font=(_UI_FONT, 14, "bold"), fg_color=_PAUSE_COLOR, state="disabled",
+            command=self._toggle_pause,
+        )
+        self._btn_pause.pack(side="right", padx=(0, 6))
+
+        data = self._license_data or {}
+        key  = data.get("key") or ""
+        masked = ("••••" + key[-4:]) if len(key) >= 4 else (key or "N/A")
+        expiry = data.get("expire_date") or "Vô thời hạn"
+        lic = ctk.CTkFrame(actions, fg_color="transparent")
+        lic.pack(fill="x", pady=(6, 0))
+        ctk.CTkLabel(lic, text=f"Bản quyền: {masked}  ·  Hết hạn: {expiry}",
+                     text_color="gray", font=_F_HINT, anchor="w",
+                     ).pack(side="left")
+        ctk.CTkButton(lic, text="Hủy kích hoạt", width=110, height=28,
+                      fg_color="#555", font=_F_HINT,
+                      command=self._deactivate_license).pack(side="right")
+
+        # ── Các tab cài đặt ──
+        tabs = ctk.CTkTabview(col, corner_radius=8)
+        tabs.pack(fill="both", expand=True)
+        pages = {}
+        for name in _SETTINGS_TABS:
+            page = ctk.CTkScrollableFrame(tabs.add(name), fg_color="transparent")
+            page.pack(fill="both", expand=True)
+            pages[name] = page
+        try:  # CTk 5.2 không có tham số segmented_button_font
+            tabs._segmented_button.configure(font=(_UI_FONT, 14, "bold"))
+        except Exception:
+            pass
+        tabs.set(_SETTINGS_TABS[0])
+        self._settings_tabs = tabs
+
+        self._build_video_tab(pages["Video"])
+        self._build_logo_tab(pages["Logo"])
+        self._build_audio_tab(pages["Âm thanh"])
+        self._build_save_tab(pages["Lưu video"])
+
+    def _build_video_tab(self, page):
         # ── Concurrency (bản thường: cố định trong edition.py, không hiện) ──
+        first = True
         if PROFILE["user_can_set_workers"]:
-            self._section(pane, "  Xử lý đồng thời")
+            self._section(page, "Xử lý đồng thời", first=True)
+            first = False
             # Mặc định theo CPU máy này (Pro); người dùng vẫn sửa được.
-            self._workers = self._labeled_entry(pane, "Số video cùng lúc:",
-                                                str(edition.default_workers_for(PROFILE)))
+            self._workers = self._labeled_entry(
+                page, "Số video cùng lúc:",
+                str(edition.default_workers_for(PROFILE, hwinfo.usable_threads())))
         else:
             self._workers = None
         # Giãn cách giữa 2 video không cho chỉnh ở bản nào: lấy từ edition.py.
 
         # ── Dữ liệu sản phẩm ──
-        self._section(pane, "  Dữ liệu sản phẩm")
+        self._section(page, "Dữ liệu sản phẩm", first=first)
         self._allow_no_product_name_var = BooleanVar(value=True)
         self._allow_no_product_name_switch = ctk.CTkSwitch(
-            pane, text="Render không có tên sản phẩm",
+            page, text="Render không có tên sản phẩm", font=_F_SET,
             variable=self._allow_no_product_name_var,
         )
         self._allow_no_product_name_switch.pack(anchor="w", pady=(2, 2))
-        ctk.CTkLabel(
-            pane, text="Bỏ kiểm tra product_name khi bật.\nVoice AI cần tên sản phẩm nên sẽ tắt tùy chọn này.",
-            text_color="gray", font=(_UI_FONT, 10), wraplength=230,
-            justify="left",
-        ).pack(anchor="w", pady=(0, 4))
+        self._hint(page, "Bỏ kiểm tra product_name khi bật. Voice AI cần tên "
+                         "sản phẩm nên sẽ tắt tùy chọn này.")
 
         # ── Trim ──
-        self._section(pane, "  Cắt video")
-        self._trim_start = self._labeled_entry(pane, "Cắt đầu (giây):", "0")
-        self._trim_end   = self._labeled_entry(pane, "Cắt đuôi (giây):", "0")
+        self._section(page, "Cắt video")
+        self._trim_start = self._labeled_entry(page, "Cắt đầu (giây):", "0")
+        self._trim_end   = self._labeled_entry(page, "Cắt đuôi (giây):", "0")
 
+        # ── Độ phân giải ──
+        self._section(page, "Độ phân giải")
+        self._resolution_var = StringVar(value="Giữ nguyên độ phân giải video")
+        self._resolution_menu = ctk.CTkOptionMenu(
+            page,
+            values=["Nâng độ phân giải lên 1080x1920", "Giữ nguyên độ phân giải video"],
+            variable=self._resolution_var, height=_ROW_H,
+            font=_F_SET, dropdown_font=_F_SET,
+        )
+        self._resolution_menu.pack(fill="x", pady=(2, 6))
+
+    def _build_logo_tab(self, page):
+        self._section(page, "Logo / Watermark", first=True)
+
+        self._logo_label = ctk.CTkLabel(page, text="", text_color="gray",
+                                         font=_F_HINT,
+                                         wraplength=_SET_WRAP, justify="left")
+        self._logo_label.pack(anchor="w", pady=(0, 2))
+
+        # Khung danh sách logo đã thêm (mỗi dòng có nút xoá riêng)
+        self._logo_list = ctk.CTkFrame(page, border_width=1,
+                                       border_color="#555", corner_radius=6)
+        self._logo_list.pack(fill="x", pady=(0, 4))
+
+        row2 = ctk.CTkFrame(page, fg_color="transparent")
+        row2.pack(fill="x", pady=2)
+        ctk.CTkButton(row2, text="+ Thêm logo", height=_ROW_H, font=_F_SET,
+                      command=self._pick_logo).pack(side="left", fill="x",
+                                                     expand=True, padx=(0, 4))
+        ctk.CTkButton(row2, text="Xoá hết", width=90, height=_ROW_H,
+                      fg_color="#555", font=_F_SET,
+                      command=self._clear_logo).pack(side="right")
+        self._refresh_logo_label()
+
+        self._section(page, "Hiển thị logo")
+        self._logo_pos, _ = self._option_row(
+            page, "Vị trí:",
+            ["Top-Right", "Top-Left", "Bottom-Right", "Bottom-Left", "Center"])
+
+        # Chuyển động: cố định / chạy vòng theo viền / nảy DVD.
+        # Vị trí ở trên đóng vai trò điểm xuất phát khi có chuyển động.
+        self._logo_motion, _ = self._option_row(
+            page, "Chuyển động:",
+            ["Cố định", "Chạy vòng theo viền", "Nảy DVD"],
+            command=self._toggle_logo_speed)
+
+        # Tốc độ — chỉ hiện khi Chuyển động khác "Cố định"
+        self._logo_speed, self._logo_speed_row = self._option_row(
+            page, "Tốc độ:", ["Chậm", "Vừa", "Nhanh"])
+        self._logo_speed.set("Vừa")
+        # Mốc để pack lại Tốc độ đúng chỗ (ngay trên Độ mờ) khi hiện lại
+        self._logo_speed_anchor = ctk.CTkFrame(page, height=0,
+                                               fg_color="transparent")
+        self._logo_speed_anchor.pack(fill="x")
+
+        # Độ mờ — áp dụng cho logo cả khi đứng yên lẫn khi chuyển động
+        self._logo_opacity, _ = self._option_row(
+            page, "Độ mờ:", ["Rõ", "Mờ vừa", "Mờ nhiều"])
+
+        self._logo_size = self._labeled_entry(page, "Kích thước (%):", "15")
+        self._toggle_logo_speed()  # áp dụng trạng thái ẩn ban đầu
+
+    def _build_audio_tab(self, page):
         # ── Audio ──
-        self._section(pane, "  Thêm nhạc")
+        self._section(page, "Thêm nhạc", first=True)
 
-        self._audio_label = ctk.CTkLabel(pane, text="", text_color="gray",
-                                          font=(_UI_FONT, 11),
-                                          wraplength=230, justify="left")
+        self._audio_label = ctk.CTkLabel(page, text="", text_color="gray",
+                                          font=_F_HINT,
+                                          wraplength=_SET_WRAP, justify="left")
         self._audio_label.pack(anchor="w", pady=(0, 2))
 
         # Khung danh sách audio đã thêm (mỗi dòng có nút xoá riêng)
-        self._audio_list = ctk.CTkFrame(pane, border_width=1,
+        self._audio_list = ctk.CTkFrame(page, border_width=1,
                                         border_color="#555", corner_radius=6)
         self._audio_list.pack(fill="x", pady=(0, 4))
 
-        row = ctk.CTkFrame(pane, fg_color="transparent")
+        row = ctk.CTkFrame(page, fg_color="transparent")
         row.pack(fill="x", pady=2)
         self._btn_pick_audio = ctk.CTkButton(
-            row, text="+ Thêm nhạc", height=30, command=self._pick_audio)
+            row, text="+ Thêm nhạc", height=_ROW_H, font=_F_SET,
+            command=self._pick_audio)
         self._btn_pick_audio.pack(side="left", fill="x", expand=True,
-                                  padx=(0, 2))
+                                  padx=(0, 4))
         self._btn_clear_audio = ctk.CTkButton(
-            row, text="Xoá hết", width=60, height=30, fg_color="#555",
-            command=self._clear_audio)
+            row, text="Xoá hết", width=90, height=_ROW_H, fg_color="#555",
+            font=_F_SET, command=self._clear_audio)
         self._btn_clear_audio.pack(side="right")
         self._refresh_audio_label()
 
         self._mute_var = BooleanVar(value=False)
-        self._mute_chk = ctk.CTkCheckBox(pane, text="Tắt tiếng (mute)",
-                                         variable=self._mute_var)
-        self._mute_chk.pack(anchor="w", pady=(4, 0))
+        self._mute_chk = ctk.CTkCheckBox(page, text="Tắt tiếng (mute)",
+                                         font=_F_SET, variable=self._mute_var)
+        self._mute_chk.pack(anchor="w", pady=(6, 0))
 
         # ── Voice AI (prompt -> Gemini -> Google TTS) ──
+        self._section(page, "Voice AI")
         self._voiceai_var = BooleanVar(value=False)
         ctk.CTkSwitch(
-            pane, text=" Voice AI (Gemini + Google TTS)",
+            page, text="Bật Voice AI (AI viết lời + đọc)", font=_F_SET,
             variable=self._voiceai_var, command=self._toggle_voiceai,
-        ).pack(anchor="w", pady=(10, 2))
+        ).pack(anchor="w", pady=(2, 2))
 
-        self._voiceai_box = ctk.CTkFrame(pane, fg_color="transparent")
+        self._voiceai_box = ctk.CTkFrame(page, fg_color="transparent")
         # Ẩn ban đầu; hiện khi bật switch
 
         # AI tạo text: Gemini hoặc ChatGPT
-        arow = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
-        arow.pack(fill="x", pady=(6, 2))
-        ctk.CTkLabel(arow, text="AI tạo text:", width=85,
-                     anchor="w").pack(side="left")
-        self._ai_provider = ctk.CTkOptionMenu(
-            arow, values=["Gemini", "ChatGPT"],
-            width=145, command=self._toggle_ai_provider)
+        self._ai_provider, _ = self._option_row(
+            self._voiceai_box, "AI tạo text:", ["Gemini", "ChatGPT"],
+            command=self._toggle_ai_provider)
         self._ai_provider.set("Gemini")
-        self._ai_provider.pack(side="right")
 
         # Khối Gemini
         self._gemini_box = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
@@ -568,28 +748,22 @@ class App(ctk.CTk):
         self._ai_provider_anchor.pack(fill="x")
 
         # Nhà cung cấp giọng
-        prow = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
-        prow.pack(fill="x", pady=(6, 2))
-        ctk.CTkLabel(prow, text="AI tạo voice:", width=85,
-                     anchor="w").pack(side="left")
-        self._tts_provider = ctk.CTkOptionMenu(
-            prow, values=["Google TTS", "AutoVoice.vn", "Voice API (videoai)"],
-            width=145, command=self._toggle_tts_provider)
+        self._tts_provider, prow = self._option_row(
+            self._voiceai_box, "AI tạo voice:",
+            ["Google TTS", "AutoVoice.vn", "Voice API (videoai)"],
+            command=self._toggle_tts_provider)
+        prow.pack_configure(pady=(10, 3))
         self._tts_provider.set("Google TTS")
-        self._tts_provider.pack(side="right")
 
         # ── Khối Google TTS ──
         self._google_box = ctk.CTkFrame(self._voiceai_box, fg_color="transparent")
         self._tts_key = self._fullwidth_entry(
             self._google_box, "API Key Google TTS:",
             placeholder="Dán API key Google TTS")
-        vrow = ctk.CTkFrame(self._google_box, fg_color="transparent")
-        vrow.pack(fill="x", pady=(6, 2))
-        ctk.CTkLabel(vrow, text="Giọng:", width=55, anchor="w").pack(side="left")
-        self._voice_name = ctk.CTkOptionMenu(
-            vrow, values=list(VOICE_CHOICES.keys()), width=175)
+        self._voice_name, vrow = self._option_row(
+            self._google_box, "Giọng:", list(VOICE_CHOICES.keys()))
+        vrow.pack_configure(pady=(8, 3))
         self._voice_name.set(DEFAULT_VOICE_LABEL)
-        self._voice_name.pack(side="right")
         self._tts_speed = self._labeled_entry(
             self._google_box, "Tốc độ đọc:", "1.2")
 
@@ -621,230 +795,106 @@ class App(ctk.CTk):
         self._tts_provider_anchor.pack(fill="x")
 
         ctk.CTkLabel(self._voiceai_box, text="Prompt tạo lời thoại:",
-                     anchor="w").pack(anchor="w", pady=(6, 2))
-        ctk.CTkLabel(
-            self._voiceai_box,
-            text="Chèn dữ liệu CSV bằng ${tên_cột} (vd ${product_name}).",
-            text_color="gray", font=(_UI_FONT, 10), wraplength=230, justify="left",
-        ).pack(anchor="w")
-        self._prompt_box = ctk.CTkTextbox(self._voiceai_box, height=120,
-                                          wrap="word")
+                     font=_F_SET, anchor="w").pack(anchor="w", pady=(10, 2))
+        self._hint(self._voiceai_box,
+                   "Chèn dữ liệu CSV bằng ${tên_cột} (vd ${product_name}).")
+        self._prompt_box = ctk.CTkTextbox(self._voiceai_box, height=160,
+                                          wrap="word", font=_F_SET)
         self._prompt_box.pack(fill="x", pady=(2, 0))
         self._prompt_box.insert("1.0", DEFAULT_PROMPT)
 
         # Mốc vị trí để pack khối Voice AI đúng chỗ khi bật/tắt switch
-        self._voiceai_anchor = ctk.CTkFrame(pane, height=0,
+        self._voiceai_anchor = ctk.CTkFrame(page, height=0,
                                             fg_color="transparent")
         self._voiceai_anchor.pack(fill="x")
         self._toggle_ai_provider()  # hiện đúng khối AI tạo text ban đầu
         self._toggle_tts_provider()  # hiện đúng khối nhà cung cấp ban đầu
         self._toggle_voiceai()  # áp dụng trạng thái ẩn ban đầu
 
-        # ── Logo ──
-        self._section(pane, "  Logo / Watermark")
-
-        self._logo_label = ctk.CTkLabel(pane, text="", text_color="gray",
-                                         font=(_UI_FONT, 11),
-                                         wraplength=230, justify="left")
-        self._logo_label.pack(anchor="w", pady=(0, 2))
-
-        # Khung danh sách logo đã thêm (mỗi dòng có nút xoá riêng)
-        self._logo_list = ctk.CTkFrame(pane, border_width=1,
-                                       border_color="#555", corner_radius=6)
-        self._logo_list.pack(fill="x", pady=(0, 4))
-
-        row2 = ctk.CTkFrame(pane, fg_color="transparent")
-        row2.pack(fill="x", pady=2)
-        ctk.CTkButton(row2, text="+ Thêm logo", height=30,
-                      command=self._pick_logo).pack(side="left", fill="x",
-                                                     expand=True, padx=(0, 2))
-        ctk.CTkButton(row2, text="Xoá hết", width=60, height=30,
-                      fg_color="#555",
-                      command=self._clear_logo).pack(side="right")
-        self._refresh_logo_label()
-
-        pos_row = ctk.CTkFrame(pane, fg_color="transparent")
-        pos_row.pack(fill="x", pady=(8, 2))
-        ctk.CTkLabel(pos_row, text="Vị trí:", width=90,
-                     anchor="w").pack(side="left")
-        self._logo_pos = ctk.CTkOptionMenu(
-            pos_row,
-            values=["Top-Right", "Top-Left", "Bottom-Right", "Bottom-Left", "Center"],
-            width=165,
-        )
-        self._logo_pos.pack(side="right")
-
-        # Chuyển động: cố định / chạy vòng theo viền / nảy DVD.
-        # Vị trí ở trên đóng vai trò điểm xuất phát khi có chuyển động.
-        motion_row = ctk.CTkFrame(pane, fg_color="transparent")
-        motion_row.pack(fill="x", pady=2)
-        ctk.CTkLabel(motion_row, text="Chuyển động:", width=90,
-                     anchor="w").pack(side="left")
-        self._logo_motion = ctk.CTkOptionMenu(
-            motion_row,
-            values=["Cố định", "Chạy vòng theo viền", "Nảy DVD"],
-            width=165,
-            command=self._toggle_logo_speed,
-        )
-        self._logo_motion.pack(side="right")
-
-        # Tốc độ — chỉ hiện khi Chuyển động khác "Cố định"
-        self._logo_speed_row = ctk.CTkFrame(pane, fg_color="transparent")
-        ctk.CTkLabel(self._logo_speed_row, text="Tốc độ:", width=90,
-                     anchor="w").pack(side="left")
-        self._logo_speed = ctk.CTkOptionMenu(
-            self._logo_speed_row, values=["Chậm", "Vừa", "Nhanh"], width=165)
-        self._logo_speed.set("Vừa")
-        self._logo_speed.pack(side="right")
-        # Mốc để pack lại Tốc độ đúng chỗ (ngay trên Độ mờ) khi hiện lại
-        self._logo_speed_anchor = ctk.CTkFrame(pane, height=0,
-                                               fg_color="transparent")
-        self._logo_speed_anchor.pack(fill="x")
-
-        # Độ mờ — áp dụng cho logo cả khi đứng yên lẫn khi chuyển động
-        op_row = ctk.CTkFrame(pane, fg_color="transparent")
-        op_row.pack(fill="x", pady=2)
-        ctk.CTkLabel(op_row, text="Độ mờ:", width=90,
-                     anchor="w").pack(side="left")
-        self._logo_opacity = ctk.CTkOptionMenu(
-            op_row, values=["Rõ", "Mờ vừa", "Mờ nhiều"], width=165)
-        self._logo_opacity.pack(side="right")
-
-        self._logo_size = self._labeled_entry(pane, "Kích thước (%):", "15")
-
-        # Thiết lập độ phân giải
-        ctk.CTkLabel(pane, text="Độ phân giải video:", anchor="w").pack(anchor="w", pady=(10, 2))
-        self._resolution_var = StringVar(value="Nâng độ phân giải lên 1080x1920")
-        self._resolution_menu = ctk.CTkOptionMenu(
-            pane,
-            values=["Nâng độ phân giải lên 1080x1920", "Giữ nguyên độ phân giải video"],
-            variable=self._resolution_var,
-            width=230,
-        )
-        self._resolution_menu.pack(fill="x", pady=(0, 6))
-
-        self._toggle_logo_speed()  # áp dụng trạng thái ẩn ban đầu
-
+    def _build_save_tab(self, page):
         # ── Nơi lưu video: Google Drive hoặc Local ──
-        self._section(pane, "  Nơi lưu video")
+        self._section(page, "Nơi lưu video", first=True)
 
         self._save_mode = ctk.CTkSegmentedButton(
-            pane, values=["Google Drive", "Local"],
-            command=self._toggle_save_mode,
+            page, values=["Google Drive", "Local"], height=_ROW_H,
+            font=_F_SET, command=self._toggle_save_mode,
         )
         self._save_mode.set("Google Drive")
-        self._save_mode.pack(fill="x", pady=(0, 6))
+        self._save_mode.pack(fill="x", pady=(0, 8))
 
         # Khối Drive (hiện khi chọn "Google Drive")
-        self._drive_box = ctk.CTkFrame(pane, fg_color="transparent")
+        self._drive_box = ctk.CTkFrame(page, fg_color="transparent")
         self._login_label = ctk.CTkLabel(
             self._drive_box, text="Chưa đăng nhập",
-            text_color="gray", font=(_UI_FONT, 11),
+            text_color="gray", font=_F_SET,
+            wraplength=_SET_WRAP, justify="left",
         )
         self._login_label.pack(anchor="w", pady=(0, 6))
 
-        # Chọn tài khoản Drive đang dùng (nhiều tài khoản đã đăng nhập).
-        acc_row = ctk.CTkFrame(self._drive_box, fg_color="transparent")
-        acc_row.pack(fill="x", pady=(0, 6))
-        ctk.CTkLabel(acc_row, text="Tài khoản:", width=70,
-                     anchor="w").pack(side="left")
-        self._drive_accounts: list = []      # email theo thứ tự trong menu
-        self._drive_account_menu = ctk.CTkOptionMenu(
-            acc_row, values=[_NO_DRIVE_ACCOUNT], dynamic_resizing=False,
-            command=self._on_select_drive_account,
-        )
-        self._drive_account_menu.pack(side="left", fill="x", expand=True)
+        # Khung danh sách Gmail đã đăng nhập: bấm email để dùng tài khoản đó,
+        # "Thoát" để đăng xuất riêng tài khoản đó.
+        ctk.CTkLabel(self._drive_box, text="Tài khoản Google Drive:",
+                     font=_F_SET, anchor="w").pack(anchor="w")
+        self._drive_list_box = ctk.CTkFrame(self._drive_box, border_width=1,
+                                            corner_radius=6)
+        self._drive_list_box.pack(fill="x", pady=(2, 2))
+        self._hint(self._drive_box, "Bấm vào email để chuyển tài khoản.",
+                   pady=(0, 6))
+        self._drive_accounts: list = []      # email theo thứ tự trong khung
+        self._drive_has_unknown = False      # có token cũ chưa rõ email
+        self._render_drive_accounts()
 
-        btn_row = ctk.CTkFrame(self._drive_box, fg_color="transparent")
-        btn_row.pack(fill="x", pady=(0, 6))
-        self._login_btn_row = btn_row
-        ctk.CTkButton(btn_row, text=" Thêm tài khoản", height=34,
-                      fg_color="#2d6a4f",
-                      command=self._login_drive).pack(side="left", fill="x",
-                                                       expand=True, padx=(0, 2))
-        ctk.CTkButton(btn_row, text=" Đăng xuất", height=34, width=90,
-                      fg_color="#555",
-                      command=self._logout_drive).pack(side="right")
+        self._login_btn = ctk.CTkButton(
+            self._drive_box, text="+ Thêm tài khoản", height=_ROW_H + 2,
+            font=_F_SET, fg_color="#2d6a4f", command=self._login_drive)
+        self._login_btn.pack(fill="x", pady=(0, 6))
 
-        # Link đăng nhập (hiện khi đang chờ đăng nhập) để copy sang trình duyệt
-        # khác nếu trình duyệt không tự mở hoặc muốn chọn tài khoản khác.
+        # Link đăng nhập (hiện khi đang chờ đăng nhập).  Tool không tự mở
+        # trình duyệt: người dùng copy link vào trình duyệt trên máy này.
         self._login_link_box = ctk.CTkFrame(self._drive_box, fg_color="transparent")
-        ctk.CTkLabel(
-            self._login_link_box,
-            text="Link đăng nhập (mở bằng trình duyệt trên máy này):",
-            text_color="gray", font=(_UI_FONT, 11),
-            wraplength=230, justify="left",
-        ).pack(anchor="w")
-        link_row = ctk.CTkFrame(self._login_link_box, fg_color="transparent")
-        link_row.pack(fill="x", pady=(2, 6))
-        self._login_link_entry = ctk.CTkEntry(link_row, height=30,
-                                              font=(_UI_FONT, 11))
-        self._login_link_entry.pack(side="left", fill="x", expand=True,
-                                    padx=(0, 2))
+        self._hint(self._login_link_box,
+                   "Copy link dưới đây, dán vào trình duyệt trên máy này "
+                   "rồi đăng nhập Google:")
+        self._login_link_entry = ctk.CTkEntry(self._login_link_box, height=_ROW_H,
+                                              font=_F_HINT)
+        self._login_link_entry.pack(fill="x", pady=(2, 4))
+        link_btns = ctk.CTkFrame(self._login_link_box, fg_color="transparent")
+        link_btns.pack(fill="x", pady=(0, 6))
         self._login_link_copy_btn = ctk.CTkButton(
-            link_row, text="Copy", height=30, width=70,
+            link_btns, text="Copy link", height=_ROW_H, font=_F_SET,
             fg_color="#1f6aa5", command=self._copy_login_link)
-        self._login_link_copy_btn.pack(side="right")
+        self._login_link_copy_btn.pack(side="left", fill="x", expand=True,
+                                       padx=(0, 4))
+        ctk.CTkButton(link_btns, text="Hủy", height=_ROW_H, width=90,
+                      fg_color="#555", font=_F_SET,
+                      command=self._cancel_drive_login).pack(side="right")
         self._login_link = ""
         self._login_link_copy_job = None
 
         # Khối Local (hiện khi chọn "Local")
-        self._local_box = ctk.CTkFrame(pane, fg_color="transparent")
+        self._local_box = ctk.CTkFrame(page, fg_color="transparent")
         self._local_label = ctk.CTkLabel(
             self._local_box, text="Chưa chọn thư mục",
-            text_color="gray", font=(_UI_FONT, 11), wraplength=230, justify="left",
+            text_color="gray", font=_F_SET, wraplength=_SET_WRAP, justify="left",
         )
         self._local_label.pack(anchor="w", pady=(0, 4))
-        ctk.CTkButton(self._local_box, text=" Chọn thư mục lưu", height=34,
-                      fg_color="#2d6a4f",
+        ctk.CTkButton(self._local_box, text="Chọn thư mục lưu", height=_ROW_H + 2,
+                      font=_F_SET, fg_color="#2d6a4f",
                       command=self._pick_local_dir).pack(fill="x", pady=(0, 6))
 
         # Mốc để pack lại khối chế độ đúng chỗ (ngay trên "Tên folder")
-        self._save_anchor = ctk.CTkFrame(pane, height=0, fg_color="transparent")
+        self._save_anchor = ctk.CTkFrame(page, height=0, fg_color="transparent")
         self._save_anchor.pack(fill="x")
 
         # Tên folder: dùng chung — Drive = tên folder Drive; Local = tên thư mục con
-        folder_row = ctk.CTkFrame(pane, fg_color="transparent")
-        folder_row.pack(fill="x", pady=2)
-        ctk.CTkLabel(folder_row, text="Tên folder:", anchor="w",
-                     width=85).pack(side="left")
-        self._folder_name = ctk.CTkEntry(folder_row, width=145,
+        self._section(page, "Tên folder lưu")
+        self._folder_name = ctk.CTkEntry(page, height=_ROW_H, font=_F_SET,
                                           placeholder_text="VD: Reup_2026")
-        self._folder_name.pack(side="right")
+        self._folder_name.pack(fill="x", pady=(2, 2))
+        self._hint(page, "Drive: tên folder tạo trên Drive. Local: tên thư mục "
+                         "con trong thư mục lưu.")
 
         self._toggle_save_mode()  # áp dụng trạng thái hiển thị ban đầu
-
-        # ── Buttons ──
-        ctk.CTkFrame(pane, height=1, fg_color="#444").pack(fill="x", pady=16)
-
-        self._btn_process = ctk.CTkButton(
-            pane, text="XỬ LÝ VIDEO", height=44,
-            font=(_UI_FONT, 14, "bold"), fg_color="#1565C0",
-            command=self._start_processing,
-        )
-        self._btn_process.pack(fill="x", pady=(0, 6))
-
-        self._btn_stop = ctk.CTkButton(
-            pane, text="DỪNG", height=34,
-            fg_color="#8B0000", state="disabled",
-            command=self._request_stop,
-        )
-        self._btn_stop.pack(fill="x")
-
-        # ── Bản quyền ──
-        ctk.CTkFrame(pane, height=1, fg_color="#444").pack(fill="x", pady=12)
-        data = self._license_data or {}
-        key  = data.get("key") or ""
-        masked = ("••••" + key[-4:]) if len(key) >= 4 else (key or "N/A")
-        expiry = data.get("expire_date") or "Vô thời hạn"
-        ctk.CTkLabel(
-            pane, text=f" Bản quyền: {masked}\nHết hạn: {expiry}",
-            text_color="gray", font=(_UI_FONT, 11), justify="left",
-        ).pack(anchor="w")
-        ctk.CTkButton(
-            pane, text="Hủy kích hoạt", height=28, fg_color="#555",
-            font=(_UI_FONT, 11), command=self._deactivate_license,
-        ).pack(anchor="w", pady=(4, 0))
 
     # ── Video list ───────────────────────────────────────────────────────────
 
@@ -912,7 +962,7 @@ class App(ctk.CTk):
         self._log_bar_h = 285                         # chiều cao thanh dưới (kéo được)
 
         bar = ctk.CTkFrame(self, height=self._log_bar_h, corner_radius=0)
-        bar.grid(row=2, column=0, columnspan=2, sticky="ew")
+        bar.grid(row=2, column=1, sticky="ew")      # chỉ nằm dưới danh sách video
         bar.grid_propagate(False)
         bar.grid_columnconfigure(0, weight=1)
         bar.grid_rowconfigure(3, weight=1)            # hàng log co giãn theo bar
@@ -983,10 +1033,13 @@ class App(ctk.CTk):
         if not self._ui_alive or self._batch_started_monotonic is None:
             return
         end = self._batch_ended_monotonic
-        elapsed = (time.monotonic() if end is None else end) - self._batch_started_monotonic
+        now = time.monotonic() if end is None else end
+        elapsed = now - self._batch_started_monotonic - self._paused_seconds(now)
         started = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime(self._batch_started_at))
+        paused_note = "  (Đang tạm dừng)" if end is None and self._pause_event.is_set() else ""
         self._batch_time_lbl.configure(
-            text=f"Bắt đầu: {started}  |  Đã chạy: {self._format_elapsed(elapsed)}")
+            text=f"Bắt đầu: {started}  |  Đã chạy: {self._format_elapsed(elapsed)}"
+                 + paused_note)
         if end is None:
             self._batch_clock_job = self.after(1000, self._refresh_batch_clock)
 
@@ -996,8 +1049,17 @@ class App(ctk.CTk):
             self.after_cancel(self._batch_clock_job)
             self._batch_clock_job = None
         self._refresh_batch_clock()
-        elapsed = ended_monotonic - self._batch_started_monotonic
+        elapsed = (ended_monotonic - self._batch_started_monotonic
+                   - self._paused_seconds(ended_monotonic))
         self._log_msg(f"Kết thúc tiến trình. Tổng thời gian chạy: {self._format_elapsed(elapsed)}")
+
+    def _paused_seconds(self, until: float) -> float:
+        """Số giây batch đã tạm dừng tính tới mốc `until` (trừ khỏi giờ chạy)."""
+        total = getattr(self, "_paused_total", 0.0)
+        since = getattr(self, "_paused_since", None)
+        if since is not None and since < until:
+            total += until - since
+        return total
 
     def _stop_batch_clock(self):
         """Freeze the duration when work ends, before completion dialogs open."""
@@ -1017,27 +1079,48 @@ class App(ctk.CTk):
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _section(parent, text: str):
-        ctk.CTkLabel(parent, text=text, font=(_UI_FONT, 13, "bold")).pack(
-            anchor="w", pady=(14, 4))
+    def _section(parent, text: str, first: bool = False):
+        ctk.CTkLabel(parent, text=text, font=_F_SECTION).pack(
+            anchor="w", pady=(2 if first else 18, 6))
+
+    @staticmethod
+    def _hint(parent, text: str, pady=(0, 4)):
+        """Dòng chữ gợi ý màu xám, tự xuống dòng theo bề rộng cột."""
+        ctk.CTkLabel(parent, text=text, text_color="gray", font=_F_HINT,
+                     wraplength=_SET_WRAP, justify="left", anchor="w",
+                     ).pack(anchor="w", pady=pady)
 
     @staticmethod
     def _labeled_entry(parent, label: str, default: str) -> ctk.CTkEntry:
         row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(fill="x", pady=2)
-        ctk.CTkLabel(row, text=label, anchor="w").pack(side="left")
-        e = ctk.CTkEntry(row, width=75)
+        row.pack(fill="x", pady=3)
+        ctk.CTkLabel(row, text=label, font=_F_SET, anchor="w").pack(side="left")
+        e = ctk.CTkEntry(row, width=110, height=_ROW_H, font=_F_SET)
         e.pack(side="right")
         e.insert(0, default)
         return e
 
     @staticmethod
+    def _option_row(parent, label: str, values: list, command=None):
+        """Nhãn bên trái + menu chọn bên phải. Trả về (menu, dòng)."""
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", pady=3)
+        ctk.CTkLabel(row, text=label, font=_F_SET, anchor="w").pack(side="left")
+        menu = ctk.CTkOptionMenu(row, values=values, width=_CTRL_W,
+                                 height=_ROW_H, font=_F_SET,
+                                 dropdown_font=_F_SET, dynamic_resizing=False,
+                                 command=command)
+        menu.pack(side="right")
+        return menu, row
+
+    @staticmethod
     def _fullwidth_entry(parent, label: str, *, show: str = "",
                          placeholder: str = "", default: str = "") -> ctk.CTkEntry:
         """Label ở trên, ô nhập full-width ở dưới (cho API key / model)."""
-        ctk.CTkLabel(parent, text=label, anchor="w").pack(anchor="w", pady=(6, 1))
-        e = ctk.CTkEntry(parent, placeholder_text=placeholder,
-                         show=show or "")
+        ctk.CTkLabel(parent, text=label, font=_F_SET, anchor="w").pack(
+            anchor="w", pady=(8, 2))
+        e = ctk.CTkEntry(parent, placeholder_text=placeholder, height=_ROW_H,
+                         font=_F_SET, show=show or "")
         e.pack(fill="x")
         if default:
             e.insert(0, default)
@@ -1701,12 +1784,11 @@ class App(ctk.CTk):
             return
         path = filedialog.askopenfilename(
             title="Chọn file CSV hoặc Excel",
-            filetypes=[
+            filetypes=_file_types(
                 ("CSV/Excel", "*.csv *.xlsx *.xls"),
                 ("CSV", "*.csv"),
                 ("Excel", "*.xlsx *.xls"),
-                ("All", "*.*")
-            ],
+            ),
         )
         if not path:
             return
@@ -1757,8 +1839,7 @@ class App(ctk.CTk):
         """Chọn 1 hoặc nhiều file audio; chọn thêm lần nữa sẽ cộng dồn vào danh sách."""
         paths = filedialog.askopenfilenames(
             title="Chọn file audio (có thể chọn nhiều)",
-            filetypes=[("Audio", "*.mp3 *.wav *.aac *.m4a *.ogg"),
-                       ("All", "*.*")],
+            filetypes=_file_types(("Audio", "*.mp3 *.wav *.aac *.m4a *.ogg")),
         )
         if not paths:
             return
@@ -1791,7 +1872,7 @@ class App(ctk.CTk):
                 text="Chọn nhiều file → random cho từng video",
                 text_color="gray")
             ctk.CTkLabel(self._audio_list, text="Chưa có file audio nào",
-                         text_color="gray", font=(_UI_FONT, 11),
+                         text_color="gray", font=_F_SET,
                          ).pack(anchor="w", padx=8, pady=6)
             return
 
@@ -1802,10 +1883,10 @@ class App(ctk.CTk):
         for i, p in enumerate(paths, 1):
             item = ctk.CTkFrame(self._audio_list, fg_color="transparent")
             item.pack(fill="x", padx=4, pady=(4 if i == 1 else 0, 2))
-            ctk.CTkLabel(item, text=_clean_ui_text(f"{i}. {Path(p).name}", 32),
-                         font=(_UI_FONT, 11), anchor="w",
+            ctk.CTkLabel(item, text=_clean_ui_text(f"{i}. {Path(p).name}", 40),
+                         font=_F_SET, anchor="w",
                          ).pack(side="left", fill="x", expand=True, padx=(4, 2))
-            ctk.CTkButton(item, text="X", width=24, height=22,
+            ctk.CTkButton(item, text="X", width=30, height=28,
                           fg_color="#555", hover_color="#c62828",
                           command=lambda path=p: self._remove_audio(path),
                           ).pack(side="right")
@@ -1814,8 +1895,7 @@ class App(ctk.CTk):
         """Chọn 1 hoặc nhiều logo; chọn thêm lần nữa sẽ cộng dồn vào danh sách."""
         paths = filedialog.askopenfilenames(
             title="Chọn file logo (có thể chọn nhiều)",
-            filetypes=[("Image", "*.png *.jpg *.jpeg *.webp"),
-                       ("All", "*.*")],
+            filetypes=_file_types(("Image", "*.png *.jpg *.jpeg *.webp")),
         )
         if not paths:
             return
@@ -1847,7 +1927,7 @@ class App(ctk.CTk):
                 text="Chọn nhiều file → random cho từng video",
                 text_color="gray")
             ctk.CTkLabel(self._logo_list, text="Chưa có file logo nào",
-                         text_color="gray", font=(_UI_FONT, 11),
+                         text_color="gray", font=_F_SET,
                          ).pack(anchor="w", padx=8, pady=6)
             return
 
@@ -1858,10 +1938,10 @@ class App(ctk.CTk):
         for i, p in enumerate(paths, 1):
             item = ctk.CTkFrame(self._logo_list, fg_color="transparent")
             item.pack(fill="x", padx=4, pady=(4 if i == 1 else 0, 2))
-            ctk.CTkLabel(item, text=_clean_ui_text(f"{i}. {Path(p).name}", 32),
-                         font=(_UI_FONT, 11), anchor="w",
+            ctk.CTkLabel(item, text=_clean_ui_text(f"{i}. {Path(p).name}", 40),
+                         font=_F_SET, anchor="w",
                          ).pack(side="left", fill="x", expand=True, padx=(4, 2))
-            ctk.CTkButton(item, text="X", width=24, height=22,
+            ctk.CTkButton(item, text="X", width=30, height=28,
                           fg_color="#555", hover_color="#c62828",
                           command=lambda path=p: self._remove_logo(path),
                           ).pack(side="right")
@@ -1869,7 +1949,7 @@ class App(ctk.CTk):
     def _pick_creds(self):
         path = filedialog.askopenfilename(
             title="Chọn file credentials.json",
-            filetypes=[("JSON", "*.json"), ("All", "*.*")],
+            filetypes=_file_types(("JSON", "*.json")),
         )
         if path:
             self._creds_path.set(path)
@@ -1889,7 +1969,9 @@ class App(ctk.CTk):
         self._login_cancel_flag = threading.Event()
         cancel_flag = self._login_cancel_flag
         self._login_in_progress = True
-        self._login_label.configure(text="Đang đăng nhập…", text_color="gray")
+        self._login_label.configure(
+            text="Đang chờ đăng nhập — copy link bên dưới vào trình duyệt…",
+            text_color="gray")
         self._hide_login_link()
 
         def _on_auth_url(url):
@@ -1930,6 +2012,14 @@ class App(ctk.CTk):
 
         threading.Thread(target=_do, daemon=True).start()
 
+    def _cancel_drive_login(self):
+        """Nút Hủy: thôi chờ đăng nhập, đóng cổng nhận kết quả từ Google."""
+        self._login_cancel_flag.set()
+        self._login_in_progress = False
+        self._hide_login_link()
+        self._log_msg(" Đã hủy đăng nhập Google Drive.")
+        self._reload_drive_accounts()
+
     # ── Nhiều tài khoản Drive ──
 
     def _reload_drive_accounts(self, check_active: bool = False):
@@ -1966,16 +2056,14 @@ class App(ctk.CTk):
         threading.Thread(target=_do, daemon=True).start()
 
     def _apply_drive_accounts(self, info: dict):
-        """Đổ danh sách tài khoản vào menu + nhãn trạng thái (Tk thread)."""
+        """Đổ danh sách tài khoản vào khung + nhãn trạng thái (Tk thread)."""
         accounts = list(info.get("accounts") or [])
         active = info.get("active") or ""
         unknown = bool(info.get("has_token")) and not active
         self._drive_accounts = accounts
         self._drive_active = active
-        values = ([_UNKNOWN_DRIVE_ACCOUNT] if unknown else []) + accounts
-        self._drive_account_menu.configure(values=values or [_NO_DRIVE_ACCOUNT])
-        self._drive_account_menu.set(
-            active or (_UNKNOWN_DRIVE_ACCOUNT if unknown else _NO_DRIVE_ACCOUNT))
+        self._drive_has_unknown = unknown
+        self._render_drive_accounts()
         if self._login_in_progress:
             return  # giữ nhãn "Đang đăng nhập…"
         if active:
@@ -1986,19 +2074,42 @@ class App(ctk.CTk):
         else:
             self._login_label.configure(text="Chưa đăng nhập", text_color="gray")
 
-    def _current_drive_choice(self) -> str:
-        if self._drive_active:
-            return self._drive_active
-        return _UNKNOWN_DRIVE_ACCOUNT if _UNKNOWN_DRIVE_ACCOUNT in self._drive_account_menu.cget("values") \
-            else _NO_DRIVE_ACCOUNT
+    def _render_drive_accounts(self):
+        """Dựng lại các dòng trong khung danh sách Gmail (Tk thread)."""
+        box = self._drive_list_box
+        for child in box.winfo_children():
+            child.destroy()
+        rows = ([("", _UNKNOWN_DRIVE_ACCOUNT)] if self._drive_has_unknown else []) \
+            + [(email, email) for email in self._drive_accounts]
+        if not rows:
+            ctk.CTkLabel(box, text=_NO_DRIVE_ACCOUNT, text_color="gray",
+                         font=_F_SET).pack(anchor="w", padx=8, pady=6)
+            return
+        for email, text in rows:
+            active = (email and email == self._drive_active) or (
+                not email and self._drive_has_unknown)
+            row = ctk.CTkFrame(box, fg_color="transparent")
+            row.pack(fill="x", padx=4, pady=2)
+            shown = text if len(text) <= 34 else text[:33] + "…"
+            ctk.CTkButton(
+                row, text=("● " if active else "○ ") + shown, anchor="w",
+                height=32, font=_F_SET,
+                fg_color="#2d6a4f" if active else "transparent",
+                hover_color="#3a7d5f" if active else ("gray80", "gray30"),
+                text_color=("gray10", "gray95") if not active else "white",
+                command=lambda e=email: self._switch_drive_account(e),
+            ).pack(side="left", fill="x", expand=True, padx=(0, 2))
+            ctk.CTkButton(
+                row, text="Thoát", width=64, height=32, font=_F_SET,
+                fg_color="#555",
+                command=lambda e=email: self._logout_drive(e),
+            ).pack(side="right")
 
-    def _on_select_drive_account(self, choice: str):
-        previous = self._current_drive_choice()
-        if choice in (_NO_DRIVE_ACCOUNT, _UNKNOWN_DRIVE_ACCOUNT) or choice == self._drive_active:
-            self._drive_account_menu.set(previous)
+    def _switch_drive_account(self, choice: str):
+        """Bấm vào 1 email trong khung → dùng tài khoản đó."""
+        if not choice or choice == self._drive_active:
             return
         if self._processing:
-            self._drive_account_menu.set(previous)
             messagebox.showwarning("Đang xử lý",
                                    "Không thể đổi tài khoản Google Drive khi batch đang chạy.")
             return
@@ -2024,8 +2135,8 @@ class App(ctk.CTk):
         entry.delete(0, "end")
         entry.insert(0, url)
         entry.configure(state="readonly")
-        self._login_link_copy_btn.configure(text="Copy")
-        self._login_link_box.pack(fill="x", after=self._login_btn_row)
+        self._login_link_copy_btn.configure(text="Copy link")
+        self._login_link_box.pack(fill="x", after=self._login_btn)
 
     def _hide_login_link(self):
         self._login_link = ""
@@ -2052,28 +2163,26 @@ class App(ctk.CTk):
         def _reset():
             self._login_link_copy_job = None
             try:
-                btn.configure(text="Copy")
+                btn.configure(text="Copy link")
             except TclError:
                 pass
         self._login_link_copy_job = self.after(1500, _reset)
 
-    def _logout_drive(self):
+    def _logout_drive(self, email: str):
+        """Nút "Thoát" trên 1 dòng: đăng xuất riêng tài khoản đó.
+
+        ``email`` rỗng = token từ bản cũ chưa rõ email (đang dùng).
+        """
         if self._processing:
             messagebox.showwarning("Đang xử lý", "Không thể đăng xuất Google Drive khi batch đang chạy.")
             return
-        self._login_cancel_flag.set()
-        self._login_in_progress = False
-        self._hide_login_link()
-        choice = self._current_drive_choice()
-        if choice == _NO_DRIVE_ACCOUNT:
-            self._reload_drive_accounts()
-            return
-        email = "" if choice == _UNKNOWN_DRIVE_ACCOUNT else choice
         shown = email or "tài khoản hiện tại"
+        is_active = (not email) or email == self._drive_active
         if not messagebox.askyesno(
                 "Đăng xuất Google Drive",
-                f"Đăng xuất {shown} khỏi tool?\n"
-                "Nếu còn tài khoản khác đã đăng nhập, tool sẽ chuyển sang tài khoản đó."):
+                f"Đăng xuất {shown} khỏi tool?"
+                + ("\nNếu còn tài khoản khác đã đăng nhập, tool sẽ chuyển sang tài khoản đó."
+                   if is_active else "")):
             return
         self._login_label.configure(text="Đang đăng xuất…", text_color="gray")
 
@@ -2188,6 +2297,12 @@ class App(ctk.CTk):
             messagebox.showwarning("Chưa chọn thư mục",
                                    "Bấm 'Chọn thư mục lưu' để chọn nơi lưu video!")
             return
+        if (save_mode == "drive" and not self._drive_active
+                and not self._drive_has_unknown):
+            # Batch không tự mở đăng nhập nữa → báo ngay khi chưa có tài khoản.
+            messagebox.showwarning("Chưa đăng nhập Google Drive",
+                                   "Bấm 'Thêm tài khoản' để đăng nhập Google Drive trước!")
+            return
         if not self._csv_out_path.get():
             messagebox.showwarning("Chưa chọn nơi lưu CSV",
                                    "Bấm 'Lưu CSV' để chọn nơi lưu file output!")
@@ -2203,10 +2318,13 @@ class App(ctk.CTk):
             trim_start = float(self._trim_start.get() or "0")
             trim_end   = float(self._trim_end.get() or "0")
             logo_size  = int(self._logo_size.get() or "15")
+            # Mặc định tính theo số luồng CPU tool thật sự dùng được (hwinfo),
+            # không phải tổng số luồng của máy.
+            auto_workers = edition.default_workers_for(PROFILE, hwinfo.usable_threads())
             if PROFILE["user_can_set_workers"] and self._workers:
-                workers = int(self._workers.get() or edition.default_workers_for(PROFILE))
+                workers = int(self._workers.get() or auto_workers)
             else:
-                workers = edition.default_workers_for(PROFILE)
+                workers = auto_workers
             workers = max(1, min(PROFILE["max_workers"], workers))
             delay   = PROFILE["default_delay"]
         except ValueError:
@@ -2331,8 +2449,14 @@ class App(ctk.CTk):
         settings["videos_snapshot"] = [dict(video) for video in self._videos]
         self._processing = True
         self._cancel_event.clear()
+        self._pause_event.clear()
+        self._paused_total = 0.0
+        self._paused_since = None
+        self._processor.resume_active()
         self._btn_process.configure(state="disabled")
         self._btn_stop.configure(state="normal")
+        self._btn_pause.configure(state="normal", text=_PAUSE_TEXT,
+                                  fg_color=_PAUSE_COLOR)
         self._progress_bar.set(0)
         self._progress_pct.configure(text="0 %")
 
@@ -2359,11 +2483,68 @@ class App(ctk.CTk):
 
     def _request_stop(self):
         self._cancel_event.set()
+        if self._pause_event.is_set():
+            self._set_paused(False, log=False)
         self._processor.cancel_active()
         for future in list(self._batch_futures):
             future.cancel()
         self._log_msg("[Dung] Dừng sau khi xong video hiện tại…")
         self._btn_stop.configure(state="disabled")
+        self._btn_pause.configure(state="disabled")
+
+    def _toggle_pause(self):
+        if not self._processing or self._cancel_event.is_set():
+            return
+        self._set_paused(not self._pause_event.is_set())
+
+    def _set_paused(self, paused: bool, log: bool = True):
+        """Tạm dừng / tiếp tục batch (chạy trên luồng Tk).
+
+        Tạm dừng: video chưa bắt đầu và bước kế tiếp của video đang dở đều
+        chờ; FFmpeg đang encode bị treo tại chỗ. Tải/upload/tạo voice đang
+        chạy dở thì chạy nốt bước đó (ngắt giữa chừng dễ đứt kết nối)."""
+        now = time.monotonic()
+        if paused:
+            self._paused_since = now
+            self._pause_event.set()
+            self._processor.suspend_active()
+            self._btn_pause.configure(text=_RESUME_TEXT, fg_color=_RESUME_COLOR)
+            if log:
+                self._log_msg("[Tam dung] Đã tạm dừng. Encode đang chạy được giữ "
+                              "nguyên; tải/upload dở sẽ chạy nốt rồi chờ. "
+                              "Bấm TIẾP TỤC để chạy tiếp.")
+        else:
+            if self._paused_since is not None:
+                self._paused_total += now - self._paused_since
+                self._paused_since = None
+            self._pause_event.clear()
+            self._processor.resume_active()
+            self._btn_pause.configure(text=_PAUSE_TEXT, fg_color=_PAUSE_COLOR)
+            if log:
+                self._log_msg("[Tiep tuc] Tiếp tục xử lý.")
+
+    def _wait_while_paused(self):
+        """Luồng nền chờ ở đây khi đang tạm dừng (thoát ngay nếu bấm Dừng)."""
+        pause = getattr(self, "_pause_event", None)
+        while (pause is not None and pause.is_set()
+               and not self._cancel_event.is_set()):
+            self._cancel_event.wait(0.2)
+
+    def _end_pause_state(self):
+        """Batch kết thúc: bỏ cờ tạm dừng (gọi được từ luồng nền).
+
+        Không đụng _paused_since/_paused_total ở đây: _finish_batch_clock
+        (đã xếp hàng trên luồng Tk) còn cần chúng để trừ giờ tạm dừng."""
+        pause = getattr(self, "_pause_event", None)
+        if pause is not None:
+            pause.clear()
+        resume = getattr(self._processor, "resume_active", None)
+        if resume is not None:
+            resume()
+
+    def _reset_pause_button(self):
+        self._btn_pause.configure(state="disabled", text=_PAUSE_TEXT,
+                                  fg_color=_PAUSE_COLOR)
 
     # ── Batch runner ─────────────────────────────────────────────────────────
 
@@ -2388,6 +2569,7 @@ class App(ctk.CTk):
         # video kế; bảo vệ bằng start_lock riêng để không tranh chấp với `lock`.
         start_lock  = threading.Lock()
         next_start  = [0.0]
+        pause_event = getattr(self, "_pause_event", None) or threading.Event()
 
         def _abort(msg: str, exc: BaseException | None = None):
             if exc is not None:
@@ -2395,11 +2577,13 @@ class App(ctk.CTk):
             else:
                 self._log_msg(msg, LOG_ERROR)
             self._stop_batch_clock()
+            self._processing = False
+            self._end_pause_state()
             self._ui(lambda: [
                 self._btn_process.configure(state="normal"),
                 self._btn_stop.configure(state="disabled"),
+                self._reset_pause_button(),
             ])
-            self._processing = False
 
         # ── Chuẩn bị đích lưu (1 lần, trước khi spawn worker) ──
         folder_id = None                 # Drive
@@ -2444,7 +2628,15 @@ class App(ctk.CTk):
         # không phải chờ mạng. Mỗi luồng = 1 video đang dở → số file tạm trên
         # đĩa tối đa = pool_size.
         # Số luồng mỗi khâu lấy từ edition.py (Pro: nhanh; thường: giới hạn).
-        _ffmpeg_sem = threading.Semaphore(workers)
+        # Chia luồng CPU cho các FFmpeg: mỗi chỗ encode một số luồng cố định
+        # (thay vì FFmpeg nào cũng tự lấy hết luồng rồi giành nhau). Hàng đợi
+        # chỗ = giới hạn số encode cùng lúc; RAM trống ít thì bớt chỗ.
+        encode_slots = hwinfo.plan_encode_slots(
+            hwinfo.usable_threads(), workers, hwinfo.available_ram_mb())
+        workers = len(encode_slots)
+        _free_slots: queue.Queue = queue.Queue()
+        for _slot in encode_slots:
+            _free_slots.put(_slot)
         upload_n = PROFILE["upload_concurrency"] if save_mode == "drive" else 0
         _drive_upload_sem = threading.Semaphore(upload_n) if upload_n else None
         _PREFETCH = edition.prefetch_for(PROFILE, workers)   # tăng theo số encode
@@ -2537,17 +2729,22 @@ class App(ctk.CTk):
         def upload_one(idx: int, gidx: int, vid: dict, item_id: str,
                        p_name: str, name: str, out_file: str):
             try:
+                self._wait_while_paused()
                 if self._cancel_event.is_set():
                     self._ui(lambda g=gidx: self._set_row_status(g, "pending"))
                     return
+                up_size = _file_size(out_file)
+                up_t0 = time.monotonic()
                 ref = _upload_client().upload_video(
                     out_file, filename=f"{item_id}.mp4", folder_id=folder_id,
                     progress_cb=None,
                     should_stop=self._cancel_event.is_set,
                     log=_upload_log_for(idx),
                 )
+                up_stats = _upload_stats(up_size, time.monotonic() - up_t0)
                 self._log_add(
-                    f"OK  [{idx+1}/{total}] Upload xong: {name}", LOG_UPLOAD)
+                    f"OK  [{idx+1}/{total}] Upload xong{up_stats}: {name}",
+                    LOG_UPLOAD)
                 # Đã upload xong thì luôn ghi nhận, kể cả khi vừa bấm Dừng —
                 # nếu bỏ qua, link mất khỏi CSV và lần chạy sau upload trùng.
                 _mark_done(gidx, vid, ref, idx, name)
@@ -2567,17 +2764,28 @@ class App(ctk.CTk):
         # Cổng giãn cách: đặt chỗ một "khe khởi động" cách video trước >= delay
         # giây, rồi chờ tới khe đó. Atomic dưới start_lock nên dù nhiều luồng gọi
         # cùng lúc, các khe vẫn xếp so le delay giây.
+        # Tạm dừng: chờ tới khi Tiếp tục rồi mới đặt khe. Bị tạm dừng lúc đang
+        # chờ khe → bỏ khe đó, đặt lại sau khi Tiếp tục, để các video đang
+        # chờ không cùng ùa chạy một lúc khi bấm Tiếp tục.
         def _gate_start():
-            if delay <= 0:
-                return
-            with start_lock:
-                slot = max(time.monotonic(), next_start[0])
-                next_start[0] = slot + delay
-            while not self._cancel_event.is_set():
-                remaining = slot - time.monotonic()
-                if remaining <= 0:
-                    break
-                time.sleep(min(0.2, remaining))
+            while True:
+                self._wait_while_paused()
+                if delay <= 0 or self._cancel_event.is_set():
+                    return
+                with start_lock:
+                    slot = max(time.monotonic(), next_start[0])
+                    next_start[0] = slot + delay
+                interrupted = False
+                while not self._cancel_event.is_set():
+                    if pause_event.is_set():
+                        interrupted = True
+                        break
+                    remaining = slot - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    time.sleep(min(0.2, remaining))
+                if not interrupted:
+                    return
 
         # ── Per-video worker ──────────────────────────────────────────────────
         # idx  = thứ tự trong batch (đặt tên temp + log + tiến độ tổng)
@@ -2737,16 +2945,24 @@ class App(ctk.CTk):
                 # Tối đa `workers` FFmpeg cùng lúc; các luồng dư (prefetch/
                 # upload) chờ ở đây với video đã tải sẵn → encode xong là có
                 # video kế tiếp ngay.
-                with _ffmpeg_sem:
+                slot = _free_slots.get()
+                try:
+                    # Video đã tải sẵn (prefetch) không bắt đầu encode khi
+                    # đang tạm dừng; process_video tự thoát nếu bấm Dừng.
+                    self._wait_while_paused()
                     self._processor.process_video(
                         tmp_dl, tmp_out, row_settings,
                         should_stop=self._cancel_event.is_set,
                         info=worker_downloader.last_info,
+                        threads=slot.threads,
                     )
+                finally:
+                    _free_slots.put(slot)
                 self._log_add(f"OK  [{idx+1}/{total}] Xử lý xong: {name}", LOG_PROCESS)
                 _safe_remove(tmp_dl)
                 if voice_mp3:
                     _safe_remove(voice_mp3)
+                self._wait_while_paused()
                 if self._cancel_event.is_set():
                     _safe_remove(tmp_out)
                     return
@@ -2790,15 +3006,19 @@ class App(ctk.CTk):
                     self._log_add(f"OK  [{idx+1}/{total}] Lưu xong: {name}", LOG_UPLOAD)
                 else:
                     with _drive_upload_sem:
+                        up_size = _file_size(tmp_out)
+                        up_t0 = time.monotonic()
                         ref = worker_uploader.upload_video(
                             tmp_out, filename=f"{item_id}.mp4", folder_id=folder_id,
                             progress_cb=None,
                             should_stop=self._cancel_event.is_set,
                             log=_upload_log_for(idx),
                         )
+                        up_stats = _upload_stats(up_size, time.monotonic() - up_t0)
                     _safe_remove(tmp_out)
                     self._log_add(
-                        f"OK  [{idx+1}/{total}] Upload xong: {name}", LOG_UPLOAD)
+                        f"OK  [{idx+1}/{total}] Upload xong{up_stats}: {name}",
+                        LOG_UPLOAD)
 
                 # Đã lưu/upload xong → luôn ghi nhận (xem upload_one).
                 _mark_done(gidx, vid, ref, idx, name)
@@ -2927,9 +3147,11 @@ class App(ctk.CTk):
             # của batch mới.
             self._cancel_event.clear()
             self._processing = False
+            self._end_pause_state()
             self._ui(lambda: [
                 self._btn_process.configure(state="normal"),
                 self._btn_stop.configure(state="disabled"),
+                self._reset_pause_button(),
             ])
 
     def _finish_local(self, done: int, total: int, dest_dir: str, csv_out: str):
@@ -3028,6 +3250,22 @@ def _safe_remove(path: str):
             os.remove(path)
     except OSError:
         pass
+
+
+def _file_size(path: str) -> int:
+    try:
+        return os.path.getsize(path)
+    except OSError:
+        return 0
+
+
+def _upload_stats(size: int, seconds: float) -> str:
+    """' (25.3 MB, 41s, 0.62 MB/s)' — để biết upload chậm do file to hay mạng."""
+    if size <= 0:
+        return ""
+    mb = size / (1024 * 1024)
+    seconds = max(seconds, 0.001)
+    return f" ({mb:.1f} MB, {seconds:.0f}s, {mb / seconds:.2f} MB/s)"
 
 
 class _AudioBag:

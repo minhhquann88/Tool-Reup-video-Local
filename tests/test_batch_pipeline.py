@@ -41,14 +41,21 @@ class BatchPipelineTests(unittest.TestCase):
         self.voice_fail_for = set()
         self.logs = []
         self.seen_settings = []          # settings mỗi lần encode
+        self.seen_threads = []           # số luồng FFmpeg mỗi lần encode
+        self.usable_threads = 16         # máy giả lập
+        self.ram_free_mb = None          # None = không giới hạn theo RAM
         self.profile = edition.PROFILES["pro"]
+        self.suspend_calls = 0
 
     def _make_app(self):
         test = self
 
         class FakeProcessor:
-            def process_video(self, src, out, settings, should_stop=None, info=None):
+            def process_video(self, src, out, settings, should_stop=None, info=None,
+                              threads=0):
                 test.seen_settings.append(dict(settings))
+                test.events.append(("enc_start", None, time.monotonic()))
+                test.seen_threads.append(threads)
                 with test.encode:
                     time.sleep(0.05)
                 with open(out, "wb") as fh:
@@ -58,11 +65,18 @@ class BatchPipelineTests(unittest.TestCase):
             def cancel_active(self):
                 pass
 
+            def suspend_active(self):
+                test.suspend_calls += 1
+
+            def resume_active(self):
+                pass
+
         app = object.__new__(main.App)
         app._ui = lambda func: None
         app._log_msg = lambda msg, cat=None: test.logs.append(str(msg))
         app._log_add = lambda msg, cat=None: test.logs.append(str(msg))
         app._cancel_event = threading.Event()
+        app._pause_event = threading.Event()
         app._processor = FakeProcessor()
         app._batch_futures = []
         app._batch_executor = None
@@ -121,6 +135,8 @@ class BatchPipelineTests(unittest.TestCase):
             patch.object(main, "make_voice", fake_voice),
             patch.object(main, "PROFILE", self.profile),
             patch.object(drive, "DriveUploader", FakeUploader),
+            patch.object(main.hwinfo, "usable_threads", lambda: test.usable_threads),
+            patch.object(main.hwinfo, "available_ram_mb", lambda: test.ram_free_mb),
         ]
 
     def _run(self, n, workers, save_mode="local", voice=False,
@@ -336,6 +352,111 @@ class BatchPipelineTests(unittest.TestCase):
         self.assertEqual(sorted(logos * 2),
                          sorted(st["logo_path"] for st in self.seen_settings))
         self.assertTrue(all(st["audio_path"] for st in self.seen_settings))
+
+    # ── Chia luồng CPU cho từng FFmpeg (hwinfo.plan_encode_slots) ──────────
+    def test_each_encode_gets_its_share_of_cpu_threads(self):
+        self.usable_threads = 16
+        self._run(8, workers=4)
+        self.assertEqual([4] * 8, self.seen_threads)
+        self.assertLessEqual(self.encode.peak, 4)
+
+    def test_low_free_ram_reduces_concurrent_encodes(self):
+        self.usable_threads = 16
+        self.ram_free_mb = 1000          # chỉ đủ RAM cho 2 encode
+        self._run(6, workers=4)
+        self.assertLessEqual(self.encode.peak, 2)
+        self.assertEqual({8}, set(self.seen_threads))
+        self.assertEqual(6, len(os.listdir(os.path.join(self.tmp, "out"))))
+
+    def test_standard_edition_single_encode_uses_all_threads(self):
+        self._standard()
+        self.usable_threads = 16
+        self._run(3, workers=5)
+        self.assertEqual([16, 16, 16], self.seen_threads)
+
+    def test_small_machine_keeps_ffmpeg_auto_threads(self):
+        self.usable_threads = 8
+        self._run(4, workers=2)
+        self.assertEqual([0] * 4, self.seen_threads)
+
+    # ── Tạm dừng / Tiếp tục ─────────────────────────────────────────────────
+    def _with_timers(self, *timers):
+        """Hẹn giờ thao tác trên app (giây, hàm(app)) ngay khi batch tạo app."""
+        real_make_app = self._make_app
+
+        def make_app():
+            app = real_make_app()
+            for delay, action in timers:
+                threading.Timer(delay, action, args=(app,)).start()
+            return app
+
+        self._make_app = make_app
+
+    def _pause_window(self, pause_at, resume_at):
+        window = {}
+
+        def pause(app):
+            window["paused"] = time.monotonic()
+            app._pause_event.set()
+
+        def resume(app):
+            window["resumed"] = time.monotonic()
+            app._pause_event.clear()
+
+        self._with_timers((pause_at, pause), (resume_at, resume))
+        return window
+
+    def _started_during(self, kind, window, grace=0.05):
+        # grace: luồng vừa qua cổng ngay trước lúc bấm Tạm dừng.
+        return [t for t in self._starts(kind)
+                if window["paused"] + grace < t < window["resumed"]]
+
+    def test_pause_holds_new_work_and_resume_finishes_batch(self):
+        window = self._pause_window(0.1, 0.7)
+        self._run(20, workers=2)
+        self.assertEqual([], self._started_during("dl_start", window))
+        self.assertEqual([], self._started_during("enc_start", window))
+        # Tiếp tục → chạy nốt, không mất video nào.
+        self.assertEqual(20, len(os.listdir(os.path.join(self.tmp, "out"))))
+        self.assertTrue(any(t > window["resumed"] for t in self._starts("dl_start")))
+
+    def test_pause_in_drive_mode_holds_uploads(self):
+        window = self._pause_window(0.1, 0.6)
+        captured = {}
+        real_make_app = self._make_app
+
+        def make_app():
+            app = real_make_app()
+            app._write_output_csv = lambda path, refs, vids: captured.update(refs=dict(refs))
+            return app
+
+        self._make_app = make_app
+        self._run(12, workers=2, save_mode="drive")
+        self.assertEqual(12, len(captured["refs"]))
+        # Upload đang chạy dở được chạy nốt (≤ 0.03 s), sau đó không upload nào
+        # kết thúc trong lúc tạm dừng.
+        ends = [t for k, _i, t in self.events if k == "up_end"
+                if window["paused"] + 0.1 < t < window["resumed"]]
+        self.assertEqual([], ends)
+
+    def test_stop_while_paused_exits_quickly(self):
+        self._with_timers((0.1, lambda app: app._pause_event.set()),
+                          (0.3, lambda app: app._cancel_event.set()))
+        t0 = time.monotonic()
+        self._run(40, workers=2, voice=True)
+        self.assertLess(time.monotonic() - t0, 3)
+        self.assertLess(len(os.listdir(os.path.join(self.tmp, "out"))), 40)
+
+    def test_standard_edition_keeps_delay_after_resume(self):
+        # Đang chờ khe khởi động thì bị tạm dừng → sau khi Tiếp tục các video
+        # vẫn cách nhau >= delay, không ùa chạy cùng lúc.
+        self._standard(delay=0.2)
+        self._pause_window(0.05, 0.5)
+        self._run(4, workers=1)
+        downloads = self._starts("dl_start")
+        self.assertEqual(4, len(downloads))
+        for a, b in zip(downloads, downloads[1:]):
+            self.assertGreaterEqual(b - a, 0.19)
 
 
 if __name__ == "__main__":

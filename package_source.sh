@@ -35,6 +35,7 @@ FILES=(
     license.py
     app_paths.py
     edition.py
+    hwinfo.py
     tts.py
     updater.py
     packaging_smoke.py

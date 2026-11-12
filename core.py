@@ -33,6 +33,42 @@ from error_text import short_reason
 # Hide console window on Windows when spawning FFmpeg
 _WIN_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
+
+def _set_process_suspended(process: subprocess.Popen, suspend: bool) -> bool:
+    """Treo / chạy tiếp 1 tiến trình (Tạm dừng). Trả False nếu không làm được.
+
+    Windows: NtSuspendProcess/NtResumeProcess (có đếm lồng nhau → người gọi
+    không được treo 2 lần). Linux/macOS: SIGSTOP/SIGCONT.
+    """
+    if process.poll() is not None:
+        return False
+    try:
+        if sys.platform == "win32":
+            import ctypes
+            from ctypes import wintypes
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            ntdll = ctypes.WinDLL("ntdll")
+            kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL,
+                                             wintypes.DWORD]
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+            func = ntdll.NtSuspendProcess if suspend else ntdll.NtResumeProcess
+            func.argtypes = [wintypes.HANDLE]
+            func.restype = ctypes.c_long
+            process_suspend_resume = 0x0800
+            handle = kernel32.OpenProcess(process_suspend_resume, False, process.pid)
+            if not handle:
+                return False
+            try:
+                return func(handle) == 0
+            finally:
+                kernel32.CloseHandle(handle)
+        import signal
+        os.kill(process.pid, signal.SIGSTOP if suspend else signal.SIGCONT)
+        return True
+    except Exception:      # noqa: BLE001 — tạm dừng là tiện ích, không được làm hỏng batch
+        return False
+
 # ── Local FFmpeg resolution ───────────────────────────────────────────────────
 # Prefer bundled bin/<exe> → fall back to system PATH.
 # Binary name carries .exe on Windows, no suffix on Linux/macOS.
@@ -277,9 +313,36 @@ class VideoProcessor:
     def __init__(self):
         self._process_lock = threading.Lock()
         self._active_processes: set[subprocess.Popen] = set()
+        self._suspended: set[subprocess.Popen] = set()
+        self._paused = False
+
+    @property
+    def paused(self) -> bool:
+        return self._paused
+
+    def suspend_active(self) -> None:
+        """Tạm dừng: treo mọi FFmpeg đang chạy (nhả CPU, giữ nguyên tiến độ).
+
+        FFmpeg khởi động trong lúc tạm dừng cũng bị treo ngay."""
+        with self._process_lock:
+            self._paused = True
+            for process in list(self._active_processes):
+                if process not in self._suspended and _set_process_suspended(process, True):
+                    self._suspended.add(process)
+
+    def resume_active(self) -> None:
+        """Tiếp tục: cho các FFmpeg đã treo chạy tiếp."""
+        with self._process_lock:
+            self._paused = False
+            suspended = list(self._suspended)
+            self._suspended.clear()
+        for process in suspended:
+            _set_process_suspended(process, False)
 
     def cancel_active(self) -> None:
         """Request termination of every FFmpeg process owned by this batch."""
+        # Chạy tiếp tiến trình đã treo trước: Linux giữ SIGTERM tới khi SIGCONT.
+        self.resume_active()
         with self._process_lock:
             processes = list(self._active_processes)
         for process in processes:
@@ -305,7 +368,7 @@ class VideoProcessor:
 
     def process_video(self, input_path: str, output_path: str,
                       settings: dict, should_stop=None,
-                      info: dict | None = None) -> str:
+                      info: dict | None = None, threads: int = 0) -> str:
         """
         Build and run a single FFmpeg command that applies all edits.
 
@@ -325,7 +388,13 @@ class VideoProcessor:
 
         info: kết quả probe_video() đã có sẵn (vd. từ bước tải về) → bỏ qua
         lần ffprobe thứ 2. None → tự probe.
+
+        threads: số luồng CPU FFmpeg này được dùng (giải mã + bộ lọc + encode),
+        do hwinfo.plan_encode_slots chia đều cho các FFmpeg chạy cùng lúc.
+        0 → FFmpeg tự lấy theo số luồng máy (hành vi cũ). Nhiều FFmpeg cùng tự
+        lấy hết sẽ giành luồng của nhau (chậm ~18% trên máy 36 luồng).
         """
+        threads = max(0, int(threads or 0))
         # Clamp negatives — a negative -ss/-t is invalid for ffmpeg
         trim_start   = max(0.0, float(settings.get("trim_start", 0)))
         trim_end     = max(0.0, float(settings.get("trim_end", 0)))
@@ -415,8 +484,17 @@ class VideoProcessor:
         need_reencode_video = has_logo or trim_start > 0 or scale_vf is not None
 
         cmd = [FFMPEG, "-y"]
+        if threads:
+            # Luồng của bộ lọc (scale/logo) — tuỳ chọn toàn cục, đặt trước input.
+            if has_logo:
+                cmd += ["-filter_complex_threads", str(threads)]
+            elif scale_vf:
+                cmd += ["-filter_threads", str(threads)]
 
         # ── inputs ──────────────────────────────────────────────────────────
+        # Luồng giải mã video gốc (tuỳ chọn của input 0, phải đứng trước -i).
+        if threads:
+            cmd += ["-threads", str(threads)]
         # Input seeking (-ss before -i) on input 0: fast, and frame-accurate
         # because we always re-encode when trimming. Seeks video + original
         # audio of input 0 TOGETHER, so they stay in sync.
@@ -508,7 +586,7 @@ class VideoProcessor:
             # Phải đứng SAU -preset mới ghi đè được thiết lập của preset.
             if video_x264_params:
                 cmd += ["-x264-params", video_x264_params]
-            cmd += ["-pix_fmt", "yuv420p", "-threads", "0"]
+            cmd += ["-pix_fmt", "yuv420p", "-threads", str(threads)]
         else:
             cmd += ["-c:v", "copy"]
 
@@ -543,13 +621,22 @@ class VideoProcessor:
         )
         with self._process_lock:
             self._active_processes.add(process)
+            # Bấm Tạm dừng đúng lúc FFmpeg đang khởi động → treo luôn.
+            if self._paused and _set_process_suspended(process, True):
+                self._suspended.add(process)
         try:
             deadline = time.monotonic() + 600
+            last_tick = time.monotonic()
             while True:
                 try:
                     stdout, stderr = process.communicate(timeout=0.25)
                     break
                 except subprocess.TimeoutExpired:
+                    # Thời gian bị treo (Tạm dừng) không tính vào hạn 10 phút.
+                    now = time.monotonic()
+                    if process in self._suspended:
+                        deadline += now - last_tick
+                    last_tick = now
                     if should_stop and should_stop():
                         process.terminate()
                         try:
@@ -565,6 +652,7 @@ class VideoProcessor:
         finally:
             with self._process_lock:
                 self._active_processes.discard(process)
+                self._suspended.discard(process)
 
         if process.returncode != 0:
             raise RuntimeError(f"FFmpeg lỗi (exit code {process.returncode}):\n{stderr}")

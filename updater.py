@@ -26,9 +26,10 @@ SOURCE_FILES = (
     "single_instance.py", "error_text.py", "setup_ffmpeg.py", "requirements.txt",
     "run_linux.sh", "run.bat", "linux-fontconfig.conf", "video.png", "video.ico",
     "packaging_smoke.py", "app_paths.py", "edition.py", "_edition_stamp.py",
+    "hwinfo.py",
 )
 REQUIRED_SOURCE = ("main.py", "license.py", "updater.py", "app_paths.py", "core.py", "drive.py",
-                   "tts.py", "error_text.py", "single_instance.py", "edition.py")
+                   "tts.py", "error_text.py", "single_instance.py", "edition.py", "hwinfo.py")
 PROTECTED = {"license.json", "token.json", "drive_accounts.json", "client_secret.json", "app_error.log", "crash.log", ".auth-state.json", ".auth.lock"}
 MAX_UNPACKED = 8 * 1024 ** 3
 READY_ENV = "REUP_UPDATE_READY"

@@ -29,7 +29,8 @@ def env(tmp_path):
     secret.write_text("{}", encoding="utf-8")
     logins = []
 
-    def login(_flow, _should_stop=None, on_auth_url=None):
+    def login(_flow, on_auth_url, _should_stop=None):
+        on_auth_url("https://accounts.example/login")
         return _creds(logins.pop(0))
 
     with patch("drive._secret_path", return_value=secret), patch(
@@ -38,6 +39,10 @@ def env(tmp_path):
         "drive._fetch_email", side_effect=lambda c: EMAILS[c.refresh_token]
     ):
         yield logins
+
+
+def _no_link(_url):
+    pass
 
 
 def _token_file():
@@ -50,9 +55,9 @@ def _store():
 
 def test_add_accounts_and_switch_between_them(env):
     env.extend(["a", "b"])
-    assert drive.add_account() == "a@gmail.com"
+    assert drive.add_account(_no_link) == "a@gmail.com"
     assert _token_file() == _token("a")
-    assert drive.add_account() == "b@gmail.com"
+    assert drive.add_account(_no_link) == "b@gmail.com"
     assert _token_file() == _token("b")
     info = drive.list_accounts()
     assert info == {"accounts": ["a@gmail.com", "b@gmail.com"],
@@ -65,8 +70,8 @@ def test_add_accounts_and_switch_between_them(env):
 
 def test_switch_keeps_refreshed_token_of_previous_account(env):
     env.extend(["a", "b"])
-    drive.add_account()
-    drive.add_account()
+    drive.add_account(_no_link)
+    drive.add_account(_no_link)
     # Batch làm mới token của b (chỉ ghi token.json).
     refreshed = dict(_token("b"), token="access-b-new")
     app_paths.write_auth(drive.get_token_path(), refreshed)
@@ -78,10 +83,10 @@ def test_switch_keeps_refreshed_token_of_previous_account(env):
 
 def test_adding_same_email_again_replaces_it(env):
     env.extend(["a", "a"])
-    drive.add_account()
+    drive.add_account(_no_link)
     EMAILS["refresh-a"] = "A@gmail.com"
     try:
-        drive.add_account()
+        drive.add_account(_no_link)
     finally:
         EMAILS["refresh-a"] = "a@gmail.com"
     assert drive.list_accounts()["accounts"] == ["A@gmail.com"]
@@ -89,8 +94,8 @@ def test_adding_same_email_again_replaces_it(env):
 
 def test_remove_active_account_switches_to_remaining(env):
     env.extend(["a", "b"])
-    drive.add_account()
-    drive.add_account()
+    drive.add_account(_no_link)
+    drive.add_account(_no_link)
     assert drive.remove_account("b@gmail.com") == "a@gmail.com"
     assert _token_file() == _token("a")
     assert drive.list_accounts() == {"accounts": ["a@gmail.com"],
@@ -99,8 +104,8 @@ def test_remove_active_account_switches_to_remaining(env):
 
 def test_remove_inactive_account_keeps_current_token(env):
     env.extend(["a", "b"])
-    drive.add_account()
-    drive.add_account()
+    drive.add_account(_no_link)
+    drive.add_account(_no_link)
     assert drive.remove_account("a@gmail.com") == "b@gmail.com"
     assert _token_file() == _token("b")
     assert drive.list_accounts()["accounts"] == ["b@gmail.com"]
@@ -108,7 +113,7 @@ def test_remove_inactive_account_keeps_current_token(env):
 
 def test_remove_last_account_logs_out(env):
     env.append("a")
-    drive.add_account()
+    drive.add_account(_no_link)
     assert drive.remove_account("a@gmail.com") == ""
     assert _token_file() is None
     assert drive.list_accounts() == {"accounts": [], "active": "",
@@ -117,7 +122,7 @@ def test_remove_last_account_logs_out(env):
 
 def test_switch_to_unknown_account_fails_without_touching_token(env):
     env.append("a")
-    drive.add_account()
+    drive.add_account(_no_link)
     with pytest.raises(RuntimeError, match="Không tìm thấy"):
         drive.switch_account("x@gmail.com")
     assert _token_file() == _token("a")
@@ -128,7 +133,7 @@ def test_legacy_token_is_identified_and_kept_when_adding(env):
     assert drive.list_accounts() == {"accounts": [], "active": "",
                                      "has_token": True}
     env.append("a")
-    drive.add_account()
+    drive.add_account(_no_link)
     assert _store()["accounts"]["legacy@gmail.com"] == _token("legacy")
     drive.switch_account("legacy@gmail.com")
     assert _token_file() == _token("legacy")
@@ -141,7 +146,7 @@ def test_unidentifiable_legacy_token_is_not_overwritten(env):
             (_ for _ in ()).throw(OSError("offline"))
             if c.refresh_token == "refresh-legacy" else EMAILS[c.refresh_token])):
         with pytest.raises(RuntimeError, match="Không xác định được"):
-            drive.add_account()
+            drive.add_account(_no_link)
     assert _token_file() == _token("legacy")
     # Đăng xuất token chưa rõ email vẫn được.
     assert drive.remove_account("") == ""
@@ -162,10 +167,26 @@ def test_current_account_email_without_token_does_not_open_browser(env):
     drive._run_oauth_login.assert_not_called()
 
 
-def test_batch_login_clears_stale_active_email(env):
-    env.extend(["a", "b"])
-    drive.add_account()
-    drive.clear_credentials()           # token mất, store vẫn ghi active = a
-    drive._get_credentials()            # batch tự đăng nhập (chưa biết email)
-    assert _token_file() == _token("b")
-    assert drive.list_accounts()["active"] == ""
+def test_add_account_hands_link_to_ui(env):
+    env.append("a")
+    links = []
+    drive.add_account(links.append)
+    assert links == ["https://accounts.example/login"]
+
+
+def test_account_order_stays_fixed_when_switching_or_relogging(env):
+    EMAILS["refresh-c"] = "c@gmail.com"
+    try:
+        env.extend(["a", "b", "c", "a"])
+        for _ in range(3):
+            drive.add_account(_no_link)
+        order = ["a@gmail.com", "b@gmail.com", "c@gmail.com"]
+        for email in ("a@gmail.com", "b@gmail.com", "c@gmail.com", "a@gmail.com"):
+            drive.switch_account(email)
+            assert drive.list_accounts()["accounts"] == order
+        drive.switch_account("c@gmail.com")
+        drive.add_account(_no_link)          # đăng nhập lại a: vẫn ở dòng đầu
+        assert drive.list_accounts() == {"accounts": order, "active": "a@gmail.com",
+                                         "has_token": True}
+    finally:
+        del EMAILS["refresh-c"]

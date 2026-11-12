@@ -33,10 +33,10 @@ class EncodeArgsTests(unittest.TestCase):
         with open(self.src, "wb") as fh:
             fh.write(b"v")
 
-    def _cmd(self, **settings):
+    def _cmd(self, threads=0, **settings):
         with patch.object(core.subprocess, "Popen", _FakePopen):
             core.VideoProcessor().process_video(
-                self.src, self.out, settings, info=dict(INFO))
+                self.src, self.out, settings, info=dict(INFO), threads=threads)
         return _FakePopen.last_cmd
 
     def _value(self, cmd, flag):
@@ -59,6 +59,29 @@ class EncodeArgsTests(unittest.TestCase):
         self.assertEqual("veryfast", self._value(cmd, "-preset"))
         self.assertEqual("18", self._value(cmd, "-crf"))
         self.assertNotIn("-x264-params", cmd)
+
+    def test_threads_limit_decode_filter_and_encode(self):
+        cmd = self._cmd(trim_start=1, force_1080p=True, logo_path=self.src,
+                        threads=6)
+        # Bộ lọc (logo dùng -filter_complex), giải mã (trước -i) và encoder.
+        self.assertEqual("6", self._value(cmd, "-filter_complex_threads"))
+        first = cmd.index("-threads")
+        self.assertEqual("6", cmd[first + 1])
+        self.assertLess(first, cmd.index("-i"))
+        last = len(cmd) - 1 - cmd[::-1].index("-threads")
+        self.assertGreater(last, cmd.index("-c:v"))
+        self.assertEqual("6", cmd[last + 1])
+
+    def test_threads_with_scale_only_uses_filter_threads(self):
+        cmd = self._cmd(force_1080p=True, threads=3)
+        self.assertEqual("3", self._value(cmd, "-filter_threads"))
+        self.assertNotIn("-filter_complex_threads", cmd)
+
+    def test_threads_zero_keeps_old_command(self):
+        cmd = self._cmd(trim_start=1, force_1080p=True)
+        self.assertEqual(1, cmd.count("-threads"))
+        self.assertNotIn("-filter_threads", cmd)
+        self.assertNotIn("-filter_complex_threads", cmd)
 
     def test_stream_copy_has_no_x264_args(self):
         # Only cutting the end needs no re-encode → video is copied.

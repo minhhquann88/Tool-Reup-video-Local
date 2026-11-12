@@ -31,7 +31,7 @@ OUT="dist/$NAME-installer.run"
 STAGE="dist/.installer_stage"
 PKG="$STAGE/$APP"
 
-FILES=(main.py core.py drive.py license.py app_paths.py edition.py tts.py updater.py packaging_smoke.py single_instance.py error_text.py
+FILES=(main.py core.py drive.py license.py app_paths.py edition.py hwinfo.py tts.py updater.py packaging_smoke.py single_instance.py error_text.py
        linux-fontconfig.conf setup_ffmpeg.py
        requirements.txt run_linux.sh client_secret.json video.png video.ico)
 for f in "${FILES[@]}"; do
