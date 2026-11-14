@@ -11,6 +11,7 @@ vào HTTP status code.
 
 from __future__ import annotations   # cho phép 'X | None' chạy trên Python 3.8/3.9
 
+import hashlib
 import sys
 import uuid
 from pathlib import Path
@@ -37,26 +38,51 @@ def get_license_path() -> Path:
     return app_paths.auth_path("license.json")
 
 
-# ── deviceId: theo phần cứng (MachineGuid) → ổn định, không đổi khi xoá file ──
+# ── deviceId: theo máy (MachineGuid / machine-id) → ổn định, không đổi khi xoá file ──
+# /etc/machine-id do systemd tạo lúc cài HĐH, chỉ root sửa được; bản cũ không có
+# systemd dùng /var/lib/dbus/machine-id. KHÔNG dùng MAC trên Linux: uuid.getnode()
+# lấy MAC card mạng đầu tiên libuuid thấy (docker/VPN/Wi-Fi MAC ngẫu nhiên) hoặc
+# sinh số ngẫu nhiên mỗi tiến trình → mở lại app là server coi là máy khác.
+_LINUX_MACHINE_ID_PATHS = (Path("/etc/machine-id"), Path("/var/lib/dbus/machine-id"))
+_MACHINE_ID_SALT = b"byscom-reup-device:"
+
+
+def _linux_machine_id() -> str | None:
+    for path in _LINUX_MACHINE_ID_PATHS:
+        try:
+            value = path.read_text(encoding="ascii").strip().lower()
+        except (OSError, UnicodeError):
+            continue
+        if (len(value) == 32 and value.strip("0")
+                and all(c in "0123456789abcdef" for c in value)):
+            return value
+    return None
+
+
 def get_device_id() -> str:
     """
-    Trả mã định danh thiết bị ổn định. Ưu tiên MachineGuid của Windows; lỗi thì
-    fallback theo địa chỉ MAC (uuid.getnode()).
+    Trả mã định danh thiết bị ổn định. Windows: MachineGuid; Linux: machine-id
+    (băm, không gửi giá trị gốc); lỗi thì fallback theo địa chỉ MAC.
     """
-    try:
-        import winreg
-        with winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"SOFTWARE\Microsoft\Cryptography",
-            0,
-            winreg.KEY_READ | winreg.KEY_WOW64_64KEY,
-        ) as k:
-            guid, _ = winreg.QueryValueEx(k, "MachineGuid")
-        guid = str(guid).strip().strip("{}").lower()
-        if guid:
-            return "win_" + guid
-    except Exception:
-        pass
+    if sys.platform == "win32":
+        try:
+            import winreg
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Cryptography",
+                0,
+                winreg.KEY_READ | winreg.KEY_WOW64_64KEY,
+            ) as k:
+                guid, _ = winreg.QueryValueEx(k, "MachineGuid")
+            guid = str(guid).strip().strip("{}").lower()
+            if guid:
+                return "win_" + guid
+        except Exception:
+            pass
+    elif sys.platform.startswith("linux"):
+        mid = _linux_machine_id()
+        if mid:
+            return "lnx_" + hashlib.sha256(_MACHINE_ID_SALT + mid.encode("ascii")).hexdigest()[:32]
     return "mac_" + format(uuid.getnode(), "x")
 
 
